@@ -47,6 +47,8 @@ module top_level (
         .distanceRAW(distanceRAW)
     );
     
-    assign LEDR = distanceRAW[21:4];  // Top 18 bits
+    // Show raw value differently
+    assign LEDR[9:0] = distanceRAW[9:0];   // Bottom 10 bits
+    assign LEDR[17:10] = distanceRAW[21:14]; // Top 8 bits
 
 endmodule
