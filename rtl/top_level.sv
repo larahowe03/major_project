@@ -1,7 +1,9 @@
 module top_level (
     input CLOCK_50,
     input [3:0] KEYS,
-    output [9:0] LEDR
+    output [9:0] LEDR,
+    input echo,           // HC-SR04 Echo pin - ADD THIS
+    output trig           // HC-SR04 Trigger pin - ADD THIS
 );
     logic enable;
     logic measure_pulse;
