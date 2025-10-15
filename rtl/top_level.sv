@@ -18,7 +18,7 @@ module top_level (
     assign enable = 1'b1;
     assign rst_n = key_debounced[0];
 
-    module debounce_keys u_debounce_keys (
+    debounce_keys u_debounce_keys (
         .clk(CLOCK_50),
         .buttons(KEYS),         
         .key_edge(key_edge),
