@@ -1,7 +1,7 @@
 module top_level (
     input CLOCK_50,
     input [3:0] KEYS,
-    output [9:0] LEDR,
+    output [17:0] LEDR,
     inout [35:0] GPIO_0  // Entire GPIO_0 bus (bidirectional)
 );
     logic enable;
