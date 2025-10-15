@@ -1,0 +1,27 @@
+# Quartus outputs
+db/
+incremental_db/
+simulation/
+output_files/
+*.qws
+*.smsg
+*.rpt
+*.summary
+*.eqn
+*.pin
+*.pof
+*.sof
+*.jdi
+*.srf
+*.qar
+*.bak
+*.qpf
+*.qsf
+
+# ModelSim
+work/
+transcript
+vsim.wlf
+*.wlf
+modelsim.ini
+questa.ini
