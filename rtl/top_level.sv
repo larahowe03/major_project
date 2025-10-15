@@ -2,6 +2,7 @@ module top_level (
     input CLOCK_50,
     input [3:0] KEYS,
     output [17:0] LEDR,
+    output [7:0] LEDG,
     inout [35:0] GPIO  // Entire GPIO_0 bus (bidirectional)
 );
     logic enable;
@@ -22,6 +23,8 @@ module top_level (
 
     assign enable = 1'b1;
     assign rst_n = key_debounced[0];
+
+    assign LEDG[0] = rst_n;
 
     debounce_keys u_debounce_keys (
         .clk(CLOCK_50),
