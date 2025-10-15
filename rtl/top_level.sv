@@ -17,10 +17,7 @@ module top_level (
     assign enable = 1'b1;
     assign rst_n = key_debounced[0];
 
-    module debounce_keys #(
-        .N(4),                       
-        .DELAY_COUNTS(2500)
-    ) u_debounce_keys (
+    module debounce_keys u_debounce_keys (
         .clk(CLOCK_50),
         .buttons(KEYS),         
         .key_edge(key_edge),
@@ -28,14 +25,14 @@ module top_level (
     );
 
     refresher250ms u_refresher250ms (
-        .CLOCK_50(CLOCK_50),
+        .clk(CLOCK_50),
         .en(enable),
         .measure(measure_pulse) // Will pulse high for one clock cycle every 250ms
     );
 
     // Use the measure pulse with your proximity sensor
     proximity_sensor u_proximity_sensor (
-        .CLOCK_50(CLOCK_50),
+        .clk(CLOCK_50),
         .rst_n(rst_n),
         .measure(measure_pulse), // Connect the 250ms pulse here
         .ready(ready),

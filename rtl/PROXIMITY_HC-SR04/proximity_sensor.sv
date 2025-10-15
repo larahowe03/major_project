@@ -5,7 +5,7 @@
 module proximity_sensor #(
     parameter TEN_US = 10'd500 // ten microseconds
 )(
-    input CLOCK_50, //50 MHz
+    input clk, //50 MHz
     input rst_n,
     input measure,
     // output logic [1:0] state,
@@ -39,7 +39,7 @@ module proximity_sensor #(
     end
 
     // State transitions
-    always_ff @(posedge CLOCK_50 or negedge rst_n) begin
+    always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             current_state <= Idle;
             counter <= '0;

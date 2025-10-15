@@ -1,5 +1,5 @@
 module refresher250ms (
-    input CLOCK_50,
+    input clk,
     input en,
     output measure
 );
@@ -7,7 +7,7 @@ module refresher250ms (
 
     assign measure = (counter == 25'd1);
 
-    always @(posedge CLOCK_50) begin
+    always @(posedge clk) begin
         if (~en | (counter == 25'd12_500_000)) begin
             counter <= 25'd0;
         end else begin
