@@ -2,8 +2,7 @@ module top_level (
     input CLOCK_50,
     input [3:0] KEYS,
     output [9:0] LEDR,
-    input echo,           // HC-SR04 Echo pin - ADD THIS
-    output trig           // HC-SR04 Trigger pin - ADD THIS
+    inout [35:0] GPIO_0  // Entire GPIO_0 bus (bidirectional)
 );
     logic enable;
     logic measure_pulse;
@@ -12,6 +11,10 @@ module top_level (
     logic ready;
     logic echo;
     logic trig;
+
+    assign echo = GPIO_0[27];  // Echo input from pin 27
+    assign GPIO_0[29] = trig;  // Trig output to pin 29
+    
     logic [21:0] distanceRAW;
 
     logic [3:0] key_edge;
