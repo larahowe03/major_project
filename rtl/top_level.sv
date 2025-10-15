@@ -2,7 +2,7 @@ module top_level (
     input CLOCK_50,
     input [3:0] KEYS,
     output [17:0] LEDR,
-    inout [35:0] GPIO_0  // Entire GPIO_0 bus (bidirectional)
+    inout [35:0] GPIO  // Entire GPIO_0 bus (bidirectional)
 );
     logic enable;
     logic measure_pulse;
@@ -12,8 +12,8 @@ module top_level (
     logic echo;
     logic trig;
 
-    assign echo = GPIO_0[27];  // Echo input from pin 27
-    assign GPIO_0[29] = trig;  // Trig output to pin 29
+    assign echo = GPIO[27];  // Echo input from pin 27
+    assign GPIO[29] = trig;  // Trig output to pin 29
     
     logic [21:0] distanceRAW;
 
