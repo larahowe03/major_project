@@ -1,6 +1,7 @@
 module top_level (
     input CLOCK_50,
-    input [3:0] KEYS
+    input [3:0] KEYS,
+    output [9:0] LEDR
 );
     logic enable;
     logic measure_pulse;
@@ -40,4 +41,24 @@ module top_level (
         .trig(trig),
         .distanceRAW(distanceRAW)
     );
+
+    // Bar graph style (closer = more LEDs)
+    // Scale distance and show as bar graph
+    logic [3:0] distance_scaled;
+    assign distance_scaled = distanceRAW[21:18]; // Use top 4 bits
+    
+    always_comb begin
+        case (distance_scaled)
+            4'd0, 4'd1:  LEDR = 10'b1111111111; // Very close - all LEDs
+            4'd2, 4'd3:  LEDR = 10'b0111111111; // Close - 9 LEDs
+            4'd4, 4'd5:  LEDR = 10'b0011111111; // Medium - 8 LEDs
+            4'd6, 4'd7:  LEDR = 10'b0001111111; // 7 LEDs
+            4'd8, 4'd9:  LEDR = 10'b0000111111; // 6 LEDs
+            4'd10, 4'd11: LEDR = 10'b0000011111; // 5 LEDs
+            4'd12, 4'd13: LEDR = 10'b0000001111; // Far - 4 LEDs
+            4'd14:       LEDR = 10'b0000000111; // Very far - 3 LEDs
+            default:     LEDR = 10'b0000000001; // Too far - 1 LED
+        endcase
+    end
+
 endmodule
