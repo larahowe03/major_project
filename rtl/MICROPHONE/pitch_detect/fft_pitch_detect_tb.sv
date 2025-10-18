@@ -1,7 +1,7 @@
 `timescale 1ps/1ps
 module fft_pitch_detect_tb;
 
-    localparam NSamples = 1024;
+    localparam NSamples = 256;
     localparam W        = 16;
 
     localparam TCLK_50  = 20_000;  // 50 MHz (20 ns) for main clock

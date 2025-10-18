@@ -1,5 +1,5 @@
 `timescale 1ns/1ns
-module window_function #(parameter W = 16, NSamples = 1024) (
+module window_function #(parameter W = 16, NSamples = 256) (
     input clk,
     input reset,
 

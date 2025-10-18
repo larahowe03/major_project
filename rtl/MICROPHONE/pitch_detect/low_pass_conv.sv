@@ -13,7 +13,7 @@ module low_pass_conv #(parameter W, W_FRAC) (
 
     // Copy & Paste your solution to Lesson 4 low_pass_conv.sv here!
 
-    integer i;
+    // integer i;
 
     // 1. Assign x_ready: we are ready for data if the module we output to (y_ready) is ready (this module does not exert backpressure).
     assign x_ready = y_ready;
@@ -25,11 +25,11 @@ module low_pass_conv #(parameter W, W_FRAC) (
     // 2. Make a shift register of depth = impulse response size. Feed x_data into this shift register when x_valid=1 and x_ready=1 (and shift all other data in the shift reg).
     logic signed [W-1:0] shift_reg [0:N-1];
     always_ff @(posedge clk) begin : h_shift_register
-        
+        integer i;
         if (x_valid & x_ready) begin
             shift_reg[0] <= signed'(x_data);
 
-            for (i = 0; i < N; i = i + 1) begin
+            for (i = 0; i < N-1; i = i + 1) begin
                 shift_reg[i+1] <= shift_reg[i];
             end
         end
@@ -41,8 +41,8 @@ module low_pass_conv #(parameter W, W_FRAC) (
     // 3. Multiply each register in the shift register by its repsective h[n] value, for n = 0 to N.
     logic signed [2*W-1:0] mult_result [0:N-1];  // 2*W as the multiply doubles width
     always_comb begin : h_multiply
-
-        for (i = 0; i < N-1; i = i + 1) begin
+        integer i;
+        for (i = 0; i < N; i = i + 1) begin
             mult_result[i] = signed'(shift_reg[i]) * signed'(h[i]);
         end
     
@@ -54,6 +54,7 @@ module low_pass_conv #(parameter W, W_FRAC) (
     // 4. Add all of the multiplication results together and shift the result into the output buffer.
     logic signed [$clog2(N)+2*W:0] macc; // $clog2(N)+1 to accomodate for overflows over the 41 additions.
     always_comb begin : MAC
+        integer i;
         macc = 0;
 
         for (i = 0; i < N; i = i + 1) begin

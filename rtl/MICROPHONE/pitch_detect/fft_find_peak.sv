@@ -1,5 +1,5 @@
 module fft_find_peak #(
-    parameter NSamples = 1024, // 1024 N-points
+    parameter NSamples = 256, // 256 N-points
     parameter W        = 33,   // For 16x2 + 1
     parameter NBits    = $clog2(NSamples)
 
@@ -50,7 +50,7 @@ module fft_find_peak #(
                 peak_valid <= 0;
             end
         end
-        //TODO Find the peak (maximum) value out of a window of 1024 streamed samples (512, actually), streamed in one at a time.
+        //TODO Find the peak (maximum) value out of a window of 256 streamed samples (256, actually), streamed in one at a time.
         // Store the corresponding k-index representing that value in 'temp_peak_k'.
         // Ensure 'temp_peak_k' is not negative by ignoring the magnitude input when the k-index is negative (MSB==1).
         

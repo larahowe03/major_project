@@ -1,5 +1,5 @@
 module fft_pitch_detect # (
-    parameter int NSamples = 1024,
+    parameter int NSamples = 256,
 	 parameter int W = 16
 ) (
     input logic audio_clk,

@@ -6,7 +6,7 @@ use POSIX 'floor';
 
 my $pi = atan2(1, 1) * 4;
 
-my $N = 1024;	# Number of FFT Points
+my $N = 256;	# Number of FFT Points
 my $NB = 32;	# Number of Twiddle Data Bits
 
 my $ND = int(log(2**($NB-1))/log(10)) + 2;	# Number of Decimal Digits

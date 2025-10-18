@@ -89,11 +89,11 @@ module async_fifo (
 				.wrusedw ());
 	defparam
 		dcfifo_component.intended_device_family = "Cyclone IV E",
-		dcfifo_component.lpm_numwords = 1024,
+		dcfifo_component.lpm_numwords = 256,
 		dcfifo_component.lpm_showahead = "ON",
 		dcfifo_component.lpm_type = "dcfifo",
 		dcfifo_component.lpm_width = 16,
-		dcfifo_component.lpm_widthu = 10,
+		dcfifo_component.lpm_widthu = 8,
 		dcfifo_component.overflow_checking = "ON",
 		dcfifo_component.rdsync_delaypipe = 4,
 		dcfifo_component.read_aclr_synch = "OFF",

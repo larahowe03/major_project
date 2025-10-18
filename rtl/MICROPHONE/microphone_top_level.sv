@@ -1,4 +1,4 @@
-module top_level #(
+module microphone_top_level #(
 	parameter int DE1_SOC = 1 // !!!IMPORTANT: Set this to 1 for DE1-SoC or 0 for DE2-115
 ) (
 	input       CLOCK_50,     // 50 MHz only used as input to the PLLs.
@@ -21,7 +21,7 @@ module top_level #(
 	input    AUD_ADCLRCK
 );
 	localparam W        = 16;   //NOTE: To change this, you must also change the Twiddle factor initialisations in r22sdf/Twiddle.v. You can use r22sdf/twiddle_gen.pl.
-	localparam NSamples = 1024; //NOTE: To change this, you must also change the SdfUnit instantiations in r22sdf/FFT.v accordingly.
+	localparam NSamples = 256; //NOTE: To change this, you must also change the SdfUnit instantiations in r22sdf/FFT.v accordingly.
 
 	logic i2c_clk; i2c_pll i2c_pll_u (.areset(1'b0),.inclk0(CLOCK_50),.c0(i2c_clk)); // generate 20 kHz clock
 	logic adc_clk; adc_pll adc_pll_u (.areset(1'b0),.inclk0(CLOCK_50),.c0(adc_clk)); // generate 18.432 MHz clock
