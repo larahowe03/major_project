@@ -253,11 +253,11 @@ module convolution_filter_tb;
     
     task load_edge_detect_kernel;
         begin
-            $display("Loading 3x3 Edge Detection kernel");
-            // Sobel-like edge detection
-            kernel[0][0] = -8'sd1; kernel[0][1] = -8'sd1; kernel[0][2] = -8'sd1;
-            kernel[1][0] = -8'sd1; kernel[1][1] =  8'sd8; kernel[1][2] = -8'sd1;
-            kernel[2][0] = -8'sd1; kernel[2][1] = -8'sd1; kernel[2][2] = -8'sd1;
+            $display("Loading 3x3 Laplacian Edge Detection kernel");
+            // Laplacian: [[0 -1 0]; [-1 4 -1]; [0 -1 0]]
+            kernel[0][0] =  8'sd0; kernel[0][1] = -8'sd1; kernel[0][2] =  8'sd0;
+            kernel[1][0] = -8'sd1; kernel[1][1] =  8'sd4; kernel[1][2] = -8'sd1;
+            kernel[2][0] =  8'sd0; kernel[2][1] = -8'sd1; kernel[2][2] =  8'sd0;
         end
     endtask
     
