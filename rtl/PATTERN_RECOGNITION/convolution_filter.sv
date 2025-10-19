@@ -168,7 +168,8 @@ module convolution_filter #(
                 x_data_d1 <= x_data;  // Delay input data
                 
                 // Output convolution result (with proper fixed-point truncation)
-                if (convolution_valid) begin
+                // Use DELAYED convolution_valid to match the y_valid timing
+                if (convolution_valid_d1) begin
                     y_data <= truncated_result;  // Extract properly scaled bits
                 end else begin
                     // Border handling: pass through delayed input pixel
