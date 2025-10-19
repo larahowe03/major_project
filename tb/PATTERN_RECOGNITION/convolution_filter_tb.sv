@@ -34,7 +34,7 @@ module convolution_filter_tb;
     // Memory for Image Data
     // ========================================================================
     logic [W-1:0] input_image [0:IMG_WIDTH*IMG_HEIGHT-1];
-    logic [W-1:0] output_image [0:IMG_WIDTH*IMG_HEIGHT-1];
+    logic [W-1:0] output_image [0:IMG_WIDTH*IMG_HEIGHT-1] = '{default: 8'hFF};  // Initialize to white
     
     // ========================================================================
     // Clock Generation
@@ -86,7 +86,8 @@ module convolution_filter_tb;
         // Load input image from MIF file
         load_mif_file("image_grayscale.mif", input_image);
         $display("Loaded input image from image_grayscale.mif");
-        $display("First few pixels: %h %h %h %h", input_image[0], input_image[1], input_image[2], input_image[3]);
+        $display("First few pixels: %h %h %h %h %h", input_image[0], input_image[1], input_image[2], input_image[3], input_image[4]);
+        $display("Last few pixels: %h %h %h", input_image[IMG_WIDTH*IMG_HEIGHT-3], input_image[IMG_WIDTH*IMG_HEIGHT-2], input_image[IMG_WIDTH*IMG_HEIGHT-1]);
         $display("Image size: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
         
         // Select kernel type (choose one)
@@ -104,6 +105,10 @@ module convolution_filter_tb;
         for (pixel_in_count = 0; pixel_in_count < IMG_WIDTH*IMG_HEIGHT; pixel_in_count++) begin
             x_data = input_image[pixel_in_count];
             x_valid = 1;
+            
+            // Debug first few pixels
+            if (pixel_in_count < 5)
+                $display("  IN[%0d] = %h", pixel_in_count, x_data);
             
             // Wait for handshake
             @(posedge clk);
