@@ -121,12 +121,19 @@ module convolution_filter_tb;
         x_valid = 0;
         $display("Finished sending all input pixels");
         
+        // Give extra time for pipeline to flush the last pixel
+        repeat(20) @(posedge clk);
+        
         // Wait for all outputs with timeout counter
         i = 0;
         while (pixel_out_count < IMG_WIDTH*IMG_HEIGHT && i < 500000) begin
             @(posedge clk);
             i = i + 1;
         end
+        
+        // Extra cycles to ensure last pixel is captured (race condition fix)
+        repeat(5) @(posedge clk);
+        $display("Final pixel_out_count after extra wait: %0d", pixel_out_count);
         
         if (pixel_out_count >= IMG_WIDTH*IMG_HEIGHT) begin
             $display("All output pixels received!");
@@ -285,19 +292,9 @@ module convolution_filter_tb;
     // ========================================================================
     // Optional: Waveform Dump
     // ========================================================================
-    integer dump_idx;
     initial begin
         $dumpfile("convolution_filter_tb.vcd");
         $dumpvars(0, convolution_filter_tb);
-        
-        // Wait a bit for arrays to be initialized
-        #1;
-        
-        // Dump last 100 pixels of output_image
-        for (dump_idx = IMG_WIDTH*IMG_HEIGHT - 100; dump_idx < IMG_WIDTH*IMG_HEIGHT; dump_idx = dump_idx + 1) begin
-            $dumpvars(1, output_image[dump_idx]);
-        end
-    endend
     end
     
     // ========================================================================
