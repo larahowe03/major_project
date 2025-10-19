@@ -34,17 +34,21 @@ def mif_to_grayscale_image(mif_file_name, output_image_name=None, resolution=[64
                 width = int(re.search(r'\d+', line).group())
             elif line.startswith("DEPTH"):
                 depth = int(re.search(r'\d+', line).group())
-            elif line.startswith("CONTENT BEGIN"):
+            elif "BEGIN" in line:  # Handle both "CONTENT BEGIN" and "BEGIN"
                 in_content = True
-            elif line.startswith("END"):
+            elif line.startswith("END") or line == "END;":
                 break
             elif in_content and ':' in line:
-                # Parse data line: "address:value;"
+                # Parse data line: "address : value;" or "address:value;"
                 parts = line.replace(';', '').split(':')
                 if len(parts) == 2:
-                    addr = int(parts[0].strip(), 16)
-                    value = int(parts[1].strip(), 16)
-                    pixels[addr] = value
+                    try:
+                        addr = int(parts[0].strip(), 16)
+                        value = int(parts[1].strip(), 16)
+                        pixels[addr] = value
+                    except ValueError:
+                        # Skip lines that can't be parsed as hex
+                        continue
     
     print(f"MIF Info: WIDTH={width}, DEPTH={depth}")
     print(f"Loaded {len(pixels)} pixels")
