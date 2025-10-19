@@ -151,6 +151,7 @@ module convolution_filter #(
     // Delay valid by 1 cycle to account for pipeline
     logic x_valid_d1;
     logic convolution_valid_d1;
+    logic [W-1:0] x_data_d1;  // Also delay the input data for border passthrough
     
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -158,18 +159,20 @@ module convolution_filter #(
             y_data <= '0;
             x_valid_d1 <= 1'b0;
             convolution_valid_d1 <= 1'b0;
+            x_data_d1 <= '0;
         end else begin
             // Update pipeline when handshake occurs
             if (handshake) begin
                 x_valid_d1 <= x_valid;
                 convolution_valid_d1 <= convolution_valid;
+                x_data_d1 <= x_data;  // Delay input data
                 
                 // Output convolution result (with proper fixed-point truncation)
                 if (convolution_valid) begin
                     y_data <= truncated_result;  // Extract properly scaled bits
                 end else begin
-                    // Border handling: pass through original pixel (center of window)
-                    y_data <= window_reg[KERNEL_H/2][KERNEL_W/2];
+                    // Border handling: pass through delayed input pixel
+                    y_data <= x_data_d1;
                 end
                 
                 // Set valid after 1 cycle delay (for ALL pixels, not just convolved ones)
