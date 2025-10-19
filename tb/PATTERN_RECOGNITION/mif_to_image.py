@@ -56,6 +56,7 @@ def mif_to_grayscale_image(mif_file_name, output_image_name=None, resolution=[64
     for addr, value in pixels.items():
         if addr < image_width * image_height:
             # Convert linear address to (row, col)
+            # Fixed: Use image_width for proper row-major addressing
             row = addr // image_width
             col = addr % image_width
             img_array[row, col] = value
@@ -170,4 +171,24 @@ def mif_to_rgb_image(mif_file_name, output_image_name=None, RGB_format=[8,8,8], 
 
 
 if __name__ == "__main__":
-    mif_to_grayscale_image("output_image.mif", "filtered_output.png")
+    # Example usage
+    if len(sys.argv) > 1:
+        mif_file = sys.argv[1]
+        output_file = sys.argv[2] if len(sys.argv) > 2 else None
+        
+        # Try to detect if it's RGB or grayscale from WIDTH
+        with open(mif_file, 'r') as f:
+            for line in f:
+                if line.startswith("WIDTH"):
+                    width = int(re.search(r'\d+', line).group())
+                    if width == 8:
+                        print("Detected grayscale format (8-bit)")
+                        mif_to_grayscale_image(mif_file, output_file)
+                    else:
+                        print(f"Detected RGB format ({width}-bit)")
+                        mif_to_rgb_image(mif_file, output_file)
+                    break
+    else:
+        # Default: convert output_image.mif from your testbench
+        print("Converting output_image.mif to PNG...")
+        mif_to_grayscale_image("output_image.mif", "filtered_output.png")
