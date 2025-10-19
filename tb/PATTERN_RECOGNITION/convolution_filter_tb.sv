@@ -5,36 +5,36 @@ module convolution_filter_tb;
     // ========================================================================
     // Parameters
     // ========================================================================
-    localparam IMG_WIDTH = 640;
-    localparam IMG_HEIGHT = 480;
-    localparam KERNEL_H = 3;
-    localparam KERNEL_W = 3;
-    localparam W = 8;
-    localparam W_FRAC = 0;
+    parameter IMG_WIDTH = 640;
+    parameter IMG_HEIGHT = 480;
+    parameter KERNEL_H = 3;
+    parameter KERNEL_W = 3;
+    parameter W = 8;
+    parameter W_FRAC = 0;
     
-    localparam CLK_PERIOD = 10; // 100 MHz
+    parameter CLK_PERIOD = 20; // 50 MHz
     
     // ========================================================================
     // DUT Signals
     // ========================================================================
-    logic clk;
-    logic rst_n;
+    reg clk;
+    reg rst_n;
     
-    logic x_valid;
-    logic x_ready;
-    logic [W-1:0] x_data;
+    reg x_valid;
+    wire x_ready;
+    reg [W-1:0] x_data;
     
-    logic y_valid;
-    logic y_ready;
-    logic [W-1:0] y_data;
+    wire y_valid;
+    reg y_ready;
+    wire [W-1:0] y_data;
     
-    logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1];
+    reg signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1];
     
     // ========================================================================
     // Memory for Image Data
     // ========================================================================
-    logic [W-1:0] input_image [0:IMG_WIDTH*IMG_HEIGHT-1];
-    logic [W-1:0] output_image [0:IMG_WIDTH*IMG_HEIGHT-1] = '{default: 8'hFF};  // Initialize to white
+    reg [W-1:0] input_image [0:IMG_WIDTH*IMG_HEIGHT-1];
+    reg [W-1:0] output_image [0:IMG_WIDTH*IMG_HEIGHT-1];
     
     // ========================================================================
     // Clock Generation
@@ -69,22 +69,30 @@ module convolution_filter_tb;
     // ========================================================================
     // Test Variables
     // ========================================================================
-    integer pixel_in_count = 0;
-    integer pixel_out_count = 0;
+    integer pixel_in_count;
+    integer pixel_out_count;
     integer fd_out;
+    integer i;
     
     // ========================================================================
     // Input Stimulus Process
     // ========================================================================
     initial begin
         // Initialize
+        pixel_in_count = 0;
+        pixel_out_count = 0;
         rst_n = 0;
         x_valid = 0;
         x_data = 0;
         y_ready = 1; // Always ready to accept output
         
+        // Initialize output image to white
+        for (i = 0; i < IMG_WIDTH*IMG_HEIGHT; i = i + 1) begin
+            output_image[i] = 8'hFF;
+        end
+        
         // Load input image from MIF file
-        load_mif_file("image_grayscale.mif", input_image);
+        load_mif_file("image_grayscale.mif");
         $display("Loaded input image: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
         
         // Select kernel type
@@ -97,7 +105,7 @@ module convolution_filter_tb;
         
         // Stream input pixels
         $display("Starting to stream %0d pixels...", IMG_WIDTH*IMG_HEIGHT);
-        for (pixel_in_count = 0; pixel_in_count < IMG_WIDTH*IMG_HEIGHT; pixel_in_count++) begin
+        for (pixel_in_count = 0; pixel_in_count < IMG_WIDTH*IMG_HEIGHT; pixel_in_count = pixel_in_count + 1) begin
             x_data = input_image[pixel_in_count];
             x_valid = 1;
             
@@ -124,7 +132,7 @@ module convolution_filter_tb;
                 $display("WARNING: Timeout waiting for outputs. Received %0d/%0d pixels", 
                          pixel_out_count, IMG_WIDTH*IMG_HEIGHT);
             end
-        join_any;
+        join
         disable fork;
         
         // Save output
@@ -157,7 +165,8 @@ module convolution_filter_tb;
     // MIF File Loader (Simple C-style parsing)
     // ========================================================================
     
-    task automatic load_mif_file(input string filename, ref logic [W-1:0] mem_array [0:IMG_WIDTH*IMG_HEIGHT-1]);
+    task load_mif_file;
+        input [8*100:1] filename; // String parameter
         integer fd, status, addr, data, c;
         integer entries_loaded;
         begin
@@ -184,8 +193,14 @@ module convolution_filter_tb;
                 // Look for colon separator
                 while (!$feof(fd)) begin
                     c = $fgetc(fd);
-                    if (c == ":") break;
-                    if (c == ";" || c == "\n") break; // No colon found, restart
+                    if (c == ":") begin
+                        c = ":";
+                        disable label1;
+                    end
+                    if (c == ";" || c == "\n") begin
+                        disable label1;
+                    end
+                    begin: label1 end
                 end
                 
                 if (c != ":") continue; // Restart if we didn't find colon
@@ -193,14 +208,17 @@ module convolution_filter_tb;
                 // Read data value (hex)
                 status = $fscanf(fd, "%h", data);
                 if (status == 1 && addr < IMG_WIDTH*IMG_HEIGHT) begin
-                    mem_array[addr] = data[W-1:0];
-                    entries_loaded++;
+                    input_image[addr] = data[W-1:0];
+                    entries_loaded = entries_loaded + 1;
                 end
                 
                 // Skip to semicolon or newline
                 while (!$feof(fd)) begin
                     c = $fgetc(fd);
-                    if (c == ";" || c == "\n") break;
+                    if (c == ";" || c == "\n") begin
+                        disable label2;
+                    end
+                    begin: label2 end
                 end
             end
             
@@ -218,18 +236,17 @@ module convolution_filter_tb;
     // Kernel Loading Functions
     // ========================================================================
     
-    task load_box_blur_kernel();
+    task load_box_blur_kernel;
         begin
             $display("Loading 3x3 Box Blur kernel");
             // Box blur (average): all 1s, divide by 9 in convolution
             kernel[0][0] = 8'sd1; kernel[0][1] = 8'sd1; kernel[0][2] = 8'sd1;
             kernel[1][0] = 8'sd1; kernel[1][1] = 8'sd1; kernel[1][2] = 8'sd1;
             kernel[2][0] = 8'sd1; kernel[2][1] = 8'sd1; kernel[2][2] = 8'sd1;
-            // Note: You'll need to divide output by 9 for proper normalization
         end
     endtask
     
-    task load_sharpen_kernel();
+    task load_sharpen_kernel;
         begin
             $display("Loading 3x3 Sharpen kernel");
             // Sharpen: [ 0 -1  0; -1 5 -1; 0 -1 0 ]
@@ -239,7 +256,7 @@ module convolution_filter_tb;
         end
     endtask
     
-    task load_edge_detect_kernel();
+    task load_edge_detect_kernel;
         begin
             $display("Loading 3x3 Edge Detection kernel");
             // Sobel-like edge detection
@@ -253,8 +270,7 @@ module convolution_filter_tb;
     // Output Save Function
     // ========================================================================
     
-    task save_output_image();
-        integer i;
+    task save_output_image;
         begin
             $display("Saving output image to output_image.mif");
             fd_out = $fopen("output_image.mif", "w");
@@ -268,7 +284,7 @@ module convolution_filter_tb;
             $fwrite(fd_out, "BEGIN\n");
             
             // Write pixel data
-            for (i = 0; i < IMG_WIDTH*IMG_HEIGHT; i++) begin
+            for (i = 0; i < IMG_WIDTH*IMG_HEIGHT; i = i + 1) begin
                 $fwrite(fd_out, "%h : %h;\n", i, output_image[i]);
             end
             
