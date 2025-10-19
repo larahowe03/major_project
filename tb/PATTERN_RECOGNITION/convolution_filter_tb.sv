@@ -5,8 +5,8 @@ module convolution_filter_tb;
     // ========================================================================
     // Parameters
     // ========================================================================
-    localparam IMG_WIDTH = 982;
-    localparam IMG_HEIGHT = 409;
+    localparam IMG_WIDTH = 650;
+    localparam IMG_HEIGHT = 480;
     localparam KERNEL_H = 3;
     localparam KERNEL_W = 3;
     localparam W = 8;
