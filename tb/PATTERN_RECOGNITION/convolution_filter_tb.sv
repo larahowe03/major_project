@@ -168,6 +168,8 @@ module convolution_filter_tb;
     task load_mif_file;
         integer fd, status, addr, data, c;
         integer entries_loaded;
+        reg [200*8:1] line;
+        integer colon_pos, i_char;
         begin
             fd = $fopen("image_grayscale.mif", "r");
             if (fd == 0) begin
@@ -178,46 +180,33 @@ module convolution_filter_tb;
             $display("Parsing MIF file: image_grayscale.mif");
             entries_loaded = 0;
             
-            // Simple state machine to parse "addr : data;" format
-            // $fscanf automatically skips non-numeric text like "WIDTH", "BEGIN", etc.
+            // Read line by line
             while (!$feof(fd)) begin
-                // Try to read address (hex)
-                status = $fscanf(fd, "%h", addr);
-                if (status != 1) begin
-                    // Skip character and try again
-                    c = $fgetc(fd);
-                    continue;
+                // Read a line
+                status = $fgets(line, fd);
+                if (status == 0) continue;
+                
+                // Try to parse "addr:data;" format
+                // Look for colon in the line
+                colon_pos = -1;
+                for (i_char = 1; i_char <= 200*8; i_char = i_char + 8) begin
+                    if (line[i_char+:8] == ":") begin
+                        colon_pos = i_char;
+                        i_char = 200*8 + 8; // break
+                    end
                 end
                 
-                // Look for colon separator
-                while (!$feof(fd)) begin
-                    c = $fgetc(fd);
-                    if (c == ":") begin
-                        c = ":";
-                        disable label1;
+                if (colon_pos > 0) begin
+                    // Try to extract address and data
+                    status = $sscanf(line, "%h:%h", addr, data);
+                    if (status == 2 && addr < IMG_WIDTH*IMG_HEIGHT) begin
+                        input_image[addr] = data[W-1:0];
+                        entries_loaded = entries_loaded + 1;
+                        
+                        if (entries_loaded <= 5) begin
+                            $display("  addr=%h data=%h", addr, data);
+                        end
                     end
-                    if (c == ";" || c == "\n") begin
-                        disable label1;
-                    end
-                    begin: label1 end
-                end
-                
-                if (c != ":") continue; // Restart if we didn't find colon
-                
-                // Read data value (hex)
-                status = $fscanf(fd, "%h", data);
-                if (status == 1 && addr < IMG_WIDTH*IMG_HEIGHT) begin
-                    input_image[addr] = data[W-1:0];
-                    entries_loaded = entries_loaded + 1;
-                end
-                
-                // Skip to semicolon or newline
-                while (!$feof(fd)) begin
-                    c = $fgetc(fd);
-                    if (c == ";" || c == "\n") begin
-                        disable label2;
-                    end
-                    begin: label2 end
                 end
             end
             
