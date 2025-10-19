@@ -172,8 +172,8 @@ module convolution_filter #(
                     y_data <= window_reg[KERNEL_H/2][KERNEL_W/2];
                 end
                 
-                // Set valid after 1 cycle delay
-                y_valid <= x_valid_d1 & convolution_valid_d1;
+                // Set valid after 1 cycle delay (for ALL pixels, not just convolved ones)
+                y_valid <= x_valid_d1;  // Output valid whenever input was valid
             end else if (y_ready && y_valid) begin
                 // Clear valid when downstream consumes data (only if no new data)
                 y_valid <= 1'b0;
