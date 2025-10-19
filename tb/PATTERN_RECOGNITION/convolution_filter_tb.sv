@@ -160,7 +160,7 @@ module convolution_filter_tb;
     // MIF File Loader (Simple C-style parsing)
     // ========================================================================
     
-    task load_mif_file(input string filename, ref logic [W-1:0] mem_array [0:IMG_WIDTH*IMG_HEIGHT-1]);
+    task automatic load_mif_file(input string filename, ref logic [W-1:0] mem_array [0:IMG_WIDTH*IMG_HEIGHT-1]);
         integer fd, status, addr, data, c;
         integer entries_loaded;
         begin
