@@ -73,6 +73,16 @@ module convolution_filter #(
     
     logic [W-1:0] line_buffer [0:KERNEL_H-1][0:IMG_WIDTH-1];
     
+    // Initialize line buffer to prevent xxx values
+    integer init_row, init_col;
+    initial begin
+        for (init_row = 0; init_row < KERNEL_H; init_row = init_row + 1) begin
+            for (init_col = 0; init_col < IMG_WIDTH; init_col = init_col + 1) begin
+                line_buffer[init_row][init_col] = 8'h00;
+            end
+        end
+    end
+    
     always_ff @(posedge clk) begin
         if (handshake) begin
             // Shift rows: line[i] <- line[i-1], line[0] <- new data
@@ -88,6 +98,16 @@ module convolution_filter #(
     // ========================================================================
     
     logic [W-1:0] window_reg [0:KERNEL_H-1][0:KERNEL_W-1];
+    
+    // Initialize window register to prevent xxx values
+    integer init_wrow, init_wcol;
+    initial begin
+        for (init_wrow = 0; init_wrow < KERNEL_H; init_wrow = init_wrow + 1) begin
+            for (init_wcol = 0; init_wcol < KERNEL_W; init_wcol = init_wcol + 1) begin
+                window_reg[init_wrow][init_wcol] = 8'h00;
+            end
+        end
+    end
     
     always_ff @(posedge clk) begin
         if (handshake) begin
