@@ -146,8 +146,16 @@ module convolution_filter_tb;
     // ========================================================================
     always @(posedge clk) begin
         if (rst_n && y_valid && y_ready) begin
-            output_image[pixel_out_count] = y_data;
-            pixel_out_count = pixel_out_count + 1;  // Use blocking assignment
+            if (pixel_out_count < IMG_WIDTH*IMG_HEIGHT) begin
+                output_image[pixel_out_count] = y_data;
+            end else begin
+                $display("WARNING: Extra output pixel! count=%0d data=%h", pixel_out_count, y_data);
+            end
+            pixel_out_count = pixel_out_count + 1;
+            
+            // Debug first and last few pixels
+            if (pixel_out_count <= 5 || pixel_out_count >= IMG_WIDTH*IMG_HEIGHT - 5)
+                $display("  OUT[%0d] = %h", pixel_out_count-1, y_data);
             
             // Optional: Print progress
             if (pixel_out_count % 10000 == 0)
