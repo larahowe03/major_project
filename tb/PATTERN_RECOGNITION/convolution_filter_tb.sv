@@ -5,7 +5,7 @@ module convolution_filter_tb;
     // ========================================================================
     // Parameters
     // ========================================================================
-    localparam IMG_WIDTH = 650;
+    localparam IMG_WIDTH = 640;
     localparam IMG_HEIGHT = 480;
     localparam KERNEL_H = 3;
     localparam KERNEL_W = 3;
@@ -85,15 +85,10 @@ module convolution_filter_tb;
         
         // Load input image from MIF file
         load_mif_file("image_grayscale.mif", input_image);
-        $display("Loaded input image from image_grayscale.mif");
-        $display("First few pixels: %h %h %h %h %h", input_image[0], input_image[1], input_image[2], input_image[3], input_image[4]);
-        $display("Last few pixels: %h %h %h", input_image[IMG_WIDTH*IMG_HEIGHT-3], input_image[IMG_WIDTH*IMG_HEIGHT-2], input_image[IMG_WIDTH*IMG_HEIGHT-1]);
-        $display("Image size: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
+        $display("Loaded input image: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
         
-        // Select kernel type (choose one)
-        // load_box_blur_kernel();
-        load_sharpen_kernel();
-        // load_edge_detect_kernel();
+        // Select kernel type
+        load_edge_detect_kernel();
         
         // Reset
         repeat(10) @(posedge clk);
@@ -106,16 +101,12 @@ module convolution_filter_tb;
             x_data = input_image[pixel_in_count];
             x_valid = 1;
             
-            // Debug first few pixels
-            if (pixel_in_count < 5)
-                $display("  IN[%0d] = %h", pixel_in_count, x_data);
-            
             // Wait for handshake
             @(posedge clk);
             while (!x_ready) @(posedge clk);
             
-            // Optional: Print progress
-            if (pixel_in_count % 10000 == 0)
+            // Print progress
+            if (pixel_in_count % 50000 == 0)
                 $display("  Sent pixel %0d/%0d", pixel_in_count, IMG_WIDTH*IMG_HEIGHT);
         end
         
@@ -151,34 +142,14 @@ module convolution_filter_tb;
     // ========================================================================
     always @(posedge clk) begin
         if (rst_n && y_valid && y_ready) begin
-            $display("[%0t] Capturing: pixel_out_count=%0d, y_data=%h", $time, pixel_out_count, y_data);
-            
             if (pixel_out_count < IMG_WIDTH*IMG_HEIGHT) begin
                 output_image[pixel_out_count] = y_data;
-            end else begin
-                $display("WARNING: Extra output pixel! count=%0d data=%h", pixel_out_count, y_data);
             end
             pixel_out_count = pixel_out_count + 1;
             
-            // Debug first and last few pixels
-            if (pixel_out_count <= 5 || pixel_out_count >= IMG_WIDTH*IMG_HEIGHT - 5)
-                $display("  OUT[%0d] = %h (stored)", pixel_out_count-1, output_image[pixel_out_count-1]);
-            
-            // Optional: Print progress
-            if (pixel_out_count % 10000 == 0)
+            // Print progress
+            if (pixel_out_count % 50000 == 0)
                 $display("  Received pixel %0d/%0d", pixel_out_count, IMG_WIDTH*IMG_HEIGHT);
-        end
-    end
-    
-    // Debug monitor
-    initial begin
-        repeat(20) @(posedge clk);
-        forever begin
-            @(posedge clk);
-            if (pixel_in_count < 10 || (pixel_in_count % 10000 == 0 && pixel_in_count < 100)) begin
-                $display("[%0t] x_valid=%b x_ready=%b x_data=%h | y_valid=%b y_ready=%b y_data=%h | in=%0d out=%0d", 
-                         $time, x_valid, x_ready, x_data, y_valid, y_ready, y_data, pixel_in_count, pixel_out_count);
-            end
         end
     end
     
@@ -224,10 +195,6 @@ module convolution_filter_tb;
                 if (status == 1 && addr < IMG_WIDTH*IMG_HEIGHT) begin
                     mem_array[addr] = data[W-1:0];
                     entries_loaded++;
-                    
-                    // Show first few entries for debug
-                    if (entries_loaded <= 10 || entries_loaded % 50000 == 0) 
-                        $display("  [%0d] addr=%h data=%h", entries_loaded, addr, data);
                 end
                 
                 // Skip to semicolon or newline
