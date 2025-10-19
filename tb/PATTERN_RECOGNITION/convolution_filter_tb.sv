@@ -285,9 +285,19 @@ module convolution_filter_tb;
     // ========================================================================
     // Optional: Waveform Dump
     // ========================================================================
+    integer dump_idx;
     initial begin
         $dumpfile("convolution_filter_tb.vcd");
         $dumpvars(0, convolution_filter_tb);
+        
+        // Wait a bit for arrays to be initialized
+        #1;
+        
+        // Dump last 100 pixels of output_image
+        for (dump_idx = IMG_WIDTH*IMG_HEIGHT - 100; dump_idx < IMG_WIDTH*IMG_HEIGHT; dump_idx = dump_idx + 1) begin
+            $dumpvars(1, output_image[dump_idx]);
+        end
+    endend
     end
     
     // ========================================================================
