@@ -19,7 +19,7 @@ module convolution_filter #(
     input logic y_ready,
     output logic [W-1:0] y_data,
     
-    // Filter kernel
+    // Impulse response
     input logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1]
 );
 
@@ -73,14 +73,8 @@ module convolution_filter #(
     
     logic [W-1:0] line_buffer [0:KERNEL_H-1][0:IMG_WIDTH-1];
     
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            for (int row = 0; row < KERNEL_H; row++) begin
-                for (int col = 0; col < IMG_WIDTH; col++) begin
-                    line_buffer[row][col] <= '0;
-                end
-            end
-        end else if (handshake) begin
+    always_ff @(posedge clk) begin
+        if (handshake) begin
             // Shift rows: line[i] <- line[i-1], line[0] <- new data
             for (int row = KERNEL_H - 1; row > 0; row--) begin
                 line_buffer[row][x_pos] <= line_buffer[row-1][x_pos];
@@ -95,14 +89,8 @@ module convolution_filter #(
     
     logic [W-1:0] window_reg [0:KERNEL_H-1][0:KERNEL_W-1];
     
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            for (int row = 0; row < KERNEL_H; row++) begin
-                for (int col = 0; col < KERNEL_W; col++) begin
-                    window_reg[row][col] <= '0;
-                end
-            end
-        end else if (handshake) begin
+    always_ff @(posedge clk) begin
+        if (handshake) begin
             for (int row = 0; row < KERNEL_H; row++) begin
                 // Shift horizontally within each row
                 for (int col = KERNEL_W - 1; col > 0; col--) begin
@@ -171,10 +159,6 @@ module convolution_filter #(
             x_valid_d1 <= 1'b0;
             convolution_valid_d1 <= 1'b0;
         end else begin
-            // Clear valid when downstream consumes data
-            if (y_ready && y_valid)
-                y_valid <= 1'b0;
-            
             // Update pipeline when handshake occurs
             if (handshake) begin
                 x_valid_d1 <= x_valid;
@@ -190,6 +174,9 @@ module convolution_filter #(
                 
                 // Set valid after 1 cycle delay
                 y_valid <= x_valid_d1 & convolution_valid_d1;
+            end else if (y_ready && y_valid) begin
+                // Clear valid when downstream consumes data (only if no new data)
+                y_valid <= 1'b0;
             end
         end
     end

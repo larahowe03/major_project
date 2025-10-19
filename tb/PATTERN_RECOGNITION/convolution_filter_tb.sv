@@ -117,8 +117,19 @@ module convolution_filter_tb;
         x_valid = 0;
         $display("Finished sending all input pixels");
         
-        // Wait for all outputs
-        wait(pixel_out_count >= IMG_WIDTH*IMG_HEIGHT);
+        // Wait for all outputs (with timeout)
+        fork
+            begin
+                wait(pixel_out_count >= IMG_WIDTH*IMG_HEIGHT);
+                $display("All output pixels received!");
+            end
+            begin
+                #(CLK_PERIOD * 500000); // 500k cycles timeout
+                $display("WARNING: Timeout waiting for outputs. Received %0d/%0d pixels", 
+                         pixel_out_count, IMG_WIDTH*IMG_HEIGHT);
+            end
+        join_any
+        disable fork;
         
         // Save output
         repeat(100) @(posedge clk);
