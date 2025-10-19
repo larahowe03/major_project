@@ -151,6 +151,8 @@ module convolution_filter_tb;
     // ========================================================================
     always @(posedge clk) begin
         if (rst_n && y_valid && y_ready) begin
+            $display("[%0t] Capturing: pixel_out_count=%0d, y_data=%h", $time, pixel_out_count, y_data);
+            
             if (pixel_out_count < IMG_WIDTH*IMG_HEIGHT) begin
                 output_image[pixel_out_count] = y_data;
             end else begin
@@ -160,7 +162,7 @@ module convolution_filter_tb;
             
             // Debug first and last few pixels
             if (pixel_out_count <= 5 || pixel_out_count >= IMG_WIDTH*IMG_HEIGHT - 5)
-                $display("  OUT[%0d] = %h", pixel_out_count-1, y_data);
+                $display("  OUT[%0d] = %h (stored)", pixel_out_count-1, output_image[pixel_out_count-1]);
             
             // Optional: Print progress
             if (pixel_out_count % 10000 == 0)
