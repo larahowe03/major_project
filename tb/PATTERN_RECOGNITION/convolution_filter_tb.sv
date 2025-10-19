@@ -147,7 +147,7 @@ module convolution_filter_tb;
     always @(posedge clk) begin
         if (rst_n && y_valid && y_ready) begin
             output_image[pixel_out_count] = y_data;
-            pixel_out_count++;
+            pixel_out_count = pixel_out_count + 1;  // Use blocking assignment
             
             // Optional: Print progress
             if (pixel_out_count % 10000 == 0)
