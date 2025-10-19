@@ -84,8 +84,10 @@ module convolution_filter_tb;
         y_ready = 1; // Always ready to accept output
         
         // Load input image from MIF file
-        $readmemh("tb/PATTERN_RECOGNITION/image_grayscale.mif", input_image);
-        $display("Loaded input image from tb/PATTERN_RECOGNITION/image_grayscale.mif");
+        load_mif_file("image_grayscale.mif", input_image);
+        $display("Loaded input image from image_grayscale.mif");
+        $display("First few pixels: %h %h %h %h", input_image[0], input_image[1], input_image[2], input_image[3]);
+        $display("Image size: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
         
         // Select kernel type (choose one)
         // load_box_blur_kernel();
@@ -102,13 +104,13 @@ module convolution_filter_tb;
         for (pixel_in_count = 0; pixel_in_count < IMG_WIDTH*IMG_HEIGHT; pixel_in_count++) begin
             x_data = input_image[pixel_in_count];
             x_valid = 1;
-            @(posedge clk);
             
             // Wait for handshake
+            @(posedge clk);
             while (!x_ready) @(posedge clk);
             
             // Optional: Print progress
-            if (pixel_in_count % 1000 == 0)
+            if (pixel_in_count % 10000 == 0)
                 $display("  Sent pixel %0d/%0d", pixel_in_count, IMG_WIDTH*IMG_HEIGHT);
         end
         
@@ -137,10 +139,87 @@ module convolution_filter_tb;
             pixel_out_count++;
             
             // Optional: Print progress
-            if (pixel_out_count % 1000 == 0)
+            if (pixel_out_count % 10000 == 0)
                 $display("  Received pixel %0d/%0d", pixel_out_count, IMG_WIDTH*IMG_HEIGHT);
         end
     end
+    
+    // Debug monitor
+    initial begin
+        repeat(20) @(posedge clk);
+        forever begin
+            @(posedge clk);
+            if (pixel_in_count < 10 || (pixel_in_count % 10000 == 0 && pixel_in_count < 100)) begin
+                $display("[%0t] x_valid=%b x_ready=%b x_data=%h | y_valid=%b y_ready=%b y_data=%h | in=%0d out=%0d", 
+                         $time, x_valid, x_ready, x_data, y_valid, y_ready, y_data, pixel_in_count, pixel_out_count);
+            end
+        end
+    end
+    
+    // ========================================================================
+    // MIF File Loader (Simple C-style parsing)
+    // ========================================================================
+    
+    task load_mif_file(input string filename, ref logic [W-1:0] mem_array []);
+        integer fd, status, addr, data, c;
+        integer entries_loaded;
+        begin
+            fd = $fopen(filename, "r");
+            if (fd == 0) begin
+                $display("ERROR: Cannot open file %s", filename);
+                $finish;
+            end
+            
+            $display("Parsing MIF file: %s", filename);
+            entries_loaded = 0;
+            
+            // Simple state machine to parse "addr : data;" format
+            // $fscanf automatically skips non-numeric text like "WIDTH", "BEGIN", etc.
+            while (!$feof(fd)) begin
+                // Try to read address (hex)
+                status = $fscanf(fd, "%h", addr);
+                if (status != 1) begin
+                    // Skip character and try again
+                    c = $fgetc(fd);
+                    continue;
+                end
+                
+                // Look for colon separator
+                while (!$feof(fd)) begin
+                    c = $fgetc(fd);
+                    if (c == ":") break;
+                    if (c == ";" || c == "\n") break; // No colon found, restart
+                end
+                
+                if (c != ":") continue; // Restart if we didn't find colon
+                
+                // Read data value (hex)
+                status = $fscanf(fd, "%h", data);
+                if (status == 1 && addr < IMG_WIDTH*IMG_HEIGHT) begin
+                    mem_array[addr] = data[W-1:0];
+                    entries_loaded++;
+                    
+                    // Show first few entries for debug
+                    if (entries_loaded <= 10 || entries_loaded % 50000 == 0) 
+                        $display("  [%0d] addr=%h data=%h", entries_loaded, addr, data);
+                end
+                
+                // Skip to semicolon or newline
+                while (!$feof(fd)) begin
+                    c = $fgetc(fd);
+                    if (c == ";" || c == "\n") break;
+                end
+            end
+            
+            $fclose(fd);
+            $display("MIF loading complete. Loaded %0d entries.", entries_loaded);
+            
+            if (entries_loaded == 0) begin
+                $display("ERROR: No data loaded from MIF file!");
+                $finish;
+            end
+        end
+    endtask
     
     // ========================================================================
     // Kernel Loading Functions
