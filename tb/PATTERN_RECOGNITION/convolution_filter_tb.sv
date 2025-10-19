@@ -92,7 +92,7 @@ module convolution_filter_tb;
         end
         
         // Load input image from MIF file
-        load_mif_file("image_grayscale.mif");
+        load_mif_file;
         $display("Loaded input image: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
         
         // Select kernel type
@@ -121,19 +121,19 @@ module convolution_filter_tb;
         x_valid = 0;
         $display("Finished sending all input pixels");
         
-        // Wait for all outputs (with timeout)
-        fork
-            begin
-                wait(pixel_out_count >= IMG_WIDTH*IMG_HEIGHT);
-                $display("All output pixels received!");
-            end
-            begin
-                #(CLK_PERIOD * 500000); // 500k cycles timeout
-                $display("WARNING: Timeout waiting for outputs. Received %0d/%0d pixels", 
-                         pixel_out_count, IMG_WIDTH*IMG_HEIGHT);
-            end
-        join
-        disable fork;
+        // Wait for all outputs with timeout counter
+        i = 0;
+        while (pixel_out_count < IMG_WIDTH*IMG_HEIGHT && i < 500000) begin
+            @(posedge clk);
+            i = i + 1;
+        end
+        
+        if (pixel_out_count >= IMG_WIDTH*IMG_HEIGHT) begin
+            $display("All output pixels received!");
+        end else begin
+            $display("WARNING: Timeout waiting for outputs. Received %0d/%0d pixels", 
+                     pixel_out_count, IMG_WIDTH*IMG_HEIGHT);
+        end
         
         // Save output
         repeat(100) @(posedge clk);
@@ -166,17 +166,16 @@ module convolution_filter_tb;
     // ========================================================================
     
     task load_mif_file;
-        input [8*100:1] filename; // String parameter
         integer fd, status, addr, data, c;
         integer entries_loaded;
         begin
-            fd = $fopen(filename, "r");
+            fd = $fopen("image_grayscale.mif", "r");
             if (fd == 0) begin
-                $display("ERROR: Cannot open file %s", filename);
+                $display("ERROR: Cannot open file image_grayscale.mif");
                 $finish;
             end
             
-            $display("Parsing MIF file: %s", filename);
+            $display("Parsing MIF file: image_grayscale.mif");
             entries_loaded = 0;
             
             // Simple state machine to parse "addr : data;" format
