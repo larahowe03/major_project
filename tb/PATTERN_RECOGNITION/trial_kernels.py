@@ -87,8 +87,8 @@ def test_all_kernels(image_path):
         axes[idx].axis('off')
         
         # Save individual result
-        Image.fromarray(result).save(f"kernel_{name.replace(' ', '_').replace('(', '').replace(')', '')}.png")
-        print(f"Saved: kernel_{name.replace(' ', '_').replace('(', '').replace(')', '')}.png")
+        # Image.fromarray(result).save(f"kernel_{name.replace(' ', '_').replace('(', '').replace(')', '')}.png")
+        # print(f"Saved: kernel_{name.replace(' ', '_').replace('(', '').replace(')', '')}.png")
     
     # Hide unused subplots
     for idx in range(len(kernels), len(axes)):
@@ -155,5 +155,4 @@ def test_single_kernel(image_path, kernel_name):
     plt.show()
 
 if __name__ == "__main__":
-    
     test_all_kernels("resized_image.png")

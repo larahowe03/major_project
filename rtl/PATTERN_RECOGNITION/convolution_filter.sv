@@ -160,10 +160,10 @@ module convolution_filter #(
     logic [W-1:0] truncated_result;
     
     always_comb begin
-        // Check for negative (sign bit)
-        if (macc[W+W_FRAC-1+$clog2(NUM_TAPS)+1]) begin  // If negative
+        // Check for negative (MSB of macc is sign bit)
+        if (macc[$clog2(NUM_TAPS) + 2*W]) begin  // If negative (sign bit = 1)
             truncated_result = 8'd0;  // Clamp to black
-        end else if (macc[W+W_FRAC-1:W_FRAC] > 8'd255) begin  // If overflow
+        end else if (macc > (255 << W_FRAC)) begin  // If overflow
             truncated_result = 8'd255;  // Clamp to white
         end else begin
             truncated_result = macc[W+W_FRAC-1:W_FRAC];  // Normal extraction
