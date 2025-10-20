@@ -258,6 +258,15 @@ module convolution_filter_tb;
         end
     endtask
 
+    task load_edge_very_aggressive_kernel;
+        begin
+            $display("Loading 3x3 Very Aggressive Edge Detection kernel");
+            kernel[0][0] = -8'sd1; kernel[0][1] = -8'sd1; kernel[0][2] = -8'sd1;
+            kernel[1][0] = -8'sd1; kernel[1][1] =  8'sd12; kernel[1][2] = -8'sd1;
+            kernel[2][0] = -8'sd1; kernel[2][1] = -8'sd1; kernel[2][2] = -8'sd1;
+        end
+    endtask
+
     task load_edge_gentle_kernel;
         begin
             $display("Loading 3x3 Gentle Edge Detection kernel");

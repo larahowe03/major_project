@@ -195,4 +195,4 @@ if __name__ == "__main__":
     else:
         # Default: convert output_image.mif from your testbench
         print("Converting output_image.mif to PNG...")
-        mif_to_grayscale_image("edge_gentle.mif", "edge_gentle.png")
+        mif_to_grayscale_image("edge_laplacian.mif", "edge_laplacian.png")
