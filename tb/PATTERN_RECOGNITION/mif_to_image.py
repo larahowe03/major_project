@@ -195,4 +195,4 @@ if __name__ == "__main__":
     else:
         # Default: convert output_image.mif from your testbench
         print("Converting output_image.mif to PNG...")
-        mif_to_grayscale_image("prewitt.mif", "prewitt.png")
+        mif_to_grayscale_image("softer_edge_detector.mif", "softer_edge_detector.png")

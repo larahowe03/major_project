@@ -153,13 +153,22 @@ module convolution_filter #(
     end
     
     // ========================================================================
-    // 6. FIXED-POINT TRUNCATION (Extract properly scaled result)
+    // 6. FIXED-POINT TRUNCATION WITH CLAMPING
     // ========================================================================
     
-    // Truncate macc to extract the W-bit result at the correct fixed-point position
-    // For W_FRAC=0 (integer): extract bits [W-1:0]
-    // For W_FRAC>0 (fixed-point): extract bits [W+W_FRAC-1:W_FRAC]
-    wire [W-1:0] truncated_result = macc[W+W_FRAC-1:W_FRAC];
+    // Truncate and clamp to prevent negative wraparound
+    logic [W-1:0] truncated_result;
+    
+    always_comb begin
+        // Check for negative (sign bit)
+        if (macc[W+W_FRAC-1+$clog2(NUM_TAPS)+1]) begin  // If negative
+            truncated_result = 8'd0;  // Clamp to black
+        end else if (macc[W+W_FRAC-1:W_FRAC] > 8'd255) begin  // If overflow
+            truncated_result = 8'd255;  // Clamp to white
+        end else begin
+            truncated_result = macc[W+W_FRAC-1:W_FRAC];  // Normal extraction
+        end
+    end
     
     // ========================================================================
     // 7. OUTPUT REGISTER (Pipeline and handshake control)
