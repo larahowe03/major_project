@@ -89,6 +89,11 @@ module zebra_crossing_detector #(
     logic in_roi;  // Are we in region of interest (bottom 2/3)?
     assign in_roi = (y_pos >= IMG_HEIGHT / 3);
     
+    // Detection method signals (declared outside always block)
+    logic method1_detect, method2_detect, method3_detect, method4_detect;
+    logic [3:0] active_scanlines, active_slices;
+    logic [2:0] vote;
+    
     integer i;
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -143,24 +148,19 @@ module zebra_crossing_detector #(
                     // ====== Detection Algorithm ======
                     
                     // Method 1: Row-based detection (works for horizontal crossings)
-                    logic method1_detect;
                     method1_detect = (stripe_rows >= MIN_STRIPES && stripe_rows <= MAX_STRIPES);
                     
                     // Method 2: Scan line analysis (works for angled crossings)
                     // Check if multiple scan lines have high edge density
-                    logic [3:0] active_scanlines;
                     active_scanlines = 0;
                     for (i = 0; i < NUM_SCAN_LINES; i = i + 1) begin
                         if (edge_count_per_scanline[i] > 50)  // Threshold for "has edges"
                             active_scanlines = active_scanlines + 1;
                     end
-                    logic method2_detect;
                     method2_detect = (active_scanlines >= 3);
                     
                     // Method 3: Slice distribution (checks for consistent pattern across width)
                     // For zebra crossing, expect similar edge density across slices
-                    logic method3_detect;
-                    logic [3:0] active_slices;
                     active_slices = 0;
                     for (i = 0; i < NUM_SLICES; i = i + 1) begin
                         if (edge_density_per_slice[i] > 100)  // Has significant edges
@@ -169,11 +169,9 @@ module zebra_crossing_detector #(
                     method3_detect = (active_slices >= 4);  // At least half the slices
                     
                     // Method 4: Overall edge density
-                    logic method4_detect;
                     method4_detect = (total_edges > 2000 && total_edges < 15000);  // Reasonable range
                     
                     // Combine methods (at least 2 must agree)
-                    logic [2:0] vote;
                     vote = {2'b0, method1_detect} + {2'b0, method2_detect} + 
                            {2'b0, method3_detect} + {2'b0, method4_detect};
                     
@@ -209,73 +207,73 @@ endmodule
 // Top-level module connecting convolution filter to zebra detector
 // ============================================================================
 
-module zebra_crossing_system #(
-    parameter IMG_WIDTH = 640,
-    parameter IMG_HEIGHT = 480,
-    parameter KERNEL_H = 3,
-    parameter KERNEL_W = 3,
-    parameter W = 8,
-    parameter W_FRAC = 0
-)(
-    input logic clk,
-    input logic rst_n,
+// module zebra_crossing_system #(
+//     parameter IMG_WIDTH = 640,
+//     parameter IMG_HEIGHT = 480,
+//     parameter KERNEL_H = 3,
+//     parameter KERNEL_W = 3,
+//     parameter W = 8,
+//     parameter W_FRAC = 0
+// )(
+//     input logic clk,
+//     input logic rst_n,
     
-    // Input pixel stream (from camera)
-    input logic x_valid,
-    output logic x_ready,
-    input logic [W-1:0] x_data,
+//     // Input pixel stream (from camera)
+//     input logic x_valid,
+//     output logic x_ready,
+//     input logic [W-1:0] x_data,
     
-    // Edge detection kernel
-    input logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1],
+//     // Edge detection kernel
+//     input logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1],
     
-    // Detection outputs
-    output logic crossing_detected,
-    output logic detection_valid,
-    output logic [7:0] stripe_count,
+//     // Detection outputs
+//     output logic crossing_detected,
+//     output logic detection_valid,
+//     output logic [7:0] stripe_count,
     
-    // Optional: edge-detected image output
-    output logic y_valid,
-    input logic y_ready,
-    output logic [W-1:0] y_data
-);
+//     // Optional: edge-detected image output
+//     output logic y_valid,
+//     input logic y_ready,
+//     output logic [W-1:0] y_data
+// );
 
-    // ========================================================================
-    // Instantiate convolution filter
-    // ========================================================================
-    convolution_filter #(
-        .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT),
-        .KERNEL_H(KERNEL_H),
-        .KERNEL_W(KERNEL_W),
-        .W(W),
-        .W_FRAC(W_FRAC)
-    ) edge_filter (
-        .clk(clk),
-        .rst_n(rst_n),
-        .x_valid(x_valid),
-        .x_ready(x_ready),
-        .x_data(x_data),
-        .y_valid(y_valid),
-        .y_ready(y_ready),
-        .y_data(y_data),
-        .kernel(kernel)
-    );
+//     // ========================================================================
+//     // Instantiate convolution filter
+//     // ========================================================================
+//     convolution_filter #(
+//         .IMG_WIDTH(IMG_WIDTH),
+//         .IMG_HEIGHT(IMG_HEIGHT),
+//         .KERNEL_H(KERNEL_H),
+//         .KERNEL_W(KERNEL_W),
+//         .W(W),
+//         .W_FRAC(W_FRAC)
+//     ) edge_filter (
+//         .clk(clk),
+//         .rst_n(rst_n),
+//         .x_valid(x_valid),
+//         .x_ready(x_ready),
+//         .x_data(x_data),
+//         .y_valid(y_valid),
+//         .y_ready(y_ready),
+//         .y_data(y_data),
+//         .kernel(kernel)
+//     );
     
-    // ========================================================================
-    // Instantiate zebra crossing detector
-    // ========================================================================
-    zebra_crossing_detector #(
-        .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT),
-        .W(W)
-    ) detector (
-        .clk(clk),
-        .rst_n(rst_n),
-        .pixel_valid(y_valid && y_ready),  // Connect to filter output
-        .edge_pixel(y_data),
-        .crossing_detected(crossing_detected),
-        .detection_valid(detection_valid),
-        .stripe_count(stripe_count)
-    );
+//     // ========================================================================
+//     // Instantiate zebra crossing detector
+//     // ========================================================================
+//     zebra_crossing_detector #(
+//         .IMG_WIDTH(IMG_WIDTH),
+//         .IMG_HEIGHT(IMG_HEIGHT),
+//         .W(W)
+//     ) detector (
+//         .clk(clk),
+//         .rst_n(rst_n),
+//         .pixel_valid(y_valid && y_ready),  // Connect to filter output
+//         .edge_pixel(y_data),
+//         .crossing_detected(crossing_detected),
+//         .detection_valid(detection_valid),
+//         .stripe_count(stripe_count)
+//     );
 
-endmodule
+// endmodule
