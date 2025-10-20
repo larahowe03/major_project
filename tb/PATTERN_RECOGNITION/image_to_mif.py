@@ -32,7 +32,7 @@ def image_to_grayscale_mif(image_file_name, pixel_bits = 8, resolution = [640, 4
     name, _ = os.path.splitext(image_file_name)
 
     # Write image data file (pixel indices)
-    data_filename = f"image_grayscale.mif"
+    data_filename = f"negative_case.mif"
     print(f"\nWriting image data to {data_filename}")
 
     WIDTH = pixel_bits
@@ -121,4 +121,4 @@ def image_to_grayscale_mif(image_file_name, pixel_bits = 8, resolution = [640, 4
 
 
 if __name__ == "__main__":
-    image_to_grayscale_mif("original_image.png")
+    image_to_grayscale_mif("negative_case.png")
