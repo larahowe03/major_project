@@ -96,7 +96,7 @@ module convolution_filter_tb;
         $display("Loaded input image: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
         
         // Select kernel type
-        load_prewitt_kernel();
+        load_edge_detect_kernel();
         
         // Reset
         repeat(10) @(posedge clk);
@@ -240,17 +240,6 @@ module convolution_filter_tb;
             kernel[2][0] = 8'sd1; kernel[2][1] = 8'sd1; kernel[2][2] = 8'sd1;
         end
     endtask
-
-    task load_prewitt_kernel;
-        begin
-            $display("Loading 3x3 Prewitt kernel");
-            // Prewitt X: [[-1 0 1]; [-1 0 1]; [-1 0 1]]
-            kernel[0][0] = -8'sd1; kernel[0][1] = 8'sd0; kernel[0][2] = 8'sd1;
-            kernel[1][0] = -8'sd1; kernel[1][1] = 8'sd0; kernel[1][2] = 8'sd1;
-            kernel[2][0] = -8'sd1; kernel[2][1] = 8'sd0; kernel[2][2] = 8'sd1;
-        end
-    endtask
-
     
     task load_sharpen_kernel;
         begin
@@ -264,10 +253,11 @@ module convolution_filter_tb;
     
     task load_edge_detect_kernel;
         begin
-            $display("Loading 3x3 Laplacian Edge Detection kernel");
-            // Laplacian: [[0 -1 0]; [-1 4 -1]; [0 -1 0]]
+            $display("Loading 3x3 Gentle Edge Detection kernel");
+            // Very gentle Laplacian: [[0 -1 0]; [-1 2 -1]; [0 -1 0]]
+            // Center weight of 2 instead of 4 or 8 = much less sensitive
             kernel[0][0] =  8'sd0; kernel[0][1] = -8'sd1; kernel[0][2] =  8'sd0;
-            kernel[1][0] = -8'sd1; kernel[1][1] =  8'sd4; kernel[1][2] = -8'sd1;
+            kernel[1][0] = -8'sd1; kernel[1][1] =  8'sd2; kernel[1][2] = -8'sd1;
             kernel[2][0] =  8'sd0; kernel[2][1] = -8'sd1; kernel[2][2] =  8'sd0;
         end
     endtask
