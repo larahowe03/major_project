@@ -96,7 +96,7 @@ module convolution_filter_tb;
         $display("Loaded input image: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
         
         // Select kernel type
-        load_edge_aggressive_kernel();
+        load_edge_gentle_kernel();
         
         // Reset
         repeat(10) @(posedge clk);
