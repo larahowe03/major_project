@@ -1,0 +1,149 @@
+/*
+WARNING: Do NOT edit the input and output ports in this file in a text
+editor if you plan to continue editing the block that represents it in
+the Block Editor! File corruption is VERY likely to occur.
+*/
+/*
+Copyright (C) 2020  Intel Corporation. All rights reserved.
+Your use of Intel Corporation's design tools, logic functions 
+and other software and tools, and any partner logic 
+functions, and any output files from any of the foregoing 
+(including device programming or simulation files), and any 
+associated documentation or information are expressly subject 
+to the terms and conditions of the Intel Program License 
+Subscription Agreement, the Intel Quartus Prime License Agreement,
+the Intel FPGA IP License Agreement, or other applicable license
+agreement, including, without limitation, that your use is for
+the sole purpose of programming logic devices manufactured by
+Intel and sold by Intel or its authorized distributors.  Please
+refer to the applicable agreement for further details, at
+https://fpgasoftware.intel.com/eula.
+*/
+(header "symbol" (version "1.1"))
+(symbol
+	(rect 0 0 432 376)
+	(text "vga" (rect 207 -1 222 11)(font "Arial" (font_size 10)))
+	(text "inst" (rect 8 360 20 372)(font "Arial" ))
+	(port
+		(pt 0 72)
+		(input)
+		(text "beat_pulse_beat_pulse[1..0]" (rect 0 0 109 12)(font "Arial" (font_size 8)))
+		(text "beat_pulse_beat_pulse[1..0]" (rect 4 61 166 72)(font "Arial" (font_size 8)))
+		(line (pt 0 72)(pt 176 72)(line_width 3))
+	)
+	(port
+		(pt 0 112)
+		(input)
+		(text "bpm_estimate_bpm_estimate[8..0]" (rect 0 0 139 12)(font "Arial" (font_size 8)))
+		(text "bpm_estimate_bpm_estimate[8..0]" (rect 4 101 190 112)(font "Arial" (font_size 8)))
+		(line (pt 0 112)(pt 176 112)(line_width 3))
+	)
+	(port
+		(pt 0 152)
+		(input)
+		(text "clk_clk" (rect 0 0 27 12)(font "Arial" (font_size 8)))
+		(text "clk_clk" (rect 4 141 46 152)(font "Arial" (font_size 8)))
+		(line (pt 0 152)(pt 176 152)(line_width 1))
+	)
+	(port
+		(pt 0 192)
+		(input)
+		(text "reset_reset_n" (rect 0 0 56 12)(font "Arial" (font_size 8)))
+		(text "reset_reset_n" (rect 4 181 82 192)(font "Arial" (font_size 8)))
+		(line (pt 0 192)(pt 176 192)(line_width 1))
+	)
+	(port
+		(pt 0 232)
+		(output)
+		(text "vga_CLK" (rect 0 0 41 12)(font "Arial" (font_size 8)))
+		(text "vga_CLK" (rect 4 221 46 232)(font "Arial" (font_size 8)))
+		(line (pt 0 232)(pt 176 232)(line_width 1))
+	)
+	(port
+		(pt 0 248)
+		(output)
+		(text "vga_HS" (rect 0 0 34 12)(font "Arial" (font_size 8)))
+		(text "vga_HS" (rect 4 237 40 248)(font "Arial" (font_size 8)))
+		(line (pt 0 248)(pt 176 248)(line_width 1))
+	)
+	(port
+		(pt 0 264)
+		(output)
+		(text "vga_VS" (rect 0 0 35 12)(font "Arial" (font_size 8)))
+		(text "vga_VS" (rect 4 253 40 264)(font "Arial" (font_size 8)))
+		(line (pt 0 264)(pt 176 264)(line_width 1))
+	)
+	(port
+		(pt 0 280)
+		(output)
+		(text "vga_BLANK" (rect 0 0 55 12)(font "Arial" (font_size 8)))
+		(text "vga_BLANK" (rect 4 269 58 280)(font "Arial" (font_size 8)))
+		(line (pt 0 280)(pt 176 280)(line_width 1))
+	)
+	(port
+		(pt 0 296)
+		(output)
+		(text "vga_SYNC" (rect 0 0 48 12)(font "Arial" (font_size 8)))
+		(text "vga_SYNC" (rect 4 285 52 296)(font "Arial" (font_size 8)))
+		(line (pt 0 296)(pt 176 296)(line_width 1))
+	)
+	(port
+		(pt 0 312)
+		(output)
+		(text "vga_R[7..0]" (rect 0 0 49 12)(font "Arial" (font_size 8)))
+		(text "vga_R[7..0]" (rect 4 301 70 312)(font "Arial" (font_size 8)))
+		(line (pt 0 312)(pt 176 312)(line_width 3))
+	)
+	(port
+		(pt 0 328)
+		(output)
+		(text "vga_G[7..0]" (rect 0 0 48 12)(font "Arial" (font_size 8)))
+		(text "vga_G[7..0]" (rect 4 317 70 328)(font "Arial" (font_size 8)))
+		(line (pt 0 328)(pt 176 328)(line_width 3))
+	)
+	(port
+		(pt 0 344)
+		(output)
+		(text "vga_B[7..0]" (rect 0 0 47 12)(font "Arial" (font_size 8)))
+		(text "vga_B[7..0]" (rect 4 333 70 344)(font "Arial" (font_size 8)))
+		(line (pt 0 344)(pt 176 344)(line_width 3))
+	)
+	(drawing
+		(text "beat_pulse" (rect 113 43 286 99)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "beat_pulse" (rect 181 67 422 144)(font "Arial" (color 0 0 0)))
+		(text "bpm_estimate" (rect 94 83 260 179)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "bpm_estimate" (rect 181 107 434 224)(font "Arial" (color 0 0 0)))
+		(text "clk" (rect 161 123 340 259)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "clk" (rect 181 147 380 304)(font "Arial" (color 0 0 0)))
+		(text "reset" (rect 147 163 324 339)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "reset_n" (rect 181 187 404 384)(font "Arial" (color 0 0 0)))
+		(text "vga" (rect 157 203 332 419)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "CLK" (rect 181 227 380 464)(font "Arial" (color 0 0 0)))
+		(text "HS" (rect 181 243 374 496)(font "Arial" (color 0 0 0)))
+		(text "VS" (rect 181 259 374 528)(font "Arial" (color 0 0 0)))
+		(text "BLANK" (rect 181 275 392 560)(font "Arial" (color 0 0 0)))
+		(text "SYNC" (rect 181 291 386 592)(font "Arial" (color 0 0 0)))
+		(text "R" (rect 181 307 368 624)(font "Arial" (color 0 0 0)))
+		(text "G" (rect 181 323 368 656)(font "Arial" (color 0 0 0)))
+		(text "B" (rect 181 339 368 688)(font "Arial" (color 0 0 0)))
+		(text " vga " (rect 413 360 856 730)(font "Arial" ))
+		(line (pt 176 32)(pt 256 32)(line_width 1))
+		(line (pt 256 32)(pt 256 360)(line_width 1))
+		(line (pt 176 360)(pt 256 360)(line_width 1))
+		(line (pt 176 32)(pt 176 360)(line_width 1))
+		(line (pt 177 52)(pt 177 76)(line_width 1))
+		(line (pt 178 52)(pt 178 76)(line_width 1))
+		(line (pt 177 92)(pt 177 116)(line_width 1))
+		(line (pt 178 92)(pt 178 116)(line_width 1))
+		(line (pt 177 132)(pt 177 156)(line_width 1))
+		(line (pt 178 132)(pt 178 156)(line_width 1))
+		(line (pt 177 172)(pt 177 196)(line_width 1))
+		(line (pt 178 172)(pt 178 196)(line_width 1))
+		(line (pt 177 212)(pt 177 348)(line_width 1))
+		(line (pt 178 212)(pt 178 348)(line_width 1))
+		(line (pt 0 0)(pt 432 0)(line_width 1))
+		(line (pt 432 0)(pt 432 376)(line_width 1))
+		(line (pt 0 376)(pt 432 376)(line_width 1))
+		(line (pt 0 0)(pt 0 376)(line_width 1))
+	)
+)

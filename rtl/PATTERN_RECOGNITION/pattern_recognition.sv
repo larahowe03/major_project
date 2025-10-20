@@ -1,4 +1,4 @@
-module top_level #(
+module pattern_recognition #(
     parameter IMG_WIDTH = 640,
     parameter IMG_HEIGHT = 480,
     parameter KERNEL_H = 3,

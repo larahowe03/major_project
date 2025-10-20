@@ -1,0 +1,676 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deploy
+ date="2025.10.08.12:55:44"
+ outputDirectory="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/">
+ <perimeter>
+  <parameter
+     name="AUTO_GENERATION_ID"
+     type="Integer"
+     defaultValue="0"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_UNIQUE_ID"
+     type="String"
+     defaultValue=""
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_FAMILY"
+     type="String"
+     defaultValue="Cyclone IV E"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE"
+     type="String"
+     defaultValue="EP4CE115F29C7"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_SPEEDGRADE"
+     type="String"
+     defaultValue="7"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLK_CLOCK_RATE"
+     type="Long"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLK_CLOCK_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLK_RESET_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <interface name="beat_pulse" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port
+       name="beat_pulse_beat_pulse"
+       direction="input"
+       role="beat_pulse"
+       width="2" />
+  </interface>
+  <interface name="bpm_estimate" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port
+       name="bpm_estimate_bpm_estimate"
+       direction="input"
+       role="bpm_estimate"
+       width="9" />
+  </interface>
+  <interface name="clk" kind="clock" start="0">
+   <property name="clockRate" value="50000000" />
+   <property name="externallyDriven" value="false" />
+   <property name="ptfSchematicName" value="" />
+   <port name="clk_clk" direction="input" role="clk" width="1" />
+  </interface>
+  <interface name="reset" kind="reset" start="0">
+   <property name="associatedClock" value="" />
+   <property name="synchronousEdges" value="NONE" />
+   <port name="reset_reset_n" direction="input" role="reset_n" width="1" />
+  </interface>
+  <interface name="vga" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="vga_CLK" direction="output" role="CLK" width="1" />
+   <port name="vga_HS" direction="output" role="HS" width="1" />
+   <port name="vga_VS" direction="output" role="VS" width="1" />
+   <port name="vga_BLANK" direction="output" role="BLANK" width="1" />
+   <port name="vga_SYNC" direction="output" role="SYNC" width="1" />
+   <port name="vga_R" direction="output" role="R" width="8" />
+   <port name="vga_G" direction="output" role="G" width="8" />
+   <port name="vga_B" direction="output" role="B" width="8" />
+  </interface>
+ </perimeter>
+ <entity
+   path=""
+   parameterizationKey="vga:1.0:AUTO_CLK_CLOCK_DOMAIN=-1,AUTO_CLK_CLOCK_RATE=-1,AUTO_CLK_RESET_DOMAIN=-1,AUTO_DEVICE=EP4CE115F29C7,AUTO_DEVICE_FAMILY=Cyclone IV E,AUTO_DEVICE_SPEEDGRADE=7,AUTO_GENERATION_ID=1759888536,AUTO_UNIQUE_ID=(clock_source:20.1:clockFrequency=50000000,clockFrequencyKnown=true,inputClockFrequency=0,resetSynchronousEdges=NONE)(vga_streaming:1.0:HEIGHT=240,PIXEL_BITS=8,WIDTH=320)(altera_up_avalon_video_pll:18.0:AUTO_DEVICE=EP4CE115F29C7,AUTO_DEVICE_SPEEDGRADE=7,camera=5MP Digital Camera (THDB_D5M),device_family=Cyclone IV E,gui_refclk=50.0,gui_resolution=VGA 640x480,lcd=7&quot; LCD on VEEK-MT and MTL/MTL2 Modules,lcd_clk_en=false,refclk=50.0,resolution=VGA 640x480,vga_clk_en=true,video_in_clk_en=false(altera_up_altpll:18.0:DEVICE_FAMILY=Cyclone IV,OUTCLK0_DIV=2,OUTCLK0_MULT=1,OUTCLK1_DIV=2,OUTCLK1_MULT=1,OUTCLK2_DIV=3,OUTCLK2_MULT=2,PHASE_SHIFT=0,audio_clk_freq=12.288,gui_device_family=Cyclone IV E,type=Video,video_in=5MP Digital Camera (THDB_D5M),video_out=7&quot; LCD on VEEK-MT and MTL/MTL2 Modules)(altera_up_avalon_reset_from_locked_signal:18.0:)(conduit:20.1:endPort=,endPortLSB=0,startPort=,startPortLSB=0,width=0))(altera_up_avalon_video_scaler:18.0:AUTO_CLK_CLOCK_RATE=25000000,AUTO_DEVICE_FAMILY=Cyclone IV E,channel_size=2,color_bits=10,color_planes=3,height_in=240,height_out=480,height_scaling=2,include_channel=false,width_in=320,width_out=640,width_scaling=2)(altera_up_avalon_video_vga_controller:18.0:AUTO_CLK_CLOCK_RATE=25000000,AUTO_DEVICE_FAMILY=Cyclone IV E,board=DE2-115,device=VGA Connector,resolution=VGA 640x480,underflow_flag=false)(avalon_streaming:20.1:)(avalon_streaming:20.1:)(clock:20.1:)(clock:20.1:)(clock:20.1:)(clock:20.1:)(reset:20.1:)(reset:20.1:)(reset:20.1:)(reset:20.1:)"
+   instancePathKey="vga"
+   kind="vga"
+   version="1.0"
+   name="vga">
+  <parameter name="AUTO_CLK_CLOCK_RATE" value="-1" />
+  <parameter name="AUTO_GENERATION_ID" value="1759888536" />
+  <parameter name="AUTO_DEVICE" value="EP4CE115F29C7" />
+  <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone IV E" />
+  <parameter name="AUTO_CLK_RESET_DOMAIN" value="-1" />
+  <parameter name="AUTO_CLK_CLOCK_DOMAIN" value="-1" />
+  <parameter name="AUTO_UNIQUE_ID" value="" />
+  <parameter name="AUTO_DEVICE_SPEEDGRADE" value="7" />
+  <generatedFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/vga.v"
+       type="VERILOG" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/vga_streaming.sv"
+       type="SYSTEM_VERILOG"
+       attributes="TOP_LEVEL_FILE" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/vga_video_pll_0.v"
+       type="VERILOG" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_altpll.v"
+       type="VERILOG"
+       attributes="TOP_LEVEL_FILE" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_avalon_reset_from_locked_signal.v"
+       type="VERILOG"
+       attributes="TOP_LEVEL_FILE" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_video_scaler_shrink.v"
+       type="VERILOG" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_video_scaler_multiply_width.v"
+       type="VERILOG" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_video_scaler_multiply_height.v"
+       type="VERILOG" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/vga_video_scaler_0.v"
+       type="VERILOG" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_avalon_video_vga_timing.v"
+       type="VERILOG" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/vga_video_vga_controller_0.v"
+       type="VERILOG" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/vga_avalon_st_adapter.v"
+       type="VERILOG" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/vga_avalon_st_adapter_channel_adapter_0.sv"
+       type="SYSTEM_VERILOG"
+       attributes="" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_reset_controller.v"
+       type="VERILOG"
+       attributes="" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_reset_synchronizer.v"
+       type="VERILOG"
+       attributes="" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_reset_controller.sdc"
+       type="SDC"
+       attributes="" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga.qsys" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga_streaming_hw.tcl" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/clocks/altera_up_avalon_video_pll/altera_up_avalon_video_pll_hw.tcl" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/clocks/altera_up_altpll/altera_up_altpll_hw.tcl" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/clocks/altera_up_avalon_reset_from_locked_signal/altera_up_avalon_reset_from_locked_signal_hw.tcl" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/audio_video/video/altera_up_avalon_video_scaler/altera_up_avalon_video_scaler_hw.tcl" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/audio_video/video/altera_up_avalon_video_scaler/hdl/altera_up_video_scaler_shrink.v" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/audio_video/video/altera_up_avalon_video_scaler/hdl/altera_up_video_scaler_multiply_width.v" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/audio_video/video/altera_up_avalon_video_scaler/hdl/altera_up_video_scaler_multiply_height.v" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/audio_video/video/altera_up_avalon_video_vga_controller/altera_up_avalon_video_vga_controller_hw.tcl" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/audio_video/video/altera_up_avalon_video_vga_controller/hdl/altera_up_avalon_video_vga_timing.v" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/avalon_st/altera_avalon_st_adapter/altera_avalon_st_adapter_hw.tcl" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/avalon_st/altera_avalon_st_channel_adapter/avalon-st_channel_adapter_hw.tcl" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/merlin/altera_reset_controller/altera_reset_controller_hw.tcl" />
+  </childSourceFiles>
+  <messages>
+   <message level="Debug" culprit="vga">queue size: 0 starting:vga "vga"</message>
+   <message level="Progress" culprit="min"></message>
+   <message level="Progress" culprit="max"></message>
+   <message level="Progress" culprit="current"></message>
+   <message level="Debug">Transform: CustomInstructionTransform</message>
+   <message level="Debug">No custom instruction connections, skipping transform </message>
+   <message level="Debug" culprit="merlin_custom_instruction_transform"><![CDATA[After transform: <b>5</b> modules, <b>10</b> connections]]></message>
+   <message level="Debug">Transform: MMTransform</message>
+   <message level="Debug">Transform: InterruptMapperTransform</message>
+   <message level="Debug">Transform: InterruptSyncTransform</message>
+   <message level="Debug">Transform: InterruptFanoutTransform</message>
+   <message level="Debug">Transform: AvalonStreamingTransform</message>
+   <message level="Progress" culprit="min"></message>
+   <message level="Progress" culprit="max"></message>
+   <message level="Progress" culprit="current"></message>
+   <message level="Info" culprit="avalon_st_adapter">Inserting channel_adapter: channel_adapter_0</message>
+   <message level="Debug" culprit="avalon_st_adapter.clk_bridge_0">Timing: ELA:1/0.001s</message>
+   <message level="Debug" culprit="avalon_st_adapter.rst_bridge_0">Timing: ELA:2/0.002s/0.002s</message>
+   <message level="Debug" culprit="avalon_st_adapter.channel_adapter_0">Timing: ELA:1/0.018s</message>
+   <message level="Debug" culprit="avalon_st_adapter">Timing: COM:3/0.032s/0.036s</message>
+   <message
+       level="Debug"
+       culprit="com_altera_sopcmodel_transforms_avalonst_AvalonStreamingTransform"><![CDATA[After transform: <b>6</b> modules, <b>13</b> connections]]></message>
+   <message level="Debug">Transform: ResetAdaptation</message>
+   <message level="Progress" culprit="min"></message>
+   <message level="Progress" culprit="max"></message>
+   <message level="Progress" culprit="current"></message>
+   <message level="Progress" culprit="min"></message>
+   <message level="Progress" culprit="max"></message>
+   <message level="Progress" culprit="current"></message>
+   <message level="Debug" culprit="reset_adaptation_transform"><![CDATA[After transform: <b>8</b> modules, <b>17</b> connections]]></message>
+   <message level="Debug" culprit="vga"><![CDATA["<b>vga</b>" reuses <b>vga_streaming</b> "<b>submodules/vga_streaming</b>"]]></message>
+   <message level="Debug" culprit="vga"><![CDATA["<b>vga</b>" reuses <b>altera_up_avalon_video_pll</b> "<b>submodules/vga_video_pll_0</b>"]]></message>
+   <message level="Debug" culprit="vga"><![CDATA["<b>vga</b>" reuses <b>altera_up_avalon_video_scaler</b> "<b>submodules/vga_video_scaler_0</b>"]]></message>
+   <message level="Debug" culprit="vga"><![CDATA["<b>vga</b>" reuses <b>altera_up_avalon_video_vga_controller</b> "<b>submodules/vga_video_vga_controller_0</b>"]]></message>
+   <message level="Debug" culprit="vga"><![CDATA["<b>vga</b>" reuses <b>altera_avalon_st_adapter</b> "<b>submodules/vga_avalon_st_adapter</b>"]]></message>
+   <message level="Debug" culprit="vga"><![CDATA["<b>vga</b>" reuses <b>altera_reset_controller</b> "<b>submodules/altera_reset_controller</b>"]]></message>
+   <message level="Debug" culprit="vga"><![CDATA["<b>vga</b>" reuses <b>altera_reset_controller</b> "<b>submodules/altera_reset_controller</b>"]]></message>
+   <message level="Debug" culprit="vga">queue size: 6 starting:vga_streaming "submodules/vga_streaming"</message>
+   <message level="Info" culprit="vga_streaming_0"><![CDATA["<b>vga</b>" instantiated <b>vga_streaming</b> "<b>vga_streaming_0</b>"]]></message>
+   <message level="Debug" culprit="vga">queue size: 5 starting:altera_up_avalon_video_pll "submodules/vga_video_pll_0"</message>
+   <message level="Progress" culprit="min"></message>
+   <message level="Progress" culprit="max"></message>
+   <message level="Progress" culprit="current"></message>
+   <message level="Debug">Transform: CustomInstructionTransform</message>
+   <message level="Debug">No custom instruction connections, skipping transform </message>
+   <message level="Debug" culprit="merlin_custom_instruction_transform"><![CDATA[After transform: <b>2</b> modules, <b>1</b> connections]]></message>
+   <message level="Debug">Transform: MMTransform</message>
+   <message level="Debug">Transform: InterruptMapperTransform</message>
+   <message level="Debug">Transform: InterruptSyncTransform</message>
+   <message level="Debug">Transform: InterruptFanoutTransform</message>
+   <message level="Debug">Transform: AvalonStreamingTransform</message>
+   <message level="Debug">Transform: ResetAdaptation</message>
+   <message level="Debug" culprit="video_pll_0"><![CDATA["<b>video_pll_0</b>" reuses <b>altera_up_altpll</b> "<b>submodules/altera_up_altpll</b>"]]></message>
+   <message level="Debug" culprit="video_pll_0"><![CDATA["<b>video_pll_0</b>" reuses <b>altera_up_avalon_reset_from_locked_signal</b> "<b>submodules/altera_up_avalon_reset_from_locked_signal</b>"]]></message>
+   <message level="Info" culprit="video_pll_0"><![CDATA["<b>vga</b>" instantiated <b>altera_up_avalon_video_pll</b> "<b>video_pll_0</b>"]]></message>
+   <message level="Debug" culprit="vga">queue size: 2 starting:altera_up_altpll "submodules/altera_up_altpll"</message>
+   <message level="Info" culprit="video_pll"><![CDATA["<b>video_pll_0</b>" instantiated <b>altera_up_altpll</b> "<b>video_pll</b>"]]></message>
+   <message level="Debug" culprit="vga">queue size: 1 starting:altera_up_avalon_reset_from_locked_signal "submodules/altera_up_avalon_reset_from_locked_signal"</message>
+   <message level="Info" culprit="reset_from_locked"><![CDATA["<b>video_pll_0</b>" instantiated <b>altera_up_avalon_reset_from_locked_signal</b> "<b>reset_from_locked</b>"]]></message>
+   <message level="Debug" culprit="vga">queue size: 6 starting:altera_up_avalon_video_scaler "submodules/vga_video_scaler_0"</message>
+   <message level="Info" culprit="video_scaler_0">Starting Generation of Video Scaler</message>
+   <message level="Info" culprit="video_scaler_0"><![CDATA["<b>vga</b>" instantiated <b>altera_up_avalon_video_scaler</b> "<b>video_scaler_0</b>"]]></message>
+   <message level="Debug" culprit="vga">queue size: 5 starting:altera_up_avalon_video_vga_controller "submodules/vga_video_vga_controller_0"</message>
+   <message level="Info" culprit="video_vga_controller_0">Starting Generation of VGA Controller</message>
+   <message level="Info" culprit="video_vga_controller_0"><![CDATA["<b>vga</b>" instantiated <b>altera_up_avalon_video_vga_controller</b> "<b>video_vga_controller_0</b>"]]></message>
+   <message level="Debug" culprit="vga">queue size: 4 starting:altera_avalon_st_adapter "submodules/vga_avalon_st_adapter"</message>
+   <message level="Progress" culprit="min"></message>
+   <message level="Progress" culprit="max"></message>
+   <message level="Progress" culprit="current"></message>
+   <message level="Debug">Transform: CustomInstructionTransform</message>
+   <message level="Debug">No custom instruction connections, skipping transform </message>
+   <message level="Debug" culprit="merlin_custom_instruction_transform"><![CDATA[After transform: <b>3</b> modules, <b>3</b> connections]]></message>
+   <message level="Debug">Transform: MMTransform</message>
+   <message level="Debug">Transform: InterruptMapperTransform</message>
+   <message level="Debug">Transform: InterruptSyncTransform</message>
+   <message level="Debug">Transform: InterruptFanoutTransform</message>
+   <message level="Debug">Transform: AvalonStreamingTransform</message>
+   <message level="Debug">Transform: ResetAdaptation</message>
+   <message level="Debug" culprit="avalon_st_adapter"><![CDATA["<b>avalon_st_adapter</b>" reuses <b>channel_adapter</b> "<b>submodules/vga_avalon_st_adapter_channel_adapter_0</b>"]]></message>
+   <message level="Info" culprit="avalon_st_adapter"><![CDATA["<b>vga</b>" instantiated <b>altera_avalon_st_adapter</b> "<b>avalon_st_adapter</b>"]]></message>
+   <message level="Debug" culprit="vga">queue size: 0 starting:channel_adapter "submodules/vga_avalon_st_adapter_channel_adapter_0"</message>
+   <message level="Info" culprit="channel_adapter_0"><![CDATA["<b>avalon_st_adapter</b>" instantiated <b>channel_adapter</b> "<b>channel_adapter_0</b>"]]></message>
+   <message level="Debug" culprit="vga">queue size: 4 starting:altera_reset_controller "submodules/altera_reset_controller"</message>
+   <message level="Info" culprit="rst_controller"><![CDATA["<b>vga</b>" instantiated <b>altera_reset_controller</b> "<b>rst_controller</b>"]]></message>
+  </messages>
+ </entity>
+ <entity
+   path="submodules/"
+   parameterizationKey="vga_streaming:1.0:HEIGHT=240,PIXEL_BITS=8,WIDTH=320"
+   instancePathKey="vga:.:vga_streaming_0"
+   kind="vga_streaming"
+   version="1.0"
+   name="vga_streaming">
+  <parameter name="PIXEL_BITS" value="8" />
+  <parameter name="WIDTH" value="320" />
+  <parameter name="HEIGHT" value="240" />
+  <generatedFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/vga_streaming.sv"
+       type="SYSTEM_VERILOG"
+       attributes="TOP_LEVEL_FILE" />
+  </generatedFiles>
+  <childGeneratedFiles/>
+  <sourceFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga_streaming_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="vga" as="vga_streaming_0" />
+  <messages>
+   <message level="Debug" culprit="vga">queue size: 6 starting:vga_streaming "submodules/vga_streaming"</message>
+   <message level="Info" culprit="vga_streaming_0"><![CDATA["<b>vga</b>" instantiated <b>vga_streaming</b> "<b>vga_streaming_0</b>"]]></message>
+  </messages>
+ </entity>
+ <entity
+   path="submodules/"
+   parameterizationKey="altera_up_avalon_video_pll:18.0:AUTO_DEVICE=EP4CE115F29C7,AUTO_DEVICE_SPEEDGRADE=7,camera=5MP Digital Camera (THDB_D5M),device_family=Cyclone IV E,gui_refclk=50.0,gui_resolution=VGA 640x480,lcd=7&quot; LCD on VEEK-MT and MTL/MTL2 Modules,lcd_clk_en=false,refclk=50.0,resolution=VGA 640x480,vga_clk_en=true,video_in_clk_en=false(altera_up_altpll:18.0:DEVICE_FAMILY=Cyclone IV,OUTCLK0_DIV=2,OUTCLK0_MULT=1,OUTCLK1_DIV=2,OUTCLK1_MULT=1,OUTCLK2_DIV=3,OUTCLK2_MULT=2,PHASE_SHIFT=0,audio_clk_freq=12.288,gui_device_family=Cyclone IV E,type=Video,video_in=5MP Digital Camera (THDB_D5M),video_out=7&quot; LCD on VEEK-MT and MTL/MTL2 Modules)(altera_up_avalon_reset_from_locked_signal:18.0:)(conduit:20.1:endPort=,endPortLSB=0,startPort=,startPortLSB=0,width=0)"
+   instancePathKey="vga:.:video_pll_0"
+   kind="altera_up_avalon_video_pll"
+   version="18.0"
+   name="vga_video_pll_0">
+  <parameter name="lcd_clk_en" value="false" />
+  <parameter name="gui_refclk" value="50.0" />
+  <parameter name="AUTO_DEVICE" value="EP4CE115F29C7" />
+  <parameter name="refclk" value="50.0" />
+  <parameter name="device_family" value="Cyclone IV E" />
+  <parameter name="gui_resolution" value="VGA 640x480" />
+  <parameter name="video_in_clk_en" value="false" />
+  <parameter name="camera" value="5MP Digital Camera (THDB_D5M)" />
+  <parameter name="lcd" value="7&quot; LCD on VEEK-MT and MTL/MTL2 Modules" />
+  <parameter name="vga_clk_en" value="true" />
+  <parameter name="resolution" value="VGA 640x480" />
+  <parameter name="AUTO_DEVICE_SPEEDGRADE" value="7" />
+  <generatedFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/vga_video_pll_0.v"
+       type="VERILOG" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_altpll.v"
+       type="VERILOG"
+       attributes="TOP_LEVEL_FILE" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_avalon_reset_from_locked_signal.v"
+       type="VERILOG"
+       attributes="TOP_LEVEL_FILE" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/clocks/altera_up_avalon_video_pll/altera_up_avalon_video_pll_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/clocks/altera_up_altpll/altera_up_altpll_hw.tcl" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/clocks/altera_up_avalon_reset_from_locked_signal/altera_up_avalon_reset_from_locked_signal_hw.tcl" />
+  </childSourceFiles>
+  <instantiator instantiator="vga" as="video_pll_0" />
+  <messages>
+   <message level="Debug" culprit="vga">queue size: 5 starting:altera_up_avalon_video_pll "submodules/vga_video_pll_0"</message>
+   <message level="Progress" culprit="min"></message>
+   <message level="Progress" culprit="max"></message>
+   <message level="Progress" culprit="current"></message>
+   <message level="Debug">Transform: CustomInstructionTransform</message>
+   <message level="Debug">No custom instruction connections, skipping transform </message>
+   <message level="Debug" culprit="merlin_custom_instruction_transform"><![CDATA[After transform: <b>2</b> modules, <b>1</b> connections]]></message>
+   <message level="Debug">Transform: MMTransform</message>
+   <message level="Debug">Transform: InterruptMapperTransform</message>
+   <message level="Debug">Transform: InterruptSyncTransform</message>
+   <message level="Debug">Transform: InterruptFanoutTransform</message>
+   <message level="Debug">Transform: AvalonStreamingTransform</message>
+   <message level="Debug">Transform: ResetAdaptation</message>
+   <message level="Debug" culprit="video_pll_0"><![CDATA["<b>video_pll_0</b>" reuses <b>altera_up_altpll</b> "<b>submodules/altera_up_altpll</b>"]]></message>
+   <message level="Debug" culprit="video_pll_0"><![CDATA["<b>video_pll_0</b>" reuses <b>altera_up_avalon_reset_from_locked_signal</b> "<b>submodules/altera_up_avalon_reset_from_locked_signal</b>"]]></message>
+   <message level="Info" culprit="video_pll_0"><![CDATA["<b>vga</b>" instantiated <b>altera_up_avalon_video_pll</b> "<b>video_pll_0</b>"]]></message>
+   <message level="Debug" culprit="vga">queue size: 2 starting:altera_up_altpll "submodules/altera_up_altpll"</message>
+   <message level="Info" culprit="video_pll"><![CDATA["<b>video_pll_0</b>" instantiated <b>altera_up_altpll</b> "<b>video_pll</b>"]]></message>
+   <message level="Debug" culprit="vga">queue size: 1 starting:altera_up_avalon_reset_from_locked_signal "submodules/altera_up_avalon_reset_from_locked_signal"</message>
+   <message level="Info" culprit="reset_from_locked"><![CDATA["<b>video_pll_0</b>" instantiated <b>altera_up_avalon_reset_from_locked_signal</b> "<b>reset_from_locked</b>"]]></message>
+  </messages>
+ </entity>
+ <entity
+   path="submodules/"
+   parameterizationKey="altera_up_avalon_video_scaler:18.0:AUTO_CLK_CLOCK_RATE=25000000,AUTO_DEVICE_FAMILY=Cyclone IV E,channel_size=2,color_bits=10,color_planes=3,height_in=240,height_out=480,height_scaling=2,include_channel=false,width_in=320,width_out=640,width_scaling=2"
+   instancePathKey="vga:.:video_scaler_0"
+   kind="altera_up_avalon_video_scaler"
+   version="18.0"
+   name="vga_video_scaler_0">
+  <parameter name="AUTO_CLK_CLOCK_RATE" value="25000000" />
+  <parameter name="channel_size" value="2" />
+  <parameter name="color_bits" value="10" />
+  <parameter name="height_scaling" value="2" />
+  <parameter name="include_channel" value="false" />
+  <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone IV E" />
+  <parameter name="width_out" value="640" />
+  <parameter name="height_in" value="240" />
+  <parameter name="width_scaling" value="2" />
+  <parameter name="color_planes" value="3" />
+  <parameter name="width_in" value="320" />
+  <parameter name="height_out" value="480" />
+  <generatedFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_video_scaler_shrink.v"
+       type="VERILOG" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_video_scaler_multiply_width.v"
+       type="VERILOG" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_video_scaler_multiply_height.v"
+       type="VERILOG" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/vga_video_scaler_0.v"
+       type="VERILOG" />
+  </generatedFiles>
+  <childGeneratedFiles/>
+  <sourceFiles>
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/audio_video/video/altera_up_avalon_video_scaler/altera_up_avalon_video_scaler_hw.tcl" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/audio_video/video/altera_up_avalon_video_scaler/hdl/altera_up_video_scaler_shrink.v" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/audio_video/video/altera_up_avalon_video_scaler/hdl/altera_up_video_scaler_multiply_width.v" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/audio_video/video/altera_up_avalon_video_scaler/hdl/altera_up_video_scaler_multiply_height.v" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="vga" as="video_scaler_0" />
+  <messages>
+   <message level="Debug" culprit="vga">queue size: 6 starting:altera_up_avalon_video_scaler "submodules/vga_video_scaler_0"</message>
+   <message level="Info" culprit="video_scaler_0">Starting Generation of Video Scaler</message>
+   <message level="Info" culprit="video_scaler_0"><![CDATA["<b>vga</b>" instantiated <b>altera_up_avalon_video_scaler</b> "<b>video_scaler_0</b>"]]></message>
+  </messages>
+ </entity>
+ <entity
+   path="submodules/"
+   parameterizationKey="altera_up_avalon_video_vga_controller:18.0:AUTO_CLK_CLOCK_RATE=25000000,AUTO_DEVICE_FAMILY=Cyclone IV E,board=DE2-115,device=VGA Connector,resolution=VGA 640x480,underflow_flag=false"
+   instancePathKey="vga:.:video_vga_controller_0"
+   kind="altera_up_avalon_video_vga_controller"
+   version="18.0"
+   name="vga_video_vga_controller_0">
+  <parameter name="AUTO_CLK_CLOCK_RATE" value="25000000" />
+  <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone IV E" />
+  <parameter name="underflow_flag" value="false" />
+  <parameter name="device" value="VGA Connector" />
+  <parameter name="resolution" value="VGA 640x480" />
+  <parameter name="board" value="DE2-115" />
+  <generatedFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_avalon_video_vga_timing.v"
+       type="VERILOG" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/vga_video_vga_controller_0.v"
+       type="VERILOG" />
+  </generatedFiles>
+  <childGeneratedFiles/>
+  <sourceFiles>
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/audio_video/video/altera_up_avalon_video_vga_controller/altera_up_avalon_video_vga_controller_hw.tcl" />
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/audio_video/video/altera_up_avalon_video_vga_controller/hdl/altera_up_avalon_video_vga_timing.v" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="vga" as="video_vga_controller_0" />
+  <messages>
+   <message level="Debug" culprit="vga">queue size: 5 starting:altera_up_avalon_video_vga_controller "submodules/vga_video_vga_controller_0"</message>
+   <message level="Info" culprit="video_vga_controller_0">Starting Generation of VGA Controller</message>
+   <message level="Info" culprit="video_vga_controller_0"><![CDATA["<b>vga</b>" instantiated <b>altera_up_avalon_video_vga_controller</b> "<b>video_vga_controller_0</b>"]]></message>
+  </messages>
+ </entity>
+ <entity
+   path="submodules/"
+   parameterizationKey="altera_avalon_st_adapter:20.1:AUTO_DEVICE=EP4CE115F29C7,AUTO_DEVICE_FAMILY=Cyclone IV E,AUTO_DEVICE_SPEEDGRADE=,inBitsPerSymbol=10,inChannelWidth=2,inDataWidth=30,inEmptyWidth=2,inErrorDescriptor=,inErrorWidth=0,inMaxChannel=0,inReadyLatency=0,inUseEmptyPort=0,inUsePackets=1,inUseReady=1,inUseValid=1,outChannelWidth=0,outDataWidth=30,outEmptyWidth=2,outErrorDescriptor=,outErrorWidth=0,outMaxChannel=0,outReadyLatency=0,outUseEmptyPort=0,outUseReady=1,outUseValid=1(altera_clock_bridge:20.1:DERIVED_CLOCK_RATE=0,EXPLICIT_CLOCK_RATE=0,NUM_CLOCK_OUTPUTS=1)(altera_reset_bridge:20.1:ACTIVE_LOW_RESET=0,AUTO_CLK_CLOCK_RATE=0,NUM_RESET_OUTPUTS=1,SYNCHRONOUS_EDGES=deassert,USE_RESET_REQUEST=0)(channel_adapter:20.1:inBitsPerSymbol=10,inChannelWidth=2,inErrorDescriptor=,inErrorWidth=0,inMaxChannel=0,inReadyLatency=0,inSymbolsPerBeat=3,inUseEmpty=false,inUseEmptyPort=NO,inUsePackets=true,inUseReady=true,outChannelWidth=0,outMaxChannel=0)(clock:20.1:)(clock:20.1:)(reset:20.1:)"
+   instancePathKey="vga:.:avalon_st_adapter"
+   kind="altera_avalon_st_adapter"
+   version="20.1"
+   name="vga_avalon_st_adapter">
+  <parameter name="inUseValid" value="1" />
+  <parameter name="inBitsPerSymbol" value="10" />
+  <parameter name="outUseEmptyPort" value="0" />
+  <parameter name="inChannelWidth" value="2" />
+  <parameter name="outErrorWidth" value="0" />
+  <parameter name="outUseValid" value="1" />
+  <parameter name="outMaxChannel" value="0" />
+  <parameter name="inErrorDescriptor" value="" />
+  <parameter name="inUsePackets" value="1" />
+  <parameter name="inErrorWidth" value="0" />
+  <parameter name="inEmptyWidth" value="2" />
+  <parameter name="inUseReady" value="1" />
+  <parameter name="outReadyLatency" value="0" />
+  <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone IV E" />
+  <parameter name="outDataWidth" value="30" />
+  <parameter name="AUTO_DEVICE_SPEEDGRADE" value="" />
+  <parameter name="inUseEmptyPort" value="0" />
+  <parameter name="outChannelWidth" value="0" />
+  <parameter name="inMaxChannel" value="0" />
+  <parameter name="outUseReady" value="1" />
+  <parameter name="inReadyLatency" value="0" />
+  <parameter name="AUTO_DEVICE" value="EP4CE115F29C7" />
+  <parameter name="inDataWidth" value="30" />
+  <parameter name="outErrorDescriptor" value="" />
+  <parameter name="outEmptyWidth" value="2" />
+  <generatedFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/vga_avalon_st_adapter.v"
+       type="VERILOG" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/vga_avalon_st_adapter_channel_adapter_0.sv"
+       type="SYSTEM_VERILOG"
+       attributes="" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/avalon_st/altera_avalon_st_adapter/altera_avalon_st_adapter_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/avalon_st/altera_avalon_st_channel_adapter/avalon-st_channel_adapter_hw.tcl" />
+  </childSourceFiles>
+  <instantiator instantiator="vga" as="avalon_st_adapter" />
+  <messages>
+   <message level="Debug" culprit="vga">queue size: 4 starting:altera_avalon_st_adapter "submodules/vga_avalon_st_adapter"</message>
+   <message level="Progress" culprit="min"></message>
+   <message level="Progress" culprit="max"></message>
+   <message level="Progress" culprit="current"></message>
+   <message level="Debug">Transform: CustomInstructionTransform</message>
+   <message level="Debug">No custom instruction connections, skipping transform </message>
+   <message level="Debug" culprit="merlin_custom_instruction_transform"><![CDATA[After transform: <b>3</b> modules, <b>3</b> connections]]></message>
+   <message level="Debug">Transform: MMTransform</message>
+   <message level="Debug">Transform: InterruptMapperTransform</message>
+   <message level="Debug">Transform: InterruptSyncTransform</message>
+   <message level="Debug">Transform: InterruptFanoutTransform</message>
+   <message level="Debug">Transform: AvalonStreamingTransform</message>
+   <message level="Debug">Transform: ResetAdaptation</message>
+   <message level="Debug" culprit="avalon_st_adapter"><![CDATA["<b>avalon_st_adapter</b>" reuses <b>channel_adapter</b> "<b>submodules/vga_avalon_st_adapter_channel_adapter_0</b>"]]></message>
+   <message level="Info" culprit="avalon_st_adapter"><![CDATA["<b>vga</b>" instantiated <b>altera_avalon_st_adapter</b> "<b>avalon_st_adapter</b>"]]></message>
+   <message level="Debug" culprit="vga">queue size: 0 starting:channel_adapter "submodules/vga_avalon_st_adapter_channel_adapter_0"</message>
+   <message level="Info" culprit="channel_adapter_0"><![CDATA["<b>avalon_st_adapter</b>" instantiated <b>channel_adapter</b> "<b>channel_adapter_0</b>"]]></message>
+  </messages>
+ </entity>
+ <entity
+   path="submodules/"
+   parameterizationKey="altera_reset_controller:20.1:ADAPT_RESET_REQUEST=0,MIN_RST_ASSERTION_TIME=3,NUM_RESET_INPUTS=1,OUTPUT_RESET_SYNC_EDGES=deassert,RESET_REQUEST_PRESENT=0,RESET_REQ_EARLY_DSRT_TIME=1,RESET_REQ_WAIT_TIME=1,SYNC_DEPTH=2,USE_RESET_REQUEST_IN0=0,USE_RESET_REQUEST_IN1=0,USE_RESET_REQUEST_IN10=0,USE_RESET_REQUEST_IN11=0,USE_RESET_REQUEST_IN12=0,USE_RESET_REQUEST_IN13=0,USE_RESET_REQUEST_IN14=0,USE_RESET_REQUEST_IN15=0,USE_RESET_REQUEST_IN2=0,USE_RESET_REQUEST_IN3=0,USE_RESET_REQUEST_IN4=0,USE_RESET_REQUEST_IN5=0,USE_RESET_REQUEST_IN6=0,USE_RESET_REQUEST_IN7=0,USE_RESET_REQUEST_IN8=0,USE_RESET_REQUEST_IN9=0,USE_RESET_REQUEST_INPUT=0"
+   instancePathKey="vga:.:rst_controller"
+   kind="altera_reset_controller"
+   version="20.1"
+   name="altera_reset_controller">
+  <generatedFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_reset_controller.v"
+       type="VERILOG"
+       attributes="" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_reset_synchronizer.v"
+       type="VERILOG"
+       attributes="" />
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_reset_controller.sdc"
+       type="SDC"
+       attributes="" />
+  </generatedFiles>
+  <childGeneratedFiles/>
+  <sourceFiles>
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/merlin/altera_reset_controller/altera_reset_controller_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="vga" as="rst_controller,rst_controller_001" />
+  <messages>
+   <message level="Debug" culprit="vga">queue size: 4 starting:altera_reset_controller "submodules/altera_reset_controller"</message>
+   <message level="Info" culprit="rst_controller"><![CDATA["<b>vga</b>" instantiated <b>altera_reset_controller</b> "<b>rst_controller</b>"]]></message>
+  </messages>
+ </entity>
+ <entity
+   path="submodules/"
+   parameterizationKey="altera_up_altpll:18.0:DEVICE_FAMILY=Cyclone IV,OUTCLK0_DIV=2,OUTCLK0_MULT=1,OUTCLK1_DIV=2,OUTCLK1_MULT=1,OUTCLK2_DIV=3,OUTCLK2_MULT=2,PHASE_SHIFT=0,audio_clk_freq=12.288,gui_device_family=Cyclone IV E,type=Video,video_in=5MP Digital Camera (THDB_D5M),video_out=7&quot; LCD on VEEK-MT and MTL/MTL2 Modules"
+   instancePathKey="vga:.:video_pll_0:.:video_pll"
+   kind="altera_up_altpll"
+   version="18.0"
+   name="altera_up_altpll">
+  <parameter name="OUTCLK0_DIV" value="2" />
+  <parameter name="OUTCLK2_MULT" value="2" />
+  <parameter name="PHASE_SHIFT" value="0" />
+  <parameter name="OUTCLK1_DIV" value="2" />
+  <parameter name="OUTCLK0_MULT" value="1" />
+  <parameter name="DEVICE_FAMILY" value="Cyclone IV" />
+  <parameter name="video_in" value="5MP Digital Camera (THDB_D5M)" />
+  <parameter name="gui_device_family" value="Cyclone IV E" />
+  <parameter name="OUTCLK2_DIV" value="3" />
+  <parameter name="OUTCLK1_MULT" value="1" />
+  <generatedFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_altpll.v"
+       type="VERILOG"
+       attributes="TOP_LEVEL_FILE" />
+  </generatedFiles>
+  <childGeneratedFiles/>
+  <sourceFiles>
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/clocks/altera_up_altpll/altera_up_altpll_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="vga_video_pll_0" as="video_pll" />
+  <messages>
+   <message level="Debug" culprit="vga">queue size: 2 starting:altera_up_altpll "submodules/altera_up_altpll"</message>
+   <message level="Info" culprit="video_pll"><![CDATA["<b>video_pll_0</b>" instantiated <b>altera_up_altpll</b> "<b>video_pll</b>"]]></message>
+  </messages>
+ </entity>
+ <entity
+   path="submodules/"
+   parameterizationKey="altera_up_avalon_reset_from_locked_signal:18.0:"
+   instancePathKey="vga:.:video_pll_0:.:reset_from_locked"
+   kind="altera_up_avalon_reset_from_locked_signal"
+   version="18.0"
+   name="altera_up_avalon_reset_from_locked_signal">
+  <generatedFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/altera_up_avalon_reset_from_locked_signal.v"
+       type="VERILOG"
+       attributes="TOP_LEVEL_FILE" />
+  </generatedFiles>
+  <childGeneratedFiles/>
+  <sourceFiles>
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/university_program/clocks/altera_up_avalon_reset_from_locked_signal/altera_up_avalon_reset_from_locked_signal_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="vga_video_pll_0" as="reset_from_locked" />
+  <messages>
+   <message level="Debug" culprit="vga">queue size: 1 starting:altera_up_avalon_reset_from_locked_signal "submodules/altera_up_avalon_reset_from_locked_signal"</message>
+   <message level="Info" culprit="reset_from_locked"><![CDATA["<b>video_pll_0</b>" instantiated <b>altera_up_avalon_reset_from_locked_signal</b> "<b>reset_from_locked</b>"]]></message>
+  </messages>
+ </entity>
+ <entity
+   path="submodules/"
+   parameterizationKey="channel_adapter:20.1:inBitsPerSymbol=10,inChannelWidth=2,inErrorDescriptor=,inErrorWidth=0,inMaxChannel=0,inReadyLatency=0,inSymbolsPerBeat=3,inUseEmpty=false,inUseEmptyPort=NO,inUsePackets=true,inUseReady=true,outChannelWidth=0,outMaxChannel=0"
+   instancePathKey="vga:.:avalon_st_adapter:.:channel_adapter_0"
+   kind="channel_adapter"
+   version="20.1"
+   name="vga_avalon_st_adapter_channel_adapter_0">
+  <parameter name="inErrorWidth" value="0" />
+  <parameter name="inUseReady" value="true" />
+  <parameter name="inBitsPerSymbol" value="10" />
+  <parameter name="inChannelWidth" value="2" />
+  <parameter name="inSymbolsPerBeat" value="3" />
+  <parameter name="outChannelWidth" value="0" />
+  <parameter name="inUseEmptyPort" value="NO" />
+  <parameter name="inMaxChannel" value="0" />
+  <parameter name="inReadyLatency" value="0" />
+  <parameter name="outMaxChannel" value="0" />
+  <parameter name="inUseEmpty" value="false" />
+  <parameter name="inErrorDescriptor" value="" />
+  <parameter name="inUsePackets" value="true" />
+  <generatedFiles>
+   <file
+       path="C:/Users/aylab/Documents/MTRX3700/a2-rgb-memfix/vga/synthesis/submodules/vga_avalon_st_adapter_channel_adapter_0.sv"
+       type="SYSTEM_VERILOG"
+       attributes="" />
+  </generatedFiles>
+  <childGeneratedFiles/>
+  <sourceFiles>
+   <file
+       path="C:/intelfpga_lite/20.1/ip/altera/avalon_st/altera_avalon_st_channel_adapter/avalon-st_channel_adapter_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="vga_avalon_st_adapter" as="channel_adapter_0" />
+  <messages>
+   <message level="Debug" culprit="vga">queue size: 0 starting:channel_adapter "submodules/vga_avalon_st_adapter_channel_adapter_0"</message>
+   <message level="Info" culprit="channel_adapter_0"><![CDATA["<b>avalon_st_adapter</b>" instantiated <b>channel_adapter</b> "<b>channel_adapter_0</b>"]]></message>
+  </messages>
+ </entity>
+</deploy>
