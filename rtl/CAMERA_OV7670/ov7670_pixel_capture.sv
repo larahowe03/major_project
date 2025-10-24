@@ -77,6 +77,7 @@ always_ff @(posedge pclk ) begin
 end
 
 
+
 assign we = x_downscaler & y_downscaler & pixel_ready;
     
 

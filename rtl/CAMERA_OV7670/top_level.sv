@@ -73,7 +73,6 @@ module top_level(
 	wire vga_blank;  
 	wire vga_sync;   
 
-	 b5
 	image_buffer U3
 	(
 		.data_in(wrdata),
