@@ -55,5 +55,20 @@ display u_display(
    .display2(HEX2),
    .display3(HEX3)
 );
- 
+
+
+logic object_detected;
+
+obstacle_detect #(
+	.THRESHOLD(1000)
+	) detector (
+   .clk(CLOCK_50),
+   .distance_mm(latched_distance_mm),
+   .valid(sonar_valid),
+   .stop(stop)
+);
+
+// Example: show detection flag on LEDR[0]
+assign LEDR[0] = stop;
+
 endmodule
