@@ -81,10 +81,11 @@ reg [7:0] address = 1'b0;
       // COM7   Size & RGB output
     end
     8'h03 : begin
-      sreg <= 16'h1100;
+      sreg <= 16'h1140; //Use external clock
+		//sreg <= 16'h110F;
       // CLKRC  Prescaler - Fin/(1+1)
     end
-    8'h04 : begin
+    8'h04 : begin 
       sreg <= 16'h0C00;
       // COM3   Lots of stuff, enable scaling, all others off
     end
@@ -93,7 +94,7 @@ reg [7:0] address = 1'b0;
       // COM14  PCLK scaling off
     end
     8'h06 : begin
-      sreg <= 16'h8C00;
+      sreg <= 16'h8C02;
       // RGB444 Set RGB format
     end
     8'h07 : begin
@@ -102,6 +103,7 @@ reg [7:0] address = 1'b0;
     end
     8'h08 : begin
       sreg <= 16'h4010;
+		//sreg <= 16'h40D0;
       // COM15  Full 0-255 output, RGB 565
     end
     8'h09 : begin
@@ -109,7 +111,8 @@ reg [7:0] address = 1'b0;
       // TSLB   Set UV ordering,  do not auto-reset window
     end
     8'h0A : begin
-      sreg <= 16'h1438;
+      sreg <= 16'h1448;
+		//sreg <= 16'h1400;
       // COM9  - AGC Celling
     end
     8'h0B : begin
@@ -222,8 +225,9 @@ reg [7:0] address = 1'b0;
     8'h28 : begin
       sreg <= 16'h4e20;
     end
+      
     8'h29 : begin
-      sreg <= 16'h6900;
+		sreg <= 16'h6900;
       // GFIX (0x69) 0x00
     end
     8'h2A : begin
@@ -268,9 +272,18 @@ reg [7:0] address = 1'b0;
     8'h37 : begin
       sreg <= 16'hb80a;
     end
+    8'h38 : begin
+      //sreg <= 16'h71b5; //Color bar test
+		sreg <= 16'h7100;
+    end
+    8'h39 : begin
+		sreg <= 16'ha202;
+    end
     default : begin
       sreg <= 16'hffff;
     end
+	 
+
     endcase
   end
 
