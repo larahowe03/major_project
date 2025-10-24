@@ -8,7 +8,7 @@ module fft_input_buffer #(
      
      input  logic         audio_input_valid,
      output logic         audio_input_ready,
-     input  logic [W-1:0]   audio_input_data,
+     input  logic [W-1:0] audio_input_data,
 
      output logic [W-1:0] fft_input,
      output logic         fft_input_valid
@@ -17,9 +17,11 @@ module fft_input_buffer #(
     // Copy & Paste your solution to Lesson 4 fft_input_buffer.sv here!
     logic fft_read;
     logic full, wr_full;
+    logic [W-1:0] fifo_q;
+
     async_fifo u_fifo (.aclr(reset),
                         .data(audio_input_data),.wrclk(audio_clk),.wrreq(audio_input_valid),.wrfull(wr_full),
-                        .q(fft_input),          .rdclk(clk),      .rdreq(fft_read),         .rdfull(full)    );
+                        .q(fifo_q),          .rdclk(clk),      .rdreq(fft_read),         .rdfull(full)    );
     assign audio_input_ready = !wr_full;
 
     assign fft_input_valid = fft_read; // The Async FIFO is set such that valid data is read out whenever the rdreq flag is high.
@@ -29,7 +31,8 @@ module fft_input_buffer #(
     logic [$clog2(NSamples)-1 : 0] counter;
     logic reading;
     
-    assign fft_read = reading ? 1:0;/* Fill-in */
+    // assign fft_read = reading ? 1:0;/* Fill-in */
+    assign fft_read = reading;
 
     always_ff @(posedge clk) begin : fifo_flush
         if (reset) begin
@@ -49,6 +52,15 @@ module fft_input_buffer #(
                 end
             end
         end
+    end
+
+    always_ff @(posedge clk or posedge reset) begin
+        if (reset)
+            fft_input <= '0;
+        else if (fft_input_valid)
+            fft_input <= fifo_q;     // latch valid FIFO data
+        else
+            fft_input <= fft_input;  // hold last value to avoid X/Z
     end
 
 endmodule

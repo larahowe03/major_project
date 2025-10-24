@@ -34,11 +34,24 @@ for (my $n = 0; $n < $N; ++$n) {
 	$dontcare = 0 if (($n < 2*$N/4) && ($n % 2 == 0));
 	$dontcare = 0 if (($n < 3*$N/4) && ($n % 3 == 0));
 	$wr_u = 0 if ($n == 0);
-	my $wr_s = ($dontcare) ? $XX : sprintf("%0${NX}X", $wr_u);
-	my $wi_s = ($dontcare) ? $XX : sprintf("%0${NX}X", $wi_u);
-	printf("assign  wn_re[%2d] = ${NB}'h$wr_s;   ", $n);
-	printf("assign  wn_im[%2d] = ${NB}'h$wi_s;   ", $n);
-	printf("// %2d", $n);
-	printf(" % .3f % .3f", $wr, $wi);
-	print "\n";
+	# my $wr_s = ($dontcare) ? $XX : sprintf("%0${NX}X", $wr_u);
+	# my $wi_s = ($dontcare) ? $XX : sprintf("%0${NX}X", $wi_u);
+
+    my $wr_s;
+    my $wi_s;
+
+    if ($dontcare) {
+        # Replace X with 0 for simulation
+        $wr_s = sprintf("%0${NX}X", 0);
+        $wi_s = sprintf("%0${NX}X", 0);
+    } else {
+        $wr_s = sprintf("%0${NX}X", $wr_u);
+        $wi_s = sprintf("%0${NX}X", $wi_u);
+    }
+
+    printf("assign  wn_re[%2d] = ${NB}'h$wr_s;   ", $n);
+    printf("assign  wn_im[%2d] = ${NB}'h$wi_s;   ", $n);
+    printf("// %2d", $n);
+    printf(" % .3f % .3f", $wr, $wi);
+    print "\n";
 }

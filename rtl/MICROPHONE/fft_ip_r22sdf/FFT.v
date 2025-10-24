@@ -27,22 +27,18 @@ wire[WIDTH-1:0] su2_do_im;
 wire            su3_do_en;
 wire[WIDTH-1:0] su3_do_re;
 wire[WIDTH-1:0] su3_do_im;
-wire            su4_do_en;
-wire[WIDTH-1:0] su4_do_re;
-wire[WIDTH-1:0] su4_do_im;
+SdfUnit #(.N(256),.M(256),.WIDTH(WIDTH)) SU1 (
+    .clock  (clock      ),  //  i
+    .reset  (reset      ),  //  i
+    .di_en  (di_en      ),  //  i
+    .di_re  (di_re      ),  //  i
+    .di_im  (di_im      ),  //  i
+    .do_en  (su1_do_en  ),  //  o
+    .do_re  (su1_do_re  ),  //  o
+    .do_im  (su1_do_im  )   //  o
+);
 
-// SdfUnit #(.N(512),.M(512),.WIDTH(WIDTH)) SU1 (
-//     .clock  (clock      ),  //  i
-//     .reset  (reset      ),  //  i
-//     .di_en  (di_en      ),  //  i
-//     .di_re  (di_re      ),  //  i
-//     .di_im  (di_im      ),  //  i
-//     .do_en  (su1_do_en  ),  //  o
-//     .do_re  (su1_do_re  ),  //  o
-//     .do_im  (su1_do_im  )   //  o
-// );
-
-SdfUnit #(.N(256),.M(256),.WIDTH(WIDTH)) SU2 (
+SdfUnit #(.N(256),.M(64),.WIDTH(WIDTH)) SU2 (
     .clock  (clock      ),  //  i
     .reset  (reset      ),  //  i
     .di_en  (su1_do_en  ),  //  i
@@ -53,7 +49,7 @@ SdfUnit #(.N(256),.M(256),.WIDTH(WIDTH)) SU2 (
     .do_im  (su2_do_im  )   //  o
 );
 
-SdfUnit #(.N(256),.M(64),.WIDTH(WIDTH)) SU3 (
+SdfUnit #(.N(256),.M(16),.WIDTH(WIDTH)) SU3 (
     .clock  (clock      ),  //  i
     .reset  (reset      ),  //  i
     .di_en  (su2_do_en  ),  //  i
@@ -64,26 +60,15 @@ SdfUnit #(.N(256),.M(64),.WIDTH(WIDTH)) SU3 (
     .do_im  (su3_do_im  )   //  o
 );
 
-SdfUnit #(.N(256),.M(16),.WIDTH(WIDTH)) SU4 (
+SdfUnit #(.N(256),.M(4),.WIDTH(WIDTH)) SU4 (
     .clock  (clock      ),  //  i
     .reset  (reset      ),  //  i
     .di_en  (su3_do_en  ),  //  i
     .di_re  (su3_do_re  ),  //  i
     .di_im  (su3_do_im  ),  //  i
-    .do_en  (su4_do_en  ),  //  o
-    .do_re  (su4_do_re  ),  //  o
-    .do_im  (su4_do_im  )   //  o
-);
-
-SdfUnit #(.N(256),.M(4),.WIDTH(WIDTH)) SU5 (
-    .clock  (clock      ),  //  i
-    .reset  (reset      ),  //  i
-    .di_en  (su4_do_en  ),  //  i
-    .di_re  (su4_do_re  ),  //  i
-    .di_im  (su4_do_im  ),  //  i
-    .do_en  (do_en      ),  //  o
-    .do_re  (do_re      ),  //  o
-    .do_im  (do_im      )   //  o
+    .do_en  (do_en  ),  //  o
+    .do_re  (do_re  ),  //  o
+    .do_im  (do_im  )   //  o
 );
 
 endmodule
