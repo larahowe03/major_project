@@ -1,22 +1,21 @@
-/*  OV7670 Pixel Capture
- *  Author: T. Holland
+/*  OV7670 Pixel Capture with 90° Clockwise Rotation
  *
  *  Takes data inputs from OV7670 camera and scales image down from 640x480 -> 320x240.
+ *  The image is stored in memory rotated 90° clockwise for correct orientation on VGA.
  *
- *
- *  Notes: 
- *  - Requires OV7670 to be configured to RGB444 data (using register 0x8C).
- *  - IMPORTANT!! Will NOT work on DE1 unless timing contraints are configured correctly for PCLK, which is 50MHz.
- */ 
+ *  Notes:
+ *  - Requires OV7670 configured for RGB444 output (register 0x8C).
+ *  - PCLK ≈ 50MHz, ensure timing constraints are set properly.
+ */
 
 module ov7670_pixel_capture(
-  input wire pclk,
-  input wire vsync,
-  input wire href,
-  input wire [7:0] d,
-  output wire [16:0] addr,
-  output wire [11:0] pixel,
-  output wire we
+    input  wire        pclk,
+    input  wire        vsync,
+    input  wire        href,
+    input  wire [7:0]  d,
+    output wire [16:0] addr,
+    output wire [11:0] pixel,
+    output wire        we
 );
 
 
@@ -77,8 +76,19 @@ always_ff @(posedge pclk ) begin
 end
 
 
+    // --------------------------
+    // 90° clockwise rotated address mapping
+    // --------------------------
+    // Normally: addr = y * IMG_W + x
+    // Rotated:  addr = (IMG_W - 1 - y) + (x * IMG_W)
+    wire [16:0] rotated_addr = ((IMG_W - 1 - y_pos) * IMG_H / IMG_W) + x_pos * IMG_H / IMG_W;
+//    assign addr = rotated_addr;
+	 
+	 assign addr = (IMG_H - 1 - y_pos) * IMG_W + x_pos;
 
-assign we = x_downscaler & y_downscaler & pixel_ready;
-    
+    // --------------------------
+    // Write enable
+    // --------------------------
+    assign we = x_downscaler & y_downscaler & pixel_ready;
 
 endmodule
