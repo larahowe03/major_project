@@ -154,9 +154,9 @@ module zebra_crossing_tb;
         integer colon_pos, i_char;
         begin
             // Try to open edge-detected MIF file (output from convolution)
-            fd = $fopen("positive_case.mif", "r");
+            fd = $fopen("not_present.mif", "r");
             if (fd == 0) begin
-                $display("ERROR: Cannot open file positive_case.mif");
+                $display("ERROR: Cannot open file not_present.mif");
                 $display("Please run the convolution filter first to generate edge-detected image!");
                 $finish;
             end
