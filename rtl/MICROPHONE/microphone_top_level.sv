@@ -77,8 +77,8 @@ module microphone_top_level #(
 	logic [23:0] pulse_counter;
 	localparam int STRETCH_CYCLES = 12_500_000; // ~0.25s
 
-	always_ff @(posedge CLOCK_50 or posedge KEYS[0]) begin
-		if (KEYS[0]) begin
+	always_ff @(posedge CLOCK_50 or posedge reset) begin
+		if (reset) begin
 			pulse_counter <= 0;
 			whistle_detected <= 1'b0;
 		end
