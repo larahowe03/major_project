@@ -195,4 +195,4 @@ if __name__ == "__main__":
     else:
         # Default: convert output_image.mif from your testbench
         print("Converting output_image.mif to PNG...")
-        mif_to_grayscale_image("edge_very_aggressive.mif", "edge_very_aggressive.png")
+        mif_to_grayscale_image("verilog_results/present_edge_aggressive.mif", "verilog_results/present_edge_aggressive.png")
