@@ -9,6 +9,9 @@ def apply_kernel(image, kernel, name):
     img_float = image.astype(float)
     
     # Apply convolution
+    # result = convolve(img_float, np.array([[1, 1, 1],
+    #                           [1, 1, 1],
+    #                           [1, 1, 1]]) / 5.0, mode='constant', cval=0.0)
     result = convolve(img_float, kernel, mode='constant', cval=0.0)
     
     # Clip to valid range
@@ -155,4 +158,4 @@ def test_single_kernel(image_path, kernel_name):
     plt.show()
 
 if __name__ == "__main__":
-    test_all_kernels("resized_image.png")
+    test_all_kernels("real_test_images/not_present.jpg")

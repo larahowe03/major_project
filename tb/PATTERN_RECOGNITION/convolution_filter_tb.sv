@@ -178,13 +178,13 @@ module convolution_filter_tb;
         reg [200*8:1] line;
         integer colon_pos, i_char;
         begin
-            fd = $fopen("image_grayscale.mif", "r");
+            fd = $fopen("not_present.mif", "r");
             if (fd == 0) begin
-                $display("ERROR: Cannot open file image_grayscale.mif");
+                $display("ERROR: Cannot open file not_present.mif");
                 $finish;
             end
             
-            $display("Parsing MIF file: image_grayscale.mif");
+            $display("Parsing MIF file: not_present.mif");
             entries_loaded = 0;
             
             // Read line by line
