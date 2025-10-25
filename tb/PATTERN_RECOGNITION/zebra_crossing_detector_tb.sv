@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module zebra_crossing_detector_tb;
+module zebra_crossing_tb;
 
     // ========================================================================
     // Parameters
@@ -205,8 +205,8 @@ module zebra_crossing_detector_tb;
     // Waveform Dump
     // ========================================================================
     initial begin
-        $dumpfile("zebra_detector_tb.vcd");
-        $dumpvars(0, zebra_crossing_detector_tb);
+        $dumpfile("zebra_crossing_tb.vcd");
+        $dumpvars(0, zebra_crossing_tb);
     end
     
     // ========================================================================
