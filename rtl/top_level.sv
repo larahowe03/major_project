@@ -4,6 +4,18 @@ module top_level (
     output [17:0] LEDR,
     output [7:0] LEDG,
     inout [35:0] GPIO  // Entire GPIO_0 bus (bidirectional)
+    
+    // Mic
+    output  logic        I2C_SCLK,
+    inout                I2C_SDAT,
+    input                AUD_ADCDAT,
+    input                AUD_BCLK,
+    output  logic        AUD_XCK,
+    input                AUD_ADCLRCK,
+    output [6:0] HEX0,
+	output [6:0] HEX1,
+	output [6:0] HEX2,
+	output [6:0] HEX3,
 );
     logic enable;
     logic measure_pulse;
@@ -48,6 +60,20 @@ module top_level (
         .echo(echo),
         .trig(trig),
         .distanceRAW(distanceRAW)
+    );
+
+    microphone_top_level u_microphone_top_level (
+        .CLOCK_50(CLOCK_50),
+        .KEY(KEYS),
+        .whistle_detected(LEDG[7]), // Output whistle detection to LEDG[7]
+        .HEX0(HEX0),
+        .HEX1(HEX1),
+        .HEX2(HEX2),
+        .HEX3(HEX3),
+        .AUD_ADCDAT(AUD_ADCDAT),
+        .AUD_BCLK(AUD_BCLK),
+        .AUD_XCK(AUD_XCK),
+        .AUD_ADCLRCK(AUD_ADCDAT)
     );
     
     // Show raw value differently

@@ -1,6 +1,7 @@
 module fft_pitch_detect # (
     parameter int NSamples = 256,
-	 parameter int W = 16
+	parameter int W = 16
+	parameter int THRESHOLD = 50
 ) (
     input logic audio_clk,
 	 input logic fft_clk,
@@ -11,6 +12,7 @@ module fft_pitch_detect # (
 	 
 	 output logic [$clog2(NSamples)-1:0] pitch_output_data,
 	 output logic pitch_output_valid 
+	 output logic whistle_detected
 );
 	// DSP Chain
 	// Input clock domain is audio_clk (3.072 MHz). This is AUD_BCLK, the 3.072 MHz clock from the WM8731.
@@ -100,6 +102,28 @@ module fft_pitch_detect # (
 		.peak_k(pitch_output_data), 
 		.peak_valid(pitch_output_valid)
 	);
+
+	// always_comb begin
+	//     whistle_detected = 0;
+	//     if (pitch_output_valid) begin
+	//         // Simple whistle detection logic based on pitch index range
+	//         if (pitch_output_data >= 20) begin
+	//             whistle_detected = 1;
+	//         end
+	//     end
+	// end
+
+	always_ff @(posedge fft_clk or posedge reset) begin
+		if (reset) begin
+			whistle_detected <= 1'b0;
+		end else begin
+			// Output 1 for a single clock when valid & above threshold
+			if (pitch_output_valid && (pitch_output_data > THRESHOLD))
+				whistle_detected <= 1'b1;
+			else
+				whistle_detected <= 1'b0;
+		end
+	end
 
 	// Output buffer is used only for SignalTap debugging purposes:
 	(* preserve *) (* noprune *) logic [W*2:0] readout_data;

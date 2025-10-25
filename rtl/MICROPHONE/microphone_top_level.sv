@@ -10,12 +10,15 @@ module microphone_top_level #(
 	output      I2C_SCLK,
 	inout       I2C_SDAT,
 
+	// Whistle Detection Output
+	output logic whistle_detected,
+
 	output [6:0] HEX0,
 	output [6:0] HEX1,
 	output [6:0] HEX2,
 	output [6:0] HEX3,
 	input  [3:0] KEY,
-	input		AUD_ADCDAT,
+	input	 AUD_ADCDAT,
 	input    AUD_BCLK,     // 3.072 MHz clock from the WM8731
 	output   AUD_XCK,      // 18.432 MHz sampling clock to the WM8731
 	input    AUD_ADCLRCK
@@ -57,6 +60,7 @@ module microphone_top_level #(
 	);
 	
 	logic [$clog2(NSamples)-1:0] pitch_output_data;
+	logic whistle_detect_pulse;
 	
 	fft_pitch_detect #(.W(W), .NSamples(NSamples)) u_fft_pitch_detect (
 	    .audio_clk(audio_clk),
@@ -65,9 +69,34 @@ module microphone_top_level #(
 	    .audio_input_data(audio_input_data),
 	    .audio_input_valid(audio_input_valid),
 	    .pitch_output_data(pitch_output_data),
-	    .pitch_output_valid()
+	    .pitch_output_valid(),
+		.whistle_detected(whistle_detect_pulse)
 	);
-	
+
+	// This is just to stretch the whistle detection LED output for visibility
+	logic [23:0] pulse_counter;
+	localparam int STRETCH_CYCLES = 12_500_000; // ~0.25s
+
+	always_ff @(posedge CLOCK_50 or posedge KEYS[0]) begin
+		if (KEYS[0]) begin
+			pulse_counter <= 0;
+			whistle_detected <= 1'b0;
+		end
+		else begin
+			if (whistle_detect_pulse) begin
+				// start stretch timer whenever pulse occurs
+				pulse_counter <= STRETCH_CYCLES;
+				whistle_detected <= 1'b1;
+			end 
+			else if (pulse_counter > 0) begin
+				pulse_counter <= pulse_counter - 1;
+				whistle_detected <= 1'b1;
+			end 
+			else begin
+				whistle_detected <= 1'b0;
+			end
+		end
+	end
 
 	// Display (for peak `k` FFT index displayed on HEX0-HEX3):
 	display u_display (
