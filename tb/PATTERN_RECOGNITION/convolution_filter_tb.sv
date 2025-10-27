@@ -243,9 +243,9 @@ module convolution_filter_tb;
     task load_sharpen_kernel;
         begin
             $display("Loading 3x3 Sharpen kernel");
-            kernel[0][0] =  8'sd0; kernel[0][1] = -8'sd1; kernel[0][2] =  8'sd0;
-            kernel[1][0] = -8'sd1; kernel[1][1] =  8'sd5; kernel[1][2] = -8'sd1;
-            kernel[2][0] =  8'sd0; kernel[2][1] = -8'sd1; kernel[2][2] =  8'sd0;
+            kernel[0][0] = 8'sd0; kernel[0][1] = -8'sd1; kernel[0][2] = 8'sd0;
+            kernel[1][0] = -8'sd1; kernel[1][1] = 8'sd5; kernel[1][2] = -8'sd1;
+            kernel[2][0] = 8'sd0; kernel[2][1] = -8'sd1; kernel[2][2] = 8'sd0;
         end
     endtask
     
@@ -253,7 +253,7 @@ module convolution_filter_tb;
         begin
             $display("Loading 3x3 Aggressive Edge Detection kernel");
             kernel[0][0] = -8'sd1; kernel[0][1] = -8'sd1; kernel[0][2] = -8'sd1;
-            kernel[1][0] = -8'sd1; kernel[1][1] =  8'sd8; kernel[1][2] = -8'sd1;
+            kernel[1][0] = -8'sd1; kernel[1][1] = 8'sd8; kernel[1][2] = -8'sd1;
             kernel[2][0] = -8'sd1; kernel[2][1] = -8'sd1; kernel[2][2] = -8'sd1;
         end
     endtask
@@ -262,7 +262,7 @@ module convolution_filter_tb;
         begin
             $display("Loading 3x3 Very Aggressive Edge Detection kernel");
             kernel[0][0] = -8'sd1; kernel[0][1] = -8'sd1; kernel[0][2] = -8'sd1;
-            kernel[1][0] = -8'sd1; kernel[1][1] =  8'sd12; kernel[1][2] = -8'sd1;
+            kernel[1][0] = -8'sd1; kernel[1][1] = 8'sd12; kernel[1][2] = -8'sd1;
             kernel[2][0] = -8'sd1; kernel[2][1] = -8'sd1; kernel[2][2] = -8'sd1;
         end
     endtask
@@ -270,18 +270,18 @@ module convolution_filter_tb;
     task load_edge_gentle_kernel;
         begin
             $display("Loading 3x3 Gentle Edge Detection kernel");
-            kernel[0][0] =  8'sd0; kernel[0][1] = -8'sd1; kernel[0][2] =  8'sd0;
-            kernel[1][0] = -8'sd1; kernel[1][1] =  8'sd2; kernel[1][2] = -8'sd1;
-            kernel[2][0] =  8'sd0; kernel[2][1] = -8'sd1; kernel[2][2] =  8'sd0;
+            kernel[0][0] = 8'sd0; kernel[0][1] = -8'sd1; kernel[0][2] = 8'sd0;
+            kernel[1][0] = -8'sd1; kernel[1][1] = 8'sd2; kernel[1][2] = -8'sd1;
+            kernel[2][0] = 8'sd0; kernel[2][1] = -8'sd1; kernel[2][2] = 8'sd0;
         end
     endtask
 
     task load_edge_laplacian_kernel;
         begin
             $display("Loading 3x3 Laplacian Edge Detection kernel");
-            kernel[0][0] =  8'sd0; kernel[0][1] = -8'sd1; kernel[0][2] =  8'sd0;
-            kernel[1][0] = -8'sd1; kernel[1][1] =  8'sd4; kernel[1][2] = -8'sd1;
-            kernel[2][0] =  8'sd0; kernel[2][1] = -8'sd1; kernel[2][2] =  8'sd0;
+            kernel[0][0] = 8'sd0; kernel[0][1] = -8'sd1; kernel[0][2] = 8'sd0;
+            kernel[1][0] = -8'sd1; kernel[1][1] = 8'sd4; kernel[1][2] = -8'sd1;
+            kernel[2][0] = 8'sd0; kernel[2][1] = -8'sd1; kernel[2][2] = 8'sd0;
         end
     endtask
 
@@ -289,8 +289,17 @@ module convolution_filter_tb;
         begin
             $display("Loading 3x3 Sobel Y kernel");
             kernel[0][0] = -8'sd1; kernel[0][1] = -8'sd2; kernel[0][2] = -8'sd1;
-            kernel[1][0] =  8'sd0; kernel[1][1] =  8'sd0; kernel[1][2] =  8'sd0;
-            kernel[2][0] =  8'sd1; kernel[2][1] =  8'sd2; kernel[2][2] =  8'sd1;
+            kernel[1][0] = 8'sd0; kernel[1][1] = 8'sd0; kernel[1][2] = 8'sd0;
+            kernel[2][0] = 8'sd1; kernel[2][1] = 8'sd2; kernel[2][2] = 8'sd1;
+        end
+    endtask
+
+    task load_opening_kernel;
+        begin
+            $display("Loading 3x3 Opening kernel");
+            kernel[0][0] = 8'sd1; kernel[0][1] = 8'sd1; kernel[0][2] = 8'sd1;
+            kernel[1][0] = 8'sd1; kernel[1][1] = 8'sd1; kernel[1][2] = 8'sd1;
+            kernel[2][0] = 8'sd1; kernel[2][1] = 8'sd1; kernel[2][2] = 8'sd1;
         end
     endtask
 
