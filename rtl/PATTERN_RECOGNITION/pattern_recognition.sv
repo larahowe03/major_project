@@ -79,7 +79,7 @@ module pattern_recognition #(
     logic [7:0] stripe_count_a, stripe_count_b, stripe_count_c;
     
     // Detector A doesn't control ready (just monitors)
-    zebra_crossing_detector_stream #(
+    zebra_crossing_detector #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
         .W(W),
@@ -102,7 +102,7 @@ module pattern_recognition #(
     );
     
     // Detector B doesn't control ready
-    zebra_crossing_detector_stream #(
+    zebra_crossing_detector #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
         .W(W),
@@ -125,7 +125,7 @@ module pattern_recognition #(
     );
     
     // Detector C doesn't control ready
-    zebra_crossing_detector_stream #(
+    zebra_crossing_detector #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
         .W(W),
