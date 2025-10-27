@@ -12,6 +12,7 @@ module top_level(
 
 logic reset;
 logic start;
+logic locked;
 
 // front sensor variables
 logic echo_front, trigger_front;
@@ -52,34 +53,44 @@ end
 sonar_pll sonar_pll (
 	.areset(reset),
 	.inclk0(CLOCK_50),
-	.c0(SONAR_CLK)
+	.c0(SONAR_CLK),
+	.locked(locked)
 	);
 
-localparam SONAR_FREQ_HZ = 43904000;
-localparam MEASURE_PERIOD_SEC = 1; // measure distance every 2 seconds
-localparam MEASURE_CYCLES = SONAR_FREQ_HZ * MEASURE_PERIOD_SEC;
+//localparam int SONAR_FREQ_HZ = 43904000;
+//localparam int MEASURE_PERIOD_SEC = 3; // measure distance every 2 seconds
+//localparam int MEASURE_CYCLES = SONAR_FREQ_HZ * MEASURE_PERIOD_SEC;
+//localparam int PULSE_LENGTH_CYCLES = 4390; // ~100 µs pulse
 
-logic [26:0] counter;
+//logic [$clog2(MEASURE_CYCLES):0] counter;
+//logic [15:0] pulse_count;
+
+logic ready_d; 
 
 always_ff @(posedge SONAR_CLK or negedge reset) begin
-	if (reset) begin
-		counter <= 0;
-		start <= 0;
-	end
-	else if (counter >= MEASURE_CYCLES) begin
-		counter <= 0;
-		start <= 1'b1;
-	end
-	else begin
-		counter <= counter + 1;
-		start <= 1'b0;
-	end
+    if (!reset) begin
+//        counter <= 0;
+        start   <= 0;
+//		  ready_d <= 0;
+    end else begin
+        if (sonar_ready_front) begin
+//            counter <= 0;
+            start   <= 1'b1;
+        end else begin
+//            counter <= counter + 1;
+            start   <= 1'b0;
+        end
+//			ready_d <= sonar_ready_front;
+//			start <= sonar_ready_front & ~ready_d;
+    end
 end
+		
+
 	
 // Front sensor - get measurement
 sonar_range sonar_range_front (
 	.clk(SONAR_CLK), // must be 43.904MHz
-	.start_measure(start),
+	.start_measure(!start),
 	.rst(reset),
 	.echo(echo_front),
 	.trig(trigger_front),
@@ -91,7 +102,7 @@ sonar_range sonar_range_front (
 // Back sensor - get measurement
 sonar_range sonar_range_back (
 	.clk(SONAR_CLK), // must be 43.904MHz
-	.start_measure(start),
+	.start_measure(!start),
 	.rst(reset),
 	.echo(echo_back),
 	.trig(trigger_back),
@@ -125,25 +136,31 @@ display u_display(
 logic stop_front;
 logic stop_back;
 
-obstacle_detect front_sensor (
+obstacle_detect #(
 	.THRESHOLD(1000)
-	) detector (
+	) detector_front (
 	.clk(CLOCK_50),
 	.distance_mm(latched_distance_mm_front),
 	.valid(sonar_valid_front),
 	.stop(stop_front)
 );
 
-obstacle_detect back_sensor (
+obstacle_detect #(
 	.THRESHOLD(500)
-	) detector (
+	) detector_back (
 	.clk(CLOCK_50),
 	.distance_mm(latched_distance_mm_back),
 	.valid(sonar_valid_back),
 	.stop(stop_back)
 );
 
-assign LEDR[17] = stop_front;
-assign LEDR[16] = stop_back;
+// ----------------------
+// Debug LEDs
+// ----------------------
+assign LEDR[17] = stop_front;          // obstacle detected
+assign LEDR[16] = stop_back;   // valid pulse from sonar
+assign LEDR[15] = start;               // trigger pulse (every 1s)
+assign LEDR[14] = locked;              // PLL lock indicator
+assign LEDR[13] = SONAR_CLK;           // faint glow = clock running
 
 endmodule
