@@ -92,7 +92,7 @@ module convolution_filter_tb;
         end
         
         // Load input image from MIF file
-        load_mif_file;
+        load_mif_file("present.mif");
         $display("Loaded input image: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
         
         // Select kernel type
@@ -144,7 +144,7 @@ module convolution_filter_tb;
         
         // Save output
         repeat(100) @(posedge clk);
-        save_output_image();
+        save_output_image("output_image.mif");
         
         $display("\n=== TEST COMPLETE ===");
         $display("Input pixels:  %0d", pixel_in_count);
@@ -172,19 +172,19 @@ module convolution_filter_tb;
     // MIF File Loader (Simple C-style parsing)
     // ========================================================================
     
-    task load_mif_file;
+    task load_mif_file(input string filename);
         integer fd, status, addr, data, c;
         integer entries_loaded;
         reg [200*8:1] line;
         integer colon_pos, i_char;
         begin
-            fd = $fopen("not_present.mif", "r");
+            fd = $fopen(filename, "r");
             if (fd == 0) begin
-                $display("ERROR: Cannot open file not_present.mif");
+                $display("ERROR: Cannot open file %s", filename);
                 $finish;
             end
             
-            $display("Parsing MIF file: not_present.mif");
+            $display("Parsing MIF file: %s", filename);
             entries_loaded = 0;
             
             // Read line by line
@@ -298,10 +298,10 @@ module convolution_filter_tb;
     // Output Save Function
     // ========================================================================
     
-    task save_output_image;
+    task save_output_image(input string filename);
         begin
-            $display("Saving output image to output_image.mif");
-            fd_out = $fopen("output_image.mif", "w");
+            $display("Saving output image to MIF file: %s", filename);
+            fd_out = $fopen(filename, "w");
             
             // MIF header
             $fwrite(fd_out, "DEPTH = %0d;\n", IMG_WIDTH*IMG_HEIGHT);
