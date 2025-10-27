@@ -3,7 +3,7 @@ module top_level (
     input [3:0] KEYS,
     output [17:0] LEDR,
     output [7:0] LEDG,
-    inout [35:0] GPIO  // Entire GPIO_0 bus (bidirectional)
+    inout [35:0] GPIO,  // Entire GPIO_0 bus (bidirectional)
     
     // Mic
     output  logic        I2C_SCLK,
@@ -15,7 +15,7 @@ module top_level (
     output [6:0] HEX0,
 	output [6:0] HEX1,
 	output [6:0] HEX2,
-	output [6:0] HEX3,
+	output [6:0] HEX3
 );
     logic enable;
     logic measure_pulse;

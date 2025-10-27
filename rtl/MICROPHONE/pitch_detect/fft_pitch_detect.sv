@@ -1,6 +1,6 @@
 module fft_pitch_detect # (
     parameter int NSamples = 256,
-	parameter int W = 16
+	parameter int W = 16,
 	parameter int THRESHOLD = 50
 ) (
     input logic audio_clk,
@@ -11,7 +11,7 @@ module fft_pitch_detect # (
 	 input logic audio_input_valid,
 	 
 	 output logic [$clog2(NSamples)-1:0] pitch_output_data,
-	 output logic pitch_output_valid 
+	 output logic pitch_output_valid,
 	 output logic whistle_detected
 );
 	// DSP Chain

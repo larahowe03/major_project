@@ -21,6 +21,7 @@ module fft_pitch_detect_tb;
     logic audio_input_valid;
     logic [$clog2(NSamples)-1:0] pitch_output_data;
     logic pitch_output_valid;
+    logic whistle_detected;
 
     // DUT instantiation
     fft_pitch_detect #(
@@ -33,12 +34,13 @@ module fft_pitch_detect_tb;
         .audio_input_data(audio_input_data),
         .audio_input_valid(audio_input_valid),
         .pitch_output_data(pitch_output_data),
-        .pitch_output_valid(pitch_output_valid)
+        .pitch_output_valid(pitch_output_valid),
+        .whistle_detected(whistle_detected)
     );
 
     // Test waveform storage
     logic [W-1:0] input_signal [NSamples];
-    initial $readmemh("test_waveform.hex", input_signal);
+    initial $readmemh("/home/mtrx3700/Desktop/MajorProject2/rtl/MICROPHONE/pitch_detect/sine_1000Hz.hex", input_signal);
 
     logic start = 1'b0; // Use a start flag.
     initial begin : test_procedure
@@ -98,6 +100,12 @@ module fft_pitch_detect_tb;
             $display("[%0t ps] DETECTED PEAK -> k=%0d (~%0.1f Hz)",
                      $time, pitch_output_data, freq_hz);
         end
+    end
+
+    // --- Whistle Detection Monitor ---
+    always_ff @(posedge fft_clk) begin
+        if (whistle_detected)
+            $display("[%0t ps] >>> WHISTLE DETECTED! <<<", $time);
     end
 	 
     // Timeout watchdog

@@ -17,6 +17,7 @@ module microphone_top_level #(
 	output [6:0] HEX1,
 	output [6:0] HEX2,
 	output [6:0] HEX3,
+	output [15:0] LEDR,
 	input  [3:0] KEY,
 	input	 AUD_ADCDAT,
 	input    AUD_BCLK,     // 3.072 MHz clock from the WM8731
@@ -58,6 +59,18 @@ module microphone_top_level #(
 		.sample_data(audio_input_data),
 		.valid(audio_input_valid)
 	);
+	
+    // getting the absolute value of the audio input    
+    logic [15:0] abs_audio;
+    always_comb begin
+        if (audio_input_data[15])
+            abs_audio = (~audio_input_data + 1);
+        else
+            abs_audio = audio_input_data;
+	end
+
+    // the abs_audio to show magnitude on the LEDs
+    assign LEDR[15:0] = abs_audio[15:0];
 	
 	logic [$clog2(NSamples)-1:0] pitch_output_data;
 	logic whistle_detect_pulse;
