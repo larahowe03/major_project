@@ -20,14 +20,54 @@ module zebra_crossing_detector #(
     // ========================================================================
     // Position tracking
     // ========================================================================
+
+    // travel the image pixel by pixel
     logic [$clog2(IMG_WIDTH)-1:0] x_pos;
     logic [$clog2(IMG_HEIGHT)-1:0] y_pos;
     
+    // storing the filtered image for analysis
+    localparam NumPixels = IMG_WIDTH * IMG_HEIGHT;
+    logic [W-1:0] filtered_image [0:NumPixels-1];
+
+    typedef enum {IDLE, READ_IMAGE, PROCESS_IMAGE} current_state, next_state;
+
+    always_comb begin : next_state_logic
+        case (current_state)
+            IDLE: begin
+                if (pixel_valid)
+                    next_state = READ_IMAGE;
+                else
+                    next_state = IDLE;
+            end
+            READ_IMAGE: begin
+                if (x_pos == IMG_WIDTH - 1 && y_pos == IMG_HEIGHT - 1)
+                    next_state = PROCESS_IMAGE;
+                else
+                    next_state = READ_IMAGE;
+            end
+            PROCESS_IMAGE: begin
+                next_state = IDLE;
+            end
+            default: next_state = IDLE;
+        endcase
+    end
+
+    // next state register
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            current_state <= IDLE;
+        end else begin
+            current_state <= next_state;
+        end
+    end
+
+    // store incoming pixels into filtered_image array 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             x_pos <= '0;
             y_pos <= '0;
-        end else if (pixel_valid) begin
+        end else if (current_state == READ_IMAGE && pixel_valid) begin
+            filtered_image[y_pos * IMG_WIDTH + x_pos] <= edge_pixel;
             if (x_pos == IMG_WIDTH - 1) begin
                 x_pos <= '0;
                 y_pos <= (y_pos == IMG_HEIGHT - 1) ? '0 : y_pos + 1;
@@ -36,7 +76,7 @@ module zebra_crossing_detector #(
             end
         end
     end
-    
+
     // ========================================================================
     // Detection parameters
     // ========================================================================
@@ -44,160 +84,36 @@ module zebra_crossing_detector #(
     localparam MIN_EDGES_PER_ROW = 80;      // Min edges to count as stripe row
     localparam MIN_STRIPES = 4;             // Min stripe rows for crossing
     localparam MAX_STRIPES = 15;            // Max stripe rows for crossing
-    
-    // Divide image into multiple scan regions to handle rotation
-    localparam NUM_SCAN_LINES = 5;
-    
+
     // ========================================================================
-    // Multi-region analysis for rotation handling
+    // Zebra crossing detection logic   
     // ========================================================================
-    
-    // Scan lines at different heights to detect angled crossings
-    logic [15:0] edge_count_per_scanline [0:NUM_SCAN_LINES-1];
-    logic [$clog2(IMG_HEIGHT)-1:0] scan_y [0:NUM_SCAN_LINES-1];
-    
-    // Define scan line positions (spread across bottom 2/3 of image)
-    initial begin
-        scan_y[0] = IMG_HEIGHT * 1 / 3;
-        scan_y[1] = IMG_HEIGHT * 2 / 5;
-        scan_y[2] = IMG_HEIGHT * 1 / 2;
-        scan_y[3] = IMG_HEIGHT * 3 / 5;
-        scan_y[4] = IMG_HEIGHT * 2 / 3;
-    end
-    
-    // ========================================================================
-    // Diagonal stripe detection using column slices
-    // ========================================================================
-    
-    // Divide width into vertical slices to detect diagonal patterns
-    localparam NUM_SLICES = 8;
-    localparam SLICE_WIDTH = IMG_WIDTH / NUM_SLICES;
-    
-    logic [11:0] edge_density_per_slice [0:NUM_SLICES-1];  // Edge count per vertical slice
-    logic [$clog2(NUM_SLICES)-1:0] current_slice;
-    
-    assign current_slice = x_pos / SLICE_WIDTH;
-    
-    // ========================================================================
-    // Edge density analysis (rotation-invariant)
-    // ========================================================================
-    
-    logic [15:0] total_edges;
-    logic [7:0] stripe_rows;
-    logic [15:0] edges_in_row;
-    
-    logic in_roi;  // Are we in region of interest (bottom 2/3)?
-    assign in_roi = (y_pos >= IMG_HEIGHT / 3);
-    
-    // Detection method signals (declared outside always block)
-    logic method1_detect, method2_detect, method3_detect, method4_detect;
-    logic [3:0] active_scanlines, active_slices;
-    logic [2:0] vote;
-    
-    integer i;
+
+    logic processing_initialised;
+    logic line_detected;
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            edges_in_row <= '0;
-            stripe_rows <= '0;
-            total_edges <= '0;
-            crossing_detected <= 1'b0;
-            detection_valid <= 1'b0;
-            stripe_count <= '0;
-            confidence <= '0;
-            
-            for (i = 0; i < NUM_SCAN_LINES; i = i + 1) begin
-                edge_count_per_scanline[i] <= '0;
-            end
-            
-            for (i = 0; i < NUM_SLICES; i = i + 1) begin
-                edge_density_per_slice[i] <= '0;
-            end
-            
-        end else begin
-            detection_valid <= 1'b0;  // Default: pulse low
-            
-            if (pixel_valid) begin
-                // Count edges in current position
-                if (in_roi && edge_pixel > EDGE_THRESHOLD) begin
-                    edges_in_row <= edges_in_row + 1;
-                    total_edges <= total_edges + 1;
-                    
-                    // Update slice density
-                    if (current_slice < NUM_SLICES)
-                        edge_density_per_slice[current_slice] <= edge_density_per_slice[current_slice] + 1;
-                    
-                    // Update scan line counts
-                    for (i = 0; i < NUM_SCAN_LINES; i = i + 1) begin
-                        if (y_pos == scan_y[i])
-                            edge_count_per_scanline[i] <= edge_count_per_scanline[i] + 1;
+            processing_initialised <= 1'b0;
+            line_detected <= 1'b0;
+        end else if (current_state == PROCESS_IMAGE) begin
+            // initially setting the x and y positions to the bottom of the image
+            if (!processing_initialised) begin
+                processing_initialised <= 1'b1;
+                x_pos <= IMG_WIDTH / 2;
+                y_pos <= IMAGE_HEIGHT - 1;
+            end else begin
+                if (!line_detected) begin
+                    // Travel up the image to find a crossing
+                    y_pos <= y_pos - 1'b1;
+                    if filtered_image[y_pos * IMG_WIDTH + x_pos] > EDGE_THRESHOLD begin
+                        line_detected <= 1'b1;
                     end
-                end
-                
-                // End of row?
-                if (x_pos == IMG_WIDTH - 1) begin
-                    // Check if this row had enough edges to be a stripe
-                    if (in_roi && edges_in_row > MIN_EDGES_PER_ROW) begin
-                        stripe_rows <= stripe_rows + 1;
-                    end
-                    // Reset counter for next row
-                    edges_in_row <= '0;
-                end
-                
-                // End of frame?
-                if (x_pos == IMG_WIDTH - 1 && y_pos == IMG_HEIGHT - 1) begin
-                    // ====== Detection Algorithm ======
-                    
-                    // Method 1: Row-based detection (works for horizontal crossings)
-                    method1_detect = (stripe_rows >= MIN_STRIPES && stripe_rows <= MAX_STRIPES);
-                    
-                    // Method 2: Scan line analysis (works for angled crossings)
-                    // Check if multiple scan lines have high edge density
-                    active_scanlines = 0;
-                    for (i = 0; i < NUM_SCAN_LINES; i = i + 1) begin
-                        if (edge_count_per_scanline[i] > 50)  // Threshold for "has edges"
-                            active_scanlines = active_scanlines + 1;
-                    end
-                    method2_detect = (active_scanlines >= 3);
-                    
-                    // Method 3: Slice distribution (checks for consistent pattern across width)
-                    // For zebra crossing, expect similar edge density across slices
-                    active_slices = 0;
-                    for (i = 0; i < NUM_SLICES; i = i + 1) begin
-                        if (edge_density_per_slice[i] > 100)  // Has significant edges
-                            active_slices = active_slices + 1;
-                    end
-                    method3_detect = (active_slices >= 4);  // At least half the slices
-                    
-                    // Method 4: Overall edge density
-                    method4_detect = (total_edges > 2000 && total_edges < 15000);  // Reasonable range
-                    
-                    // Combine methods (at least 2 must agree)
-                    vote = {2'b0, method1_detect} + {2'b0, method2_detect} + 
-                           {2'b0, method3_detect} + {2'b0, method4_detect};
-                    
-                    crossing_detected <= (vote >= 2);
-                    
-                    // Calculate confidence (0-255)
-                    confidence <= {vote, 6'b0} + stripe_rows;  // Simple confidence metric
-                    
-                    // Output stripe count
-                    stripe_count <= stripe_rows;
-                    
-                    // Signal that detection is ready
-                    detection_valid <= 1'b1;
-                    
-                    // Reset for next frame
-                    stripe_rows <= '0;
-                    total_edges <= '0;
-                    for (i = 0; i < NUM_SCAN_LINES; i = i + 1) begin
-                        edge_count_per_scanline[i] <= '0;
-                    end
-                    for (i = 0; i < NUM_SLICES; i = i + 1) begin
-                        edge_density_per_slice[i] <= '0;
-                    end
+                end else begin
+                    // if a line is detected travel around that pixel to 
                 end
             end
         end
     end
-
+            
 endmodule
