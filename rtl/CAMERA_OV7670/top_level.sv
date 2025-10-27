@@ -124,10 +124,10 @@ module top_level (
 //	end
 
 	// signed 8-bit 3x3 Sobel-X kernel
-	localparam logic signed [7:0] SOBEL_X [0:2][0:2] = '{
-											 '{-8'sd1,  8'sd0,  8'sd1},
-											 '{-8'sd2,  8'sd0,  8'sd2},
-											 '{-8'sd1,  8'sd0,  8'sd1}
+	localparam logic signed [7:0] SOBEL_Y [0:2][0:2] = '{
+											 '{-8'sd1, -8'sd2, -8'sd1},
+											 '{ 8'sd0,  8'sd0,  8'sd0},
+											 '{ 8'sd1,  8'sd2,  8'sd1}
 										};
 
 
@@ -157,7 +157,7 @@ module top_level (
 	  .x_valid           (pix_valid),
 	  .x_ready           (),          // <— fix: explicitly unconnected
 	  .x_data            (gray_px),
-	  .kernel            (SOBEL_X),   // <— fix: const aggregate
+	  .kernel            (SOBEL_Y),   // <— fix: const aggregate
 	  .crossing_detected (crossing_detected),
 	  .detection_valid   (detection_valid),
 	  .stripe_count      (stripe_count),
