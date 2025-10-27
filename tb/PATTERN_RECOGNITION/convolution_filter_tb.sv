@@ -178,9 +178,9 @@ module convolution_filter_tb;
         reg [200*8:1] line;
         integer colon_pos, i_char;
         begin
-            fd = $fopen("present.mif", "r");
+            fd = $fopen("not_present.mif", "r");
             if (fd == 0) begin
-                $display("ERROR: Cannot open file present.mif");
+                $display("ERROR: Cannot open file not_present.mif");
                 $finish;
             end
             
