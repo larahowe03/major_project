@@ -1,6 +1,6 @@
 module image_buffer
 (
-	input  logic [11:0] data_in,
+	input  logic [11:0] data_in, 
 	input  logic rd_clk,
 	input  logic wr_clk,
 	input  logic ready, 
@@ -18,6 +18,8 @@ module image_buffer
   logic [8:0]  y_vga;
   logic [8:0]  x_src;
   logic [7:0]  y_src;
+
+
 
   always_ff @(posedge rd_clk) begin
     if (rst) begin
@@ -46,9 +48,16 @@ module image_buffer
 					image_end <= 1'b1;
 				end
 				//Dodgy Manoeuvre to scale the VGA
-				x_src = x_vga[9:1]; //Divide by two
-				y_src = y_vga[8:1];
-				rdaddress <= ({9'd0, y_src} << 8) + ({9'd0, y_src} << 6) + {8'd0, x_src};
+				x_src = x_vga[9:1]; // Divide by two → 320
+				y_src = y_vga[8:1]; // Divide by two → 240
+
+				// OBSERVATION: rotated wrong, original line from Ed.
+				// FIX: physically rotated camera so it's the right orientation on vga output since
+				// the way the pixels and addresses are written into memory, and then the way it's read out to downstream
+				// computations is kept consistent.
+				rdaddress <= ({9'd0, y_src} << 8) + ({9'd0, y_src} << 6) + {8'd0, x_src};	
+
+
 			end
 		end
   end
