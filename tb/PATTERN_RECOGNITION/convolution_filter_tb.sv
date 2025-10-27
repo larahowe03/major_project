@@ -10,12 +10,9 @@ module convolution_filter_tb;
     parameter KERNEL_H = 3;
     parameter KERNEL_W = 3;
     parameter W = 8;
-    parameter W_FRAC = 4;  // 4 fractional bits = Q4.4 format, scale factor = 16
+    parameter W_FRAC = 0;
     
     parameter CLK_PERIOD = 20; // 50 MHz
-    
-    // Fixed-point scale factor
-    localparam SCALE_FACTOR = (1 << W_FRAC);  // 2^4 = 16
     
     // ========================================================================
     // DUT Signals
@@ -99,12 +96,7 @@ module convolution_filter_tb;
         $display("Loaded input image: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
         
         // Select kernel type
-        $display("\n=== FIXED-POINT CONFIGURATION ===");
-        $display("W_FRAC = %0d (Q%0d.%0d format)", W_FRAC, W-W_FRAC, W_FRAC);
-        $display("Scale Factor = 2^%0d = %0d", W_FRAC, SCALE_FACTOR);
-        $display("Fractional precision = 1/%0d = %.4f\n", SCALE_FACTOR, 1.0/SCALE_FACTOR);
-        
-        load_blur_kernel();
+        load_sobel_y_kernel();
         
         // Reset
         repeat(10) @(posedge clk);
@@ -236,162 +228,78 @@ module convolution_filter_tb;
     endtask
     
     // ========================================================================
-    // Kernel Loading Functions (FIXED-POINT VERSIONS)
+    // Kernel Loading Functions
     // ========================================================================
-    
-    // Helper function to convert float to fixed-point
-    function integer float_to_fixed(input real value);
-        begin
-            float_to_fixed = $rtoi(value * SCALE_FACTOR + 0.5);
-        end
-    endfunction
-    
-    // Helper task to display kernel
-    task display_kernel(input string name);
-        integer sum;
-        real sum_real;
-        begin
-            $display("\n=== %s ===", name);
-            $display("Kernel (fixed-point values, scale=%0d):", SCALE_FACTOR);
-            $display("  [%3d %3d %3d]", $signed(kernel[0][0]), $signed(kernel[0][1]), $signed(kernel[0][2]));
-            $display("  [%3d %3d %3d]", $signed(kernel[1][0]), $signed(kernel[1][1]), $signed(kernel[1][2]));
-            $display("  [%3d %3d %3d]", $signed(kernel[2][0]), $signed(kernel[2][1]), $signed(kernel[2][2]));
-            
-            sum = $signed(kernel[0][0]) + $signed(kernel[0][1]) + $signed(kernel[0][2]) +
-                  $signed(kernel[1][0]) + $signed(kernel[1][1]) + $signed(kernel[1][2]) +
-                  $signed(kernel[2][0]) + $signed(kernel[2][1]) + $signed(kernel[2][2]);
-            sum_real = real'(sum) / SCALE_FACTOR;
-            $display("Sum = %0d (represents %.4f in real)", sum, sum_real);
-            $display("");
-        end
-    endtask
     
     task load_blur_kernel;
         begin
-            // Box Blur: [[1,1,1],[1,1,1],[1,1,1]] / 9.0
-            // Each coefficient = 1/9 ≈ 0.1111
-            // Fixed-point (scale=16): 0.1111 * 16 ≈ 1.78 → 2
-            kernel[0][0] = 8'sd2; kernel[0][1] = 8'sd2; kernel[0][2] = 8'sd2;
-            kernel[1][0] = 8'sd2; kernel[1][1] = 8'sd2; kernel[1][2] = 8'sd2;
-            kernel[2][0] = 8'sd2; kernel[2][1] = 8'sd2; kernel[2][2] = 8'sd2;
-            // Sum = 18 → represents 18/16 = 1.125 (close to 1.0)
-            
-            display_kernel("Box Blur (normalized)");
-        end
-    endtask
-    
-    task load_gaussian_blur_kernel;
-        begin
-            // Gaussian Blur: [[1,2,1],[2,4,2],[1,2,1]] / 16.0
-            // Perfect for Q4.4! Each coefficient directly maps:
-            // 1/16 = 1, 2/16 = 2, 4/16 = 4
-            kernel[0][0] = 8'sd1; kernel[0][1] = 8'sd2; kernel[0][2] = 8'sd1;
-            kernel[1][0] = 8'sd2; kernel[1][1] = 8'sd4; kernel[1][2] = 8'sd2;
-            kernel[2][0] = 8'sd1; kernel[2][1] = 8'sd2; kernel[2][2] = 8'sd1;
-            // Sum = 16 → represents 16/16 = 1.0 (perfect!)
-            
-            display_kernel("Gaussian Blur (normalized)");
+            $display("Loading 3x3 Box Blur kernel");
+            kernel[0][0] = 8'sd1; kernel[0][1] = 8'sd1; kernel[0][2] = 8'sd1;
+            kernel[1][0] = 8'sd1; kernel[1][1] = 8'sd1; kernel[1][2] = 8'sd1;
+            kernel[2][0] = 8'sd1; kernel[2][1] = 8'sd1; kernel[2][2] = 8'sd1;
         end
     endtask
     
     task load_sharpen_kernel;
         begin
-            // Sharpen: [[0,-1,0],[-1,5,-1],[0,-1,0]]
-            // Already normalized (sum = 1)
-            // Scale to fixed-point: multiply by 16
-            kernel[0][0] = 8'sd0;  kernel[0][1] = -8'sd16; kernel[0][2] = 8'sd0;
-            kernel[1][0] = -8'sd16; kernel[1][1] = 8'sd80; kernel[1][2] = -8'sd16;
-            kernel[2][0] = 8'sd0;  kernel[2][1] = -8'sd16; kernel[2][2] = 8'sd0;
-            // Sum = 16 → represents 1.0
-            
-            display_kernel("Sharpen (normalized)");
-        end
-    endtask
-    
-    task load_edge_detection_kernel;
-        begin
-            // Laplacian Edge: [[0,-1,0],[-1,4,-1],[0,-1,0]]
-            // Sum = 0 (edge detection highlights changes)
-            // Scale by 4 for better visibility
-            kernel[0][0] = 8'sd0;  kernel[0][1] = -8'sd4; kernel[0][2] = 8'sd0;
-            kernel[1][0] = -8'sd4; kernel[1][1] = 8'sd16; kernel[1][2] = -8'sd4;
-            kernel[2][0] = 8'sd0;  kernel[2][1] = -8'sd4; kernel[2][2] = 8'sd0;
-            // Sum = 0 (as expected for edge detection)
-            
-            display_kernel("Laplacian Edge Detection");
+            $display("Loading 3x3 Sharpen kernel");
+            kernel[0][0] = 8'sd0; kernel[0][1] = -8'sd1; kernel[0][2] = 8'sd0;
+            kernel[1][0] = -8'sd1; kernel[1][1] = 8'sd5; kernel[1][2] = -8'sd1;
+            kernel[2][0] = 8'sd0; kernel[2][1] = -8'sd1; kernel[2][2] = 8'sd0;
         end
     endtask
     
     task load_edge_aggressive_kernel;
         begin
-            // Aggressive edge: [[-1,-1,-1],[-1,8,-1],[-1,-1,-1]]
-            // Sum = 0, scale by 2 for better contrast
-            kernel[0][0] = -8'sd2; kernel[0][1] = -8'sd2; kernel[0][2] = -8'sd2;
-            kernel[1][0] = -8'sd2; kernel[1][1] = 8'sd16; kernel[1][2] = -8'sd2;
-            kernel[2][0] = -8'sd2; kernel[2][1] = -8'sd2; kernel[2][2] = -8'sd2;
-            
-            display_kernel("Aggressive Edge Detection");
+            $display("Loading 3x3 Aggressive Edge Detection kernel");
+            kernel[0][0] = -8'sd1; kernel[0][1] = -8'sd1; kernel[0][2] = -8'sd1;
+            kernel[1][0] = -8'sd1; kernel[1][1] = 8'sd8; kernel[1][2] = -8'sd1;
+            kernel[2][0] = -8'sd1; kernel[2][1] = -8'sd1; kernel[2][2] = -8'sd1;
         end
     endtask
 
     task load_edge_very_aggressive_kernel;
         begin
-            // Very aggressive: [[-1,-1,-1],[-1,12,-1],[-1,-1,-1]]
-            // Scale by 3
-            kernel[0][0] = -8'sd3; kernel[0][1] = -8'sd3; kernel[0][2] = -8'sd3;
-            kernel[1][0] = -8'sd3; kernel[1][1] = 8'sd36; kernel[1][2] = -8'sd3;
-            kernel[2][0] = -8'sd3; kernel[2][1] = -8'sd3; kernel[2][2] = -8'sd3;
-            
-            display_kernel("Very Aggressive Edge Detection");
+            $display("Loading 3x3 Very Aggressive Edge Detection kernel");
+            kernel[0][0] = -8'sd1; kernel[0][1] = -8'sd1; kernel[0][2] = -8'sd1;
+            kernel[1][0] = -8'sd1; kernel[1][1] = 8'sd12; kernel[1][2] = -8'sd1;
+            kernel[2][0] = -8'sd1; kernel[2][1] = -8'sd1; kernel[2][2] = -8'sd1;
         end
     endtask
 
     task load_edge_gentle_kernel;
         begin
-            // Gentle edge: [[0,-1,0],[-1,2,-1],[0,-1,0]]
-            // Scale by 8
-            kernel[0][0] = 8'sd0;  kernel[0][1] = -8'sd8; kernel[0][2] = 8'sd0;
-            kernel[1][0] = -8'sd8; kernel[1][1] = 8'sd16; kernel[1][2] = -8'sd8;
-            kernel[2][0] = 8'sd0;  kernel[0][1] = -8'sd8; kernel[2][2] = 8'sd0;
-            
-            display_kernel("Gentle Edge Detection");
+            $display("Loading 3x3 Gentle Edge Detection kernel");
+            kernel[0][0] = 8'sd0; kernel[0][1] = -8'sd1; kernel[0][2] = 8'sd0;
+            kernel[1][0] = -8'sd1; kernel[1][1] = 8'sd2; kernel[1][2] = -8'sd1;
+            kernel[2][0] = 8'sd0; kernel[2][1] = -8'sd1; kernel[2][2] = 8'sd0;
         end
     endtask
 
-    task load_sobel_x_kernel;
+    task load_edge_laplacian_kernel;
         begin
-            // Sobel X (vertical edges): [[-1,0,1],[-2,0,2],[-1,0,1]]
-            // Scale by 4 for better visibility
-            kernel[0][0] = -8'sd4; kernel[0][1] = 8'sd0; kernel[0][2] = 8'sd4;
-            kernel[1][0] = -8'sd8; kernel[1][1] = 8'sd0; kernel[1][2] = 8'sd8;
-            kernel[2][0] = -8'sd4; kernel[2][1] = 8'sd0; kernel[2][2] = 8'sd4;
-            
-            display_kernel("Sobel X (Vertical Edges)");
+            $display("Loading 3x3 Laplacian Edge Detection kernel");
+            kernel[0][0] = 8'sd0; kernel[0][1] = -8'sd1; kernel[0][2] = 8'sd0;
+            kernel[1][0] = -8'sd1; kernel[1][1] = 8'sd4; kernel[1][2] = -8'sd1;
+            kernel[2][0] = 8'sd0; kernel[2][1] = -8'sd1; kernel[2][2] = 8'sd0;
         end
     endtask
 
     task load_sobel_y_kernel;
         begin
-            // Sobel Y (horizontal edges): [[-1,-2,-1],[0,0,0],[1,2,1]]
-            // Scale by 4 for better visibility
-            kernel[0][0] = -8'sd4; kernel[0][1] = -8'sd8; kernel[0][2] = -8'sd4;
-            kernel[1][0] = 8'sd0;  kernel[1][1] = 8'sd0;  kernel[1][2] = 8'sd0;
-            kernel[2][0] = 8'sd4;  kernel[2][1] = 8'sd8;  kernel[2][2] = 8'sd4;
-            
-            display_kernel("Sobel Y (Horizontal Edges)");
+            $display("Loading 3x3 Sobel Y kernel");
+            kernel[0][0] = -8'sd1; kernel[0][1] = -8'sd2; kernel[0][2] = -8'sd1;
+            kernel[1][0] = 8'sd0; kernel[1][1] = 8'sd0; kernel[1][2] = 8'sd0;
+            kernel[2][0] = 8'sd1; kernel[2][1] = 8'sd2; kernel[2][2] = 8'sd1;
         end
     endtask
 
-    task load_identity_kernel;
+    task load_opening_kernel;
         begin
-            // Identity: [[0,0,0],[0,1,0],[0,0,0]]
-            // Scale by 16 (to represent 1.0 in fixed-point)
-            kernel[0][0] = 8'sd0; kernel[0][1] = 8'sd0;  kernel[0][2] = 8'sd0;
-            kernel[1][0] = 8'sd0; kernel[1][1] = 8'sd16; kernel[1][2] = 8'sd0;
-            kernel[2][0] = 8'sd0; kernel[2][1] = 8'sd0;  kernel[2][2] = 8'sd0;
-            // Sum = 16 → represents 1.0
-            
-            display_kernel("Identity (pass-through)");
+            $display("Loading 3x3 Opening kernel");
+            kernel[0][0] = 8'sd1; kernel[0][1] = 8'sd1; kernel[0][2] = 8'sd1;
+            kernel[1][0] = 8'sd1; kernel[1][1] = 8'sd1; kernel[1][2] = 8'sd1;
+            kernel[2][0] = 8'sd1; kernel[2][1] = 8'sd1; kernel[2][2] = 8'sd1;
         end
     endtask
 
