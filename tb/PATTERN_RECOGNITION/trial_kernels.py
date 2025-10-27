@@ -9,11 +9,12 @@ def apply_kernel(image, kernel, name):
     img_float = image.astype(float)
     
     # Apply convolution
-    result = convolve(img_float, np.array([[ 0, -1,  0],
-                             [-1,  5, -1],
-                             [ 0, -1,  0]]), mode='constant', cval=0.0)
-    result = convolve(result, kernel, mode='constant', cval=0.0)
-    
+    result = convolve(img_float, kernel, mode='constant', cval=0.0)
+
+    result = convolve(result, np.array([[-1, -2, -1],
+                                        [ 0,  0,  0],
+                                        [ 1,  2,  1]]), mode='constant', cval=0.0)
+
     # Clip to valid range
     result = np.clip(result, 0, 255).astype(np.uint8)
     
@@ -39,7 +40,7 @@ def test_all_kernels(image_path):
         'Sharpen': np.array([[ 0, -1,  0],
                              [-1,  5, -1],
                              [ 0, -1,  0]]),
-        
+
         'Edge (Aggressive)': np.array([[-1, -1, -1],
                                        [-1,  8, -1],
                                        [-1, -1, -1]]),
