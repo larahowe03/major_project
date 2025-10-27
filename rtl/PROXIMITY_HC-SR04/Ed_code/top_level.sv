@@ -1,26 +1,29 @@
 module top_level(
-	input         CLOCK_50,
-	inout  [35:0] GPIO,
-	input  [3:0]  KEY,
-	output [6:0]  HEX0,
-	output [6:0]  HEX1,
-	output [6:0]  HEX2,
-	output [6:0]  HEX3,
+	input          CLOCK_50,
+	inout  [35:0]  GPIO,
+	input  [3:0]   KEY,
+	output [6:0]   HEX0,
+	output [6:0]   HEX1,
+	output [6:0]   HEX2,
+	output [6:0]   HEX3,
+	output [6:0]   HEX4,
+	output [6:0]   HEX5,
+	output [6:0]   HEX6,
+	output [6:0]   HEX7,
 	output [17:0]  LEDR
 );
-
 
 logic reset;
 logic start;
 logic locked;
 
-// front sensor variables
+// Front sensor variables
 logic echo_front, trigger_front;
 logic sonar_ready_front, sonar_valid_front;
 logic [11:0] distance_mm_front;
 logic [11:0] latched_distance_mm_front;
 
-// back sensor variables
+// Back sensor variables
 logic echo_back, trigger_back;
 logic sonar_ready_back, sonar_valid_back;
 logic [11:0] distance_mm_back;
@@ -30,16 +33,23 @@ logic SONAR_CLK;
 
 logic [15:0] bcd;
 
-// assign front GPIO pins (J3 on adapter board)
+assign reset = !KEY[2];
+
+//-------------------------------------------
+// GPIO Pin Assignment
+//-------------------------------------------
+
+// Front sensor - J3 on adapter board
 assign echo_front = GPIO[29];
 assign GPIO[27] = trigger_front;
 
-// assign back GPIO pins (J4 on adapter board)
+// Back sensor - J4 on adapter board
 assign echo_back = GPIO[32];
 assign GPIO[30] = trigger_back;
 
-
-assign reset = !KEY[2];
+//-------------------------------------------
+// Set Sensor Clock
+//-------------------------------------------
 
 always_ff @(posedge CLOCK_50) begin
 	if (sonar_valid_front) begin
@@ -57,37 +67,28 @@ sonar_pll sonar_pll (
 	.locked(locked)
 	);
 
-//localparam int SONAR_FREQ_HZ = 43904000;
-//localparam int MEASURE_PERIOD_SEC = 3; // measure distance every 2 seconds
-//localparam int MEASURE_CYCLES = SONAR_FREQ_HZ * MEASURE_PERIOD_SEC;
-//localparam int PULSE_LENGTH_CYCLES = 4390; // ~100 µs pulse
-
-//logic [$clog2(MEASURE_CYCLES):0] counter;
-//logic [15:0] pulse_count;
-
-logic ready_d; 
+//-------------------------------------------
+// Set start_measure flag
+//-------------------------------------------
 
 always_ff @(posedge SONAR_CLK or negedge reset) begin
     if (!reset) begin
-//        counter <= 0;
         start   <= 0;
-//		  ready_d <= 0;
     end else begin
         if (sonar_ready_front) begin
-//            counter <= 0;
             start   <= 1'b1;
         end else begin
-//            counter <= counter + 1;
             start   <= 1'b0;
         end
-//			ready_d <= sonar_ready_front;
-//			start <= sonar_ready_front & ~ready_d;
     end
 end
 		
 
+//-------------------------------------------
+// Get sensor measurements
+//-------------------------------------------
 	
-// Front sensor - get measurement
+// Front sensor
 sonar_range sonar_range_front (
 	.clk(SONAR_CLK), // must be 43.904MHz
 	.start_measure(!start),
@@ -99,7 +100,7 @@ sonar_range sonar_range_front (
 	.valid(sonar_valid_front)
 );
 
-// Back sensor - get measurement
+// Back sensor
 sonar_range sonar_range_back (
 	.clk(SONAR_CLK), // must be 43.904MHz
 	.start_measure(!start),
@@ -112,6 +113,11 @@ sonar_range sonar_range_back (
 );
 
 
+//-------------------------------------------
+// 7 Seg Display
+//-------------------------------------------
+
+// Display of Front sensor distance
 display u_display(
 	.clk(CLOCK_50),
 	.value(latched_distance_mm_front),
@@ -121,17 +127,20 @@ display u_display(
 	.display3(HEX3)
 );
 
+// Display of Back sensor distance
+display u_display(
+	.clk(CLOCK_50),
+	.value(latched_distance_mm_back),
+	.display0(HEX4),
+	.display1(HEX5),
+	.display2(HEX6),
+	.display3(HEX7)
+);
 
-//--- can display the back sensor distance too using the two paired 7 segs 
-// display u_display(
-// 	.clk(CLOCK_50),
-// 	.value(latched_distance_mm_front),
-// 	.display0(HEX0),
-// 	.display1(HEX1),
-// 	.display2(HEX2),
-// 	.display3(HEX3)
-// );
 
+//-------------------------------------------
+// Obstacle Detection
+//-------------------------------------------
 
 logic stop_front;
 logic stop_back;
@@ -154,13 +163,13 @@ obstacle_detect #(
 	.stop(stop_back)
 );
 
+
 // ----------------------
 // Debug LEDs
 // ----------------------
+
 assign LEDR[17] = stop_front;          // obstacle detected
-assign LEDR[16] = stop_back;   // valid pulse from sonar
+assign LEDR[16] = stop_back;   		   // valid pulse from sonar
 assign LEDR[15] = start;               // trigger pulse (every 1s)
-assign LEDR[14] = locked;              // PLL lock indicator
-assign LEDR[13] = SONAR_CLK;           // faint glow = clock running
 
 endmodule
