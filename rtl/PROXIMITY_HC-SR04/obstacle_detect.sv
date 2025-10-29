@@ -3,17 +3,28 @@ module obstacle_detect # (
 )(
 	input  logic 			clk,
 	input  logic [11:0] 	distance_mm,
+	input  logic 			direction,
 	input  logic 			valid,
 	output logic 			stop
 );
 
 	always_ff @(posedge clk) begin
 		if (valid) begin
-			if (distance_mm < THRESHOLD) begin
-				stop <= 1'b1;
+			if (direction == 1'b0) begin
+				if (distance_mm < THRESHOLD) begin
+					stop <= 1'b1;
+				end
+				else begin
+					stop <= 1'b0;
+				end
 			end
 			else begin
-				stop <= 1'b0;
+				if (distance_mm > THRESHOLD) begin
+					stop <= 1'b1;
+				end
+				else begin
+					stop <= 1'b0;
+				end
 			end
 		end
 	end

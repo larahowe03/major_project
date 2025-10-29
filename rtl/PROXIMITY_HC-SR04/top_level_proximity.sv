@@ -118,7 +118,7 @@ sonar_range sonar_range_back (
 //-------------------------------------------
 
 // Display of Front sensor distance
-display u_display(
+display u_display1(
 	.clk(CLOCK_50),
 	.value(latched_distance_mm_front),
 	.display0(HEX0),
@@ -128,7 +128,7 @@ display u_display(
 );
 
 // Display of Back sensor distance
-display u_display(
+display u_display2(
 	.clk(CLOCK_50),
 	.value(latched_distance_mm_back),
 	.display0(HEX4),
@@ -150,15 +150,17 @@ obstacle_detect #(
 	) detector_front (
 	.clk(CLOCK_50),
 	.distance_mm(latched_distance_mm_front),
+	.direction(1'b0),
 	.valid(sonar_valid_front),
 	.stop(stop_front)
 );
 
 obstacle_detect #(
-	.THRESHOLD(500)
+	.THRESHOLD(1000)
 	) detector_back (
 	.clk(CLOCK_50),
 	.distance_mm(latched_distance_mm_back),
+	.direction(1'b1),
 	.valid(sonar_valid_back),
 	.stop(stop_back)
 );
