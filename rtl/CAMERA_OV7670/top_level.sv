@@ -167,7 +167,7 @@ module top_level (
 	);
 
 	assign zebra_crossing_stop = crossing_detected & detection_valid;
-	assign LEDG[7] = zebra_pattern_stop;  // lights up when zebra detected
+	assign LEDG[7] = zebra_crossing_stop;  // lights up when zebra detected
 	assign LEDG[6:0] = 7'b0;              // keep others off for now
 
 	// --------------- Visualise: choose raw or processed on VGA ---------------
