@@ -1,5 +1,5 @@
 module microphone_top_level #(
-	parameter int DE1_SOC = 1 // !!!IMPORTANT: Set this to 1 for DE1-SoC or 0 for DE2-115
+	parameter int DE1_SOC = 0 // !!!IMPORTANT: Set this to 1 for DE1-SoC or 0 for DE2-115
 ) (
 	input       CLOCK_50,     // 50 MHz only used as input to the PLLs.
 
@@ -12,12 +12,18 @@ module microphone_top_level #(
 
 	// Whistle Detection Output
 	output logic whistle_detected,
+	output logic beep_detected,
 
 	output [6:0] HEX0,
 	output [6:0] HEX1,
 	output [6:0] HEX2,
 	output [6:0] HEX3,
+	output [6:0] HEX4,
+	output [6:0] HEX5,
+	output [6:0] HEX6,
+	output [6:0] HEX7,
 	output [15:0] LEDR,
+	// output [7:0] LEDG,
 	input  [3:0] KEY,
 	input	 AUD_ADCDAT,
 	input    AUD_BCLK,     // 3.072 MHz clock from the WM8731
@@ -74,6 +80,9 @@ module microphone_top_level #(
 	
 	logic [$clog2(NSamples)-1:0] pitch_output_data;
 	logic whistle_detect_pulse;
+	logic beep_detected_pulse;
+	logic pitch_output_valid;
+	logic [7:0] peak_display;
 	
 	fft_pitch_detect #(.W(W), .NSamples(NSamples)) u_fft_pitch_detect (
 	    .audio_clk(audio_clk),
@@ -82,8 +91,10 @@ module microphone_top_level #(
 	    .audio_input_data(audio_input_data),
 	    .audio_input_valid(audio_input_valid),
 	    .pitch_output_data(pitch_output_data),
-	    .pitch_output_valid(),
-		.whistle_detected(whistle_detect_pulse)
+	    .pitch_output_valid(pitch_output_valid),
+		.whistle_detected(whistle_detect_pulse),
+		.beep_detected(beep_detected_pulse),
+		.peak_display(peak_display)
 	);
 
 	// This is just to stretch the whistle detection LED output for visibility
@@ -111,15 +122,61 @@ module microphone_top_level #(
 		end
 	end
 
+	logic [23:0] beep_counter;
+
+	always_ff @(posedge CLOCK_50 or posedge reset) begin
+		if (reset) begin
+			beep_counter <= 0;
+			beep_detected <= 1'b0;
+		end
+		else begin
+			if (beep_detected_pulse) begin
+				// start stretch timer whenever pulse occurs
+				beep_counter <= STRETCH_CYCLES;
+				beep_detected <= 1'b1;
+			end 
+			else if (beep_counter > 0) begin
+				beep_counter <= beep_counter - 1;
+				beep_detected <= 1'b1;
+			end 
+			else begin
+				beep_detected <= 1'b0;
+			end
+		end
+	end
+
 	// Display (for peak `k` FFT index displayed on HEX0-HEX3):
 	display u_display (
-		.clk(adc_clk),
+		.clk(CLOCK_50),
 		.value(pitch_output_data),
 		.display0(HEX0),
 		.display1(HEX1),
 		.display2(HEX2),
 		.display3(HEX3)
 	);
+
+	display u_display2 (
+		.clk(CLOCK_50),
+		.value(peak_display),
+		.display0(HEX4),
+		.display1(HEX5),
+		.display2(HEX6),
+		.display3(HEX7)
+	);
+
+	// --- Stretch pitch_output_valid so it's visible (~100ms) ---
+	logic [22:0] pitch_stretch = 0; // 50 MHz * 0.1s ≈ 5 million cycles
+	always_ff @(posedge CLOCK_50 or posedge reset) begin
+		if (reset)
+			pitch_stretch <= 0;
+		else if (pitch_output_valid)
+			pitch_stretch <= 23'd5_000_000;
+		else if (pitch_stretch > 0)
+			pitch_stretch <= pitch_stretch - 1;
+	end
+
+	// assign LEDG[0] = whistle_detected;
+	// assign LEDG[1] = beep_detected;
 
 endmodule
 

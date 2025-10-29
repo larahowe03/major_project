@@ -22,6 +22,7 @@ module fft_pitch_detect_tb;
     logic [$clog2(NSamples)-1:0] pitch_output_data;
     logic pitch_output_valid;
     logic whistle_detected;
+    logic [7:0] peak_display;
 
     // DUT instantiation
     fft_pitch_detect #(
@@ -35,7 +36,8 @@ module fft_pitch_detect_tb;
         .audio_input_valid(audio_input_valid),
         .pitch_output_data(pitch_output_data),
         .pitch_output_valid(pitch_output_valid),
-        .whistle_detected(whistle_detected)
+        .whistle_detected(whistle_detected),
+        .peak_display(peak_display)
     );
 
     // Test waveform storage
@@ -92,13 +94,9 @@ module fft_pitch_detect_tb;
 
     always_ff @(posedge fft_clk) begin : monitor
         if (pitch_output_valid) begin
-            output_check <= pitch_output_data;
-            output_i     <= output_i < NSamples-1 ? output_i + 1 : 0;
-
-            
             freq_hz = (pitch_output_data * 1.0) * (12000.0 / NSamples); // fs=12kHz after decimation
-            $display("[%0t ps] DETECTED PEAK -> k=%0d (~%0.1f Hz)",
-                     $time, pitch_output_data, freq_hz);
+            $display("[%0t ps] DETECTED PEAK -> k=%0d (~%0.1f Hz), PEAK_MAG=%0d (0x%h)",
+                     $time, pitch_output_data, freq_hz, peak_display, peak_display);
         end
     end
 

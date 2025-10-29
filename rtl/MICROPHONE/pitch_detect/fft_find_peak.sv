@@ -14,10 +14,12 @@ module fft_find_peak #(
 );
 
     // Copy & Paste your solution to Lesson 4 fft_find_peak.sv here!
-
+    logic [NBits-1:0] peak_k_raw = 0;
+    logic [W-1:0]     peak_raw = 0;
     logic [NBits-1:0] i = 0, k;
     // The FFT k-index is represented by bit-reversing i. This has been done for you.
-    always_comb for (integer j=0; j<NBits; j=j+1) k[j] = i[NBits-1-j]; // bit-reversed index
+    // always_comb for (integer j=0; j<NBits; j=j+1) k[j] = i[NBits-1-j]; // bit-reversed index
+    assign k = i;
 
     logic [W-1:0]         peak_temp   = 0;
     logic [NBits-1:0]     peak_k_temp = 0;
@@ -29,8 +31,8 @@ module fft_find_peak #(
             peak_temp <= 0;
             peak_k_temp <= 0;
             peak_valid <= 0;
-            peak       <= 0;
-            peak_k     <= 0;
+            peak_raw       <= 0;
+            peak_k_raw     <= 0;
         end else begin            
             if (mag > peak_temp && k[NBits-1] == 1'b0) begin
                 peak_temp <= mag;
@@ -39,8 +41,8 @@ module fft_find_peak #(
 
             if (i == NSamples - 1) begin
                 peak_valid <= 1;
-                peak <= peak_temp;
-                peak_k <= peak_k_temp;
+                peak_raw <= peak_temp;
+                peak_k_raw <= peak_k_temp;
                 // reset stuff for next frame?
                 i          <= 0;
                 peak_temp  <= 0;
@@ -62,6 +64,18 @@ module fft_find_peak #(
         // Reset all registers when 'i == 1023', in preparation for the next FFT window.
         // Also, reset all registers when 'mag_valid' goes low ('mag' should be a continuous data stream).
         // Also, reset in the usual way if 'reset' is high!
+    end
+
+    parameter SMOOTH_SHIFT = 1; // smoothing strength (1/8 new value, 7/8 old)
+
+    always_ff @(posedge clk or posedge reset) begin
+        if (reset) begin
+            peak_k <= 0;
+            peak <= 0;
+        end else if (peak_valid) begin
+            peak_k <= peak_k + ( $signed(peak_k_raw) - $signed(peak_k) ) >>> SMOOTH_SHIFT;
+            peak <= peak + ( $signed(peak_raw) - $signed(peak) ) >>> SMOOTH_SHIFT;
+        end
     end
 
 endmodule

@@ -1,7 +1,10 @@
 module fft_pitch_detect # (
     parameter int NSamples = 256,
 	parameter int W = 16,
-	parameter int THRESHOLD = 50
+	parameter int UPPER_WHISTLE = 60,
+	parameter int LOWER_WHISTLE = 45,
+	parameter int UPPER_BEEP = 20,
+	parameter int LOWER_BEEP = 10
 ) (
     input logic audio_clk,
 	 input logic fft_clk,
@@ -12,7 +15,9 @@ module fft_pitch_detect # (
 	 
 	 output logic [$clog2(NSamples)-1:0] pitch_output_data,
 	 output logic pitch_output_valid,
-	 output logic whistle_detected
+	 output logic whistle_detected,
+	 output logic beep_detected,
+	 output logic [7:0] peak_display
 );
 	// DSP Chain
 	// Input clock domain is audio_clk (3.072 MHz). This is AUD_BCLK, the 3.072 MHz clock from the WM8731.
@@ -93,35 +98,55 @@ module fft_pitch_detect # (
 		.mag_valid(mag_valid)
 	);
 
+	logic [$clog2(NSamples)-1:0] pitch_pulse;
+
+	logic [32:0] peak;
+	logic [32:0] peak_pulse;
+	
 	fft_find_peak #(.W(W*2+1),.NSamples(NSamples)) u_fft_find_peak (
 		.clk(fft_clk), 
 		.reset(reset), 
 		.mag(mag_sq), 
 		.mag_valid(mag_valid), 
-		.peak(), 
-		.peak_k(pitch_output_data), 
+		.peak(peak_pulse), 
+		.peak_k(pitch_pulse), 
 		.peak_valid(pitch_output_valid)
 	);
 
-	// always_comb begin
-	//     whistle_detected = 0;
-	//     if (pitch_output_valid) begin
-	//         // Simple whistle detection logic based on pitch index range
-	//         if (pitch_output_data >= 20) begin
-	//             whistle_detected = 1;
-	//         end
-	//     end
-	// end
+	assign peak_display = peak >> (W-8); // Scale down for display purposes
+
+	localparam int PEAK_THRESHOLD = 100; // decimal threshold for valid pitch
 
 	always_ff @(posedge fft_clk or posedge reset) begin
 		if (reset) begin
+			pitch_output_data <= '0;
+			peak <= '0;
+		end else if (pitch_output_valid) begin
+			// only update if peak_display >= threshold
+			if (peak_display >= PEAK_THRESHOLD) begin
+				pitch_output_data <= pitch_pulse;
+			end else begin
+				pitch_output_data <= '0;  // silence -> zero bin
+			end
+			peak <= peak_pulse;
+		end
+	end
+	
+	always_ff @(posedge fft_clk or posedge reset) begin
+		if (reset) begin
 			whistle_detected <= 1'b0;
+			beep_detected <= 1'b0;
 		end else begin
-			// Output 1 for a single clock when valid & above threshold
-			if (pitch_output_valid && (pitch_output_data > THRESHOLD))
+			// Output 1 for a single clock when valid & within threshold
+			if (pitch_output_valid && ( UPPER_WHISTLE > pitch_output_data ) && (pitch_output_data > LOWER_WHISTLE))
 				whistle_detected <= 1'b1;
 			else
 				whistle_detected <= 1'b0;
+
+			if (pitch_output_valid && ( UPPER_BEEP > pitch_output_data ) && (pitch_output_data > LOWER_BEEP))
+				beep_detected <= 1'b1;
+			else
+				beep_detected <= 1'b0;
 		end
 	end
 
