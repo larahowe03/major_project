@@ -27,11 +27,6 @@ module pattern_recognition #(
     input logic y_ready,
     output logic [W-1:0] y_data
 );
-
-    // ========================================================================
-    // ISSUE 1: Need intermediate signals for convolution output
-    // The y_valid/y_data signals are module outputs AND need to go to detectors
-    // ========================================================================
     
     logic conv_valid;
     logic conv_ready;
@@ -63,17 +58,7 @@ module pattern_recognition #(
     assign y_valid = conv_valid;
     assign y_data = conv_data;
     assign conv_ready = y_ready;
-    
-    // ========================================================================
-    // ISSUE 2: Wrong module name - should be zebra_crossing_detector_stream
-    // (unless you're using the full buffer version)
-    // ========================================================================
-    
-    // ========================================================================
-    // ISSUE 3: Ready signal conflict - all three detectors try to drive y_ready
-    // Need separate ready signals or use internal taps
-    // ========================================================================
-    
+        
     logic zebra_detected_a, zebra_detected_b, zebra_detected_c;
     logic detection_valid_a, detection_valid_b, detection_valid_c;
     logic [7:0] stripe_count_a, stripe_count_b, stripe_count_c;
@@ -147,10 +132,6 @@ module pattern_recognition #(
         .current_state_debug()
     );
 
-    // ========================================================================
-    // ISSUE 4: Assignments must be in always block or use assign
-    // ========================================================================
-    
     // Combine results - zebra detected if ANY column detects it
     assign crossing_detected = zebra_detected_a || zebra_detected_b || zebra_detected_c;
     

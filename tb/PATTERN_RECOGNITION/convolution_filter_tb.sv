@@ -96,7 +96,7 @@ module convolution_filter_tb;
         $display("Loaded input image: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
         
         // Select kernel type
-        load_sobel_y_kernel();
+        load_edge_aggressive_kernel();
         
         // Reset
         repeat(10) @(posedge clk);
@@ -144,7 +144,7 @@ module convolution_filter_tb;
         
         // Save output
         repeat(100) @(posedge clk);
-        save_output_image("output_image.mif");
+        save_output_image("present_edge_aggressive.mif");
         
         $display("\n=== TEST COMPLETE ===");
         $display("Input pixels:  %0d", pixel_in_count);

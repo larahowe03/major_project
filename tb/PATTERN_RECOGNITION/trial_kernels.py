@@ -11,9 +11,9 @@ def apply_kernel(image, kernel, name):
     # Apply convolution
     result = convolve(img_float, kernel, mode='constant', cval=0.0)
 
-    result = convolve(result, np.array([[-1, -2, -1],
-                                        [ 0,  0,  0],
-                                        [ 1,  2,  1]]), mode='constant', cval=0.0)
+    # result = convolve(result, np.array([[-1, -2, -1],
+    #                                     [ 0,  0,  0],
+    #                                     [ 1,  2,  1]]), mode='constant', cval=0.0)
 
     # Clip to valid range
     result = np.clip(result, 0, 255).astype(np.uint8)

@@ -2,7 +2,7 @@ import numpy as np
 from PIL import Image
 import os
 
-def image_to_grayscale_mif(image_file_name, pixel_bits = 8, resolution = [640, 480]):
+def image_to_grayscale_mif(image_file_name, pixel_bits = 8, resolution = [320, 240]):
     """
     Converts a png to grayscale then saves as .mif file
     FIXED: Correct addressing using image_width instead of image_height
@@ -37,7 +37,7 @@ def image_to_grayscale_mif(image_file_name, pixel_bits = 8, resolution = [640, 4
     name, _ = os.path.splitext(image_file_name)
 
     # Write image data file (pixel indices)
-    data_filename = f"positive_case.mif"
+    data_filename = f"real_test_images/present.mif"
     print(f"\nWriting image data to {data_filename}")
 
     WIDTH = pixel_bits
@@ -65,4 +65,4 @@ def image_to_grayscale_mif(image_file_name, pixel_bits = 8, resolution = [640, 4
     print(f"Memory usage: {DEPTH} words of width {WIDTH} = {round(DEPTH*WIDTH/1000)}kb")
 
 if __name__ == "__main__":
-    image_to_grayscale_mif("real_test_images/not_present.jpg")
+    image_to_grayscale_mif("real_test_images/present.jpg")
