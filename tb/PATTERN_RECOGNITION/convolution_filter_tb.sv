@@ -92,7 +92,7 @@ module convolution_filter_tb;
         end
         
         // Load input image from MIF file
-        load_mif_file("present.mif");
+        load_mif_file("not_present.mif");
         $display("Loaded input image: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
         
         // Select kernel type
@@ -144,7 +144,7 @@ module convolution_filter_tb;
         
         // Save output
         repeat(100) @(posedge clk);
-        save_output_image("present_edge_aggressive.mif");
+        save_output_image("not_present_edge_aggressive.mif");
         
         $display("\n=== TEST COMPLETE ===");
         $display("Input pixels:  %0d", pixel_in_count);
