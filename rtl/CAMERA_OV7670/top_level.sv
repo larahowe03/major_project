@@ -123,11 +123,17 @@ module top_level (
 //	sobel_x[2][0] = -1; sobel_x[2][1] =  0; sobel_x[2][2] =  1;
 //	end
 
-	// signed 8-bit 3x3 Sobel-X kernel
-	localparam logic signed [7:0] SOBEL_Y [0:2][0:2] = '{
-											 '{-8'sd1, -8'sd2, -8'sd1},
-											 '{ 8'sd0,  8'sd0,  8'sd0},
-											 '{ 8'sd1,  8'sd2,  8'sd1}
+	// signed 8-bit 3x3 Sobel-y kernel
+//	localparam logic signed [7:0] SOBEL_Y [0:2][0:2] = '{
+//											 '{-8'sd1, -8'sd2, -8'sd1},
+//											 '{ 8'sd0,  8'sd0,  8'sd0},
+//											 '{ 8'sd1,  8'sd2,  8'sd1}
+//										};
+//										
+	localparam logic signed [7:0] AGGRESSIVE [0:2][0:2] = '{
+											 '{-8'sd1, -8'sd1, -8'sd1},
+											 '{-8'sd1,  8'sd8, -8'sd1},
+											 '{-8'sd1, -8'sd1, -8'sd1}
 										};
 
 
@@ -157,7 +163,7 @@ module top_level (
 	  .x_valid           (pix_valid),
 	  .x_ready           (),          // <— fix: explicitly unconnected
 	  .x_data            (gray_px),
-	  .kernel            (SOBEL_Y),   // <— fix: const aggregate
+	  .kernel            (AGGRESSIVE),   // <— fix: const aggregate
 	  .crossing_detected (crossing_detected),
 	  .detection_valid   (detection_valid),
 	  .stripe_count      (stripe_count),
