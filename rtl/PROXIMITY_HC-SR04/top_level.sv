@@ -1,4 +1,4 @@
-module top_level(
+module top_level_proximity(
 	input          CLOCK_50,
 	inout  [35:0]  GPIO,
 	input  [3:0]   KEY,
