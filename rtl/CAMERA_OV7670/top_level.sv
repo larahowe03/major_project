@@ -21,7 +21,7 @@ module top_level (
 	
 	input logic [3:0] KEY,
 	
-	output logic zebra_pattern_stop,
+	output logic zebra_crossing_stop,
 	output logic [7:0] LEDG
 
 );

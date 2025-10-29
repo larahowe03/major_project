@@ -4,7 +4,7 @@ import sys
 import os
 import re
 
-def mif_to_grayscale_image(mif_file_name, output_image_name=None, resolution=[640, 480]):
+def mif_to_grayscale_image(mif_file_name, output_image_name=None, resolution=[320, 240]):
     """
     Convert a grayscale .mif file back to a PNG image
     
@@ -195,4 +195,4 @@ if __name__ == "__main__":
     else:
         # Default: convert output_image.mif from your testbench
         print("Converting output_image.mif to PNG...")
-        mif_to_grayscale_image("verilog_results/present_blur_edge_aggressive.mif", "verilog_results/present_blur_edge_aggressive.png")
+        mif_to_grayscale_image("verilog_results/present_sobel_y.mif", "verilog_results/present_sobel_y.png")
