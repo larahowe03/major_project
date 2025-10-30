@@ -3,7 +3,7 @@ module zebra_crossing_detector #(
     parameter IMG_HEIGHT = 240,
     parameter W = 8,
     parameter WHITE_THRESHOLD = 8'd180,
-    parameter MIN_RUN_LENGTH = 50,      // Minimum pixels for a valid stripe
+    parameter MIN_BLOB_SIZE = 50,       // Minimum connected pixels for a valid stripe
     parameter MIN_STRIPES = 3           // Need at least 3 stripes for zebra crossing
 )(
     input logic clk,
@@ -22,12 +22,11 @@ module zebra_crossing_detector #(
     // Detection outputs
     output logic is_white,                              // Current pixel is white
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] white_count,  // Total white pixels in frame
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] max_connected, // Longest white run
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] current_run,   // Current white run length
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] current_blob, // Current blob size
     
     // Zebra crossing detection
-    output logic [7:0] long_run_count,                 // Number of long runs found
-    output logic zebra_detected,                       // Zebra crossing detected (≥3 long runs)
+    output logic [7:0] blob_count,                     // Number of blobs found (≥MIN_BLOB_SIZE)
+    output logic zebra_detected,                       // Zebra crossing detected (≥3 blobs)
     output logic detection_valid                       // Detection result valid (end of frame)
 );
 
@@ -66,84 +65,121 @@ module zebra_crossing_detector #(
     // Check if current pixel is white
     assign is_white = (x_data >= WHITE_THRESHOLD);
     
-    // Count all white pixels, track runs, and count long runs
-    logic was_white;
-    logic [7:0] long_runs;  // Count of runs ≥ MIN_RUN_LENGTH
+    // Store previous row to check vertical connectivity
+    logic [IMG_WIDTH-1:0] prev_row_white;  // Bitmap of previous row
+    logic prev_pixel_white;                 // Previous pixel in current row
+    
+    // Blob detection state
+    logic in_blob;
+    logic [7:0] blobs_found;
     
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             white_count <= '0;
-            current_run <= '0;
-            max_connected <= '0;
-            was_white <= 1'b0;
-            long_runs <= '0;
-            long_run_count <= '0;
+            current_blob <= '0;
+            blobs_found <= '0;
+            in_blob <= 1'b0;
+            prev_row_white <= '0;
+            prev_pixel_white <= 1'b0;
         end else begin
             // Reset at start of frame
             if (handshake && x_pos == 0 && y_pos == 0) begin
                 white_count <= '0;
-                current_run <= '0;
-                max_connected <= '0;
-                was_white <= 1'b0;
-                long_runs <= '0;
+                current_blob <= '0;
+                blobs_found <= '0;
+                in_blob <= 1'b0;
+                prev_row_white <= '0;
+                prev_pixel_white <= 1'b0;
             end
             
             // Process every pixel
             if (handshake) begin
+                // Check if connected to previous white pixels
+                logic connected;
+                connected = 1'b0;
+                
                 if (is_white) begin
-                    // White pixel
                     white_count <= white_count + 1;
-                    current_run <= current_run + 1;
-                    was_white <= 1'b1;
-                end else begin
-                    // Not white - end of run
-                    if (was_white) begin
-                        // Check if this was a long run
-                        if (current_run >= MIN_RUN_LENGTH) begin
-                            long_runs <= long_runs + 1;
+                    
+                    // Check horizontal connectivity (left neighbor)
+                    if (x_pos > 0 && prev_pixel_white) begin
+                        connected = 1'b1;
+                    end
+                    
+                    // Check vertical connectivity (pixel above)
+                    if (y_pos > 0 && prev_row_white[x_pos]) begin
+                        connected = 1'b1;
+                    end
+                    
+                    // Check diagonal connectivity (top-left and top-right)
+                    if (y_pos > 0) begin
+                        if (x_pos > 0 && prev_row_white[x_pos-1]) begin
+                            connected = 1'b1;
                         end
-                        
-                        // Update max
-                        if (current_run > max_connected) begin
-                            max_connected <= current_run;
+                        if (x_pos < IMG_WIDTH-1 && prev_row_white[x_pos+1]) begin
+                            connected = 1'b1;
                         end
                     end
                     
-                    current_run <= '0;
-                    was_white <= 1'b0;
-                end
-            end
-            
-            // At end of frame, check for final run and latch count
-            if (frame_end) begin
-                // Check if frame ended in middle of a run
-                if (was_white && current_run >= MIN_RUN_LENGTH) begin
-                    long_run_count <= long_runs + 1;
+                    if (connected) begin
+                        // Part of existing blob
+                        current_blob <= current_blob + 1;
+                        in_blob <= 1'b1;
+                    end else begin
+                        // Start of new blob - check if previous blob was valid
+                        if (in_blob && current_blob >= MIN_BLOB_SIZE) begin
+                            blobs_found <= blobs_found + 1;
+                        end
+                        current_blob <= 1;
+                        in_blob <= 1'b1;
+                    end
+                    
+                    prev_pixel_white <= 1'b1;
                 end else begin
-                    long_run_count <= long_runs;
+                    // Not white
+                    if (in_blob && current_blob >= MIN_BLOB_SIZE) begin
+                        // End of a valid blob
+                        blobs_found <= blobs_found + 1;
+                    end
+                    
+                    current_blob <= '0;
+                    in_blob <= 1'b0;
+                    prev_pixel_white <= 1'b0;
                 end
+                
+                // Update previous row bitmap
+                if (x_pos == IMG_WIDTH - 1) begin
+                    // End of row - clear for next row
+                    prev_row_white <= '0;
+                    prev_pixel_white <= 1'b0;
+                end
+                
+                // Store current pixel for next row
+                prev_row_white[x_pos] <= is_white;
             end
         end
     end
     
-    // Zebra crossing detection logic
+    // Detection logic
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
+            blob_count <= '0;
             zebra_detected <= 1'b0;
             detection_valid <= 1'b0;
         end else begin
             detection_valid <= 1'b0;
             
-            // At end of frame, determine if zebra crossing detected
+            // At end of frame, finalize detection
             if (frame_end) begin
                 detection_valid <= 1'b1;
                 
-                // Check if we ended on a long run
-                if (was_white && current_run >= MIN_RUN_LENGTH) begin
-                    // Include the final run
-                    zebra_detected <= ((long_runs + 1) >= MIN_STRIPES);
+                // Check if last blob was valid
+                if (in_blob && current_blob >= MIN_BLOB_SIZE) begin
+                    blob_count <= blobs_found + 1;
+                    zebra_detected <= ((blobs_found + 1) >= MIN_STRIPES);
                 end else begin
-                    zebra_detected <= (long_runs >= MIN_STRIPES);
+                    blob_count <= blobs_found;
+                    zebra_detected <= (blobs_found >= MIN_STRIPES);
                 end
             end
         end

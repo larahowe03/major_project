@@ -148,7 +148,7 @@ module top_level (
 	logic [7:0]  pr_y_data;
 	logic        crossing_detected;
 	logic        detection_valid;
-	logic [7:0]  long_run_count;
+	logic [7:0]  blob_count, show_blob;
 	logic [15:0] confidence;
 
 	pattern_recognition #(
@@ -167,15 +167,19 @@ module top_level (
 	  .kernel            (AGGRESSIVE),   // <— fix: const aggregate
 	  .crossing_detected (crossing_detected),
 	  .detection_valid   (detection_valid),
-	  .long_run_count      (long_run_count),
+	  .blob_count      (blob_count),
 	  .y_valid           (pr_y_valid),
 	  .y_ready           (1'b1),
 	  .y_data            (pr_y_data)
 	);
 
+	always_ff @(posedge clk or negedge rst_n) begin
+		if (detection_valid) show_blob <= blob_count;
+	end
+
 	display u_display (
 		.clk(clk),
-    	.value(long_run_count),
+    	.value(show_blob),
 		.display0(HEX0),
 		.display1(HEX1),
 		.display2(HEX2),

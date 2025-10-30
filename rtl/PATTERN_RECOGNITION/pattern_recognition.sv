@@ -20,7 +20,7 @@ module pattern_recognition #(
     // Detection outputs
     output logic crossing_detected,
     output logic detection_valid,
-    output logic [7:0] long_run_count,
+    output logic [7:0] blob_count,
     
     // Optional: edge-detected image output
     output logic y_valid,
@@ -65,7 +65,7 @@ module pattern_recognition #(
         .IMG_HEIGHT(IMG_HEIGHT),
         .W(W),
         .WHITE_THRESHOLD(8'd180),
-        .MIN_RUN_LENGTH(50),      // Minimum pixels for a valid stripe
+        .MIN_BLOB_SIZE(50),      // Minimum pixels for a valid stripe
         .MIN_STRIPES(3)           // Need at least 3 stripes for zebra crossing
     ) u_zebra_crossing_detector (
         .clk(clk),
@@ -84,13 +84,12 @@ module pattern_recognition #(
         // Detection outputs
         .is_white(),                              // Current pixel is white
         .white_count(),  // Total white pixels in frame
-        .max_connected(), // Longest white run
-        .current_run(),   // Current white run length
+        .current_blob(),   // Current white run length
         
         // Zebra crossing detection
-        .long_run_count(long_run_count),                 // Number of long runs found
+        .blob_count(blob_count),                 // Number of long runs found
         .zebra_detected(crossing_detected),                       // Zebra crossing detected (≥3 long runs)
         .detection_valid(detection_valid)                       // Detection result valid (end of frame)
     );
-        
+
 endmodule
