@@ -175,12 +175,12 @@ module top_level (
 
 	display u_display (
 		.clk(clk),
-    	.long_run_count(long_run_count),
+    	.value(long_run_count),
 		.display0(HEX0),
 		.display1(HEX1),
 		.display2(HEX2),
 		.display3(HEX3)
-	)
+	);
 
 	assign zebra_crossing_stop = crossing_detected & detection_valid;
 	assign LEDG[7] = zebra_crossing_stop;  // lights up when zebra detected

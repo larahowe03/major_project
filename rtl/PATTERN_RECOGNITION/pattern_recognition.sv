@@ -58,11 +58,7 @@ module pattern_recognition #(
     assign y_valid = conv_valid;
     assign y_data = conv_data;
     assign conv_ready = y_ready;
-        
-    logic zebra_detected_a, zebra_detected_b, zebra_detected_c;
-    logic detection_valid_a, detection_valid_b, detection_valid_c;
-    logic [7:0] stripe_count_a, stripe_count_b, stripe_count_c;
-    
+            
     // Zebra crossing detector
     zebra_crossing_detector #(
         .IMG_WIDTH(IMG_WIDTH),
@@ -77,12 +73,12 @@ module pattern_recognition #(
         
         // Input stream
         .x_valid(conv_valid),
-        output logic x_ready,
+        .x_ready(), // TODO
         .x_data(conv_data),
         
         // Output stream (pass-through)
-        .y_valid(detection_valid),
-        input logic y_ready,
+        .y_valid(),
+        .y_ready(conv_ready),
         .y_data(),
         
         // Detection outputs
