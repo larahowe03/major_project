@@ -4,7 +4,14 @@ module pattern_recognition #(
     parameter KERNEL_H = 3,
     parameter KERNEL_W = 3,
     parameter W = 8,
-    parameter W_FRAC = 0
+    parameter W_FRAC = 0,
+    // Detection parameters
+    parameter WHITE_THRESHOLD = 8'd180,
+    parameter BLACK_THRESHOLD = 8'd75,
+    parameter MIN_STRIPE_HEIGHT = 4,
+    parameter MIN_ALTERNATIONS = 4,
+    parameter MIN_COLUMNS_DETECTED = 20,
+    parameter SCAN_STEP = 4
 )(
     input logic clk,
     input logic rst_n,
@@ -17,10 +24,14 @@ module pattern_recognition #(
     // Edge detection kernel
     input logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1],
     
-    // Detection outputs
-    output logic crossing_detected,
-    output logic detection_valid,
-    output logic [7:0] stripe_count,
+    // Detection outputs (bounding box)
+    output logic zebra_detected,
+    output logic bbox_valid,
+    output logic [$clog2(IMG_WIDTH)-1:0] bbox_x_min,
+    output logic [$clog2(IMG_WIDTH)-1:0] bbox_x_max,
+    output logic [$clog2(IMG_HEIGHT)-1:0] bbox_y_min,
+    output logic [$clog2(IMG_HEIGHT)-1:0] bbox_y_max,
+    output logic [$clog2(IMG_WIDTH)-1:0] columns_detected,
     
     // Optional: edge-detected image output
     output logic y_valid,
@@ -28,12 +39,18 @@ module pattern_recognition #(
     output logic [W-1:0] y_data
 );
     
+    // Convolution filter outputs
     logic conv_valid;
     logic conv_ready;
     logic [W-1:0] conv_data;
     
+    // Zebra detector outputs
+    logic det_valid;
+    logic det_ready;
+    logic [W-1:0] det_data;
+    
     // ========================================================================
-    // Instantiate convolution filter
+    // 1. Convolution Filter (Edge Detection)
     // ========================================================================
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
@@ -54,91 +71,50 @@ module pattern_recognition #(
         .kernel(kernel)
     );
     
-    // Pass convolution output to module outputs
-    assign y_valid = conv_valid;
-    assign y_data = conv_data;
-    assign conv_ready = y_ready;
+    // ========================================================================
+    // 2. Zebra Crossing Detector (with Bounding Box)
+    // ========================================================================
+    zebra_crossing_detector #(
+        .IMG_WIDTH(IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT),
+        .W(W),
+        .WHITE_THRESHOLD(WHITE_THRESHOLD),
+        .BLACK_THRESHOLD(BLACK_THRESHOLD),
+        .MIN_STRIPE_HEIGHT(MIN_STRIPE_HEIGHT),
+        .MIN_ALTERNATIONS(MIN_ALTERNATIONS),
+        .MIN_COLUMNS_DETECTED(MIN_COLUMNS_DETECTED),
+        .SCAN_STEP(SCAN_STEP)
+    ) zebra_detector (
+        .clk(clk),
+        .rst_n(rst_n),
         
-    logic zebra_detected_a, zebra_detected_b, zebra_detected_c;
-    logic detection_valid_a, detection_valid_b, detection_valid_c;
-    logic [7:0] stripe_count_a, stripe_count_b, stripe_count_c;
-    
-    // Detector A doesn't control ready (just monitors)
-    zebra_crossing_detector #(
-        .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT),
-        .W(W),
-        .WHITE_THRESHOLD(8'd180),
-        .BLACK_THRESHOLD(8'd75),
-        .MIN_STRIPE_HEIGHT(4),
-        .MIN_ALTERNATIONS(6),
-        .ANALYSIS_COL(IMG_WIDTH/4)
-    ) zebra_det_a (
-        .clk(clk), 
-        .rst_n(rst_n),
-        .x_valid(conv_valid), 
-        .x_ready(),  // Leave unconnected - not controlling flow
+        // Input from convolution filter
+        .x_valid(conv_valid),
+        .x_ready(conv_ready),
         .x_data(conv_data),
-        .y_valid(detection_valid_a), 
-        .y_ready(1'b1), 
-        .y_data(zebra_detected_a),
-        .alternation_count(stripe_count_a),
-        .current_state_debug()
+        
+        // Pass-through output
+        .y_valid(det_valid),
+        .y_ready(det_ready),
+        .y_data(det_data),
+        
+        // Bounding box outputs
+        .bbox_valid(bbox_valid),
+        .bbox_x_min(bbox_x_min),
+        .bbox_x_max(bbox_x_max),
+        .bbox_y_min(bbox_y_min),
+        .bbox_y_max(bbox_y_max),
+        .zebra_detected(zebra_detected),
+        .columns_detected_count(columns_detected)
     );
     
-    // Detector B doesn't control ready
-    zebra_crossing_detector #(
-        .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT),
-        .W(W),
-        .WHITE_THRESHOLD(8'd180),
-        .BLACK_THRESHOLD(8'd75),
-        .MIN_STRIPE_HEIGHT(4),
-        .MIN_ALTERNATIONS(6),
-        .ANALYSIS_COL(IMG_WIDTH/2)
-    ) zebra_det_b (
-        .clk(clk), 
-        .rst_n(rst_n),
-        .x_valid(conv_valid), 
-        .x_ready(),  // Leave unconnected - not controlling flow
-        .x_data(conv_data),
-        .y_valid(detection_valid_b), 
-        .y_ready(1'b1), 
-        .y_data(zebra_detected_b),
-        .alternation_count(stripe_count_b),
-        .current_state_debug()
-    );
+    // ========================================================================
+    // 3. Output Assignment
+    // ========================================================================
     
-    // Detector C doesn't control ready
-    zebra_crossing_detector #(
-        .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT),
-        .W(W),
-        .WHITE_THRESHOLD(8'd180),
-        .BLACK_THRESHOLD(8'd75),
-        .MIN_STRIPE_HEIGHT(4),
-        .MIN_ALTERNATIONS(6),
-        .ANALYSIS_COL(IMG_WIDTH/4 + IMG_WIDTH/2)
-    ) zebra_det_c (
-        .clk(clk), 
-        .rst_n(rst_n),
-        .x_valid(conv_valid), 
-        .x_ready(),  // Leave unconnected - not controlling flow
-        .x_data(conv_data),
-        .y_valid(detection_valid_c), 
-        .y_ready(1'b1), 
-        .y_data(zebra_detected_c),
-        .alternation_count(stripe_count_c),
-        .current_state_debug()
-    );
-
-    // Combine results - zebra detected if ANY column detects it
-    assign crossing_detected = zebra_detected_a || zebra_detected_b || zebra_detected_c;
-    
-    // Valid when all detectors have valid outputs
-    assign detection_valid = detection_valid_a && detection_valid_b && detection_valid_c;
-    
-    // Average stripe count (integer division)
-    assign stripe_count = (stripe_count_a + stripe_count_b + stripe_count_c) / 3;
+    // Pass through the edge-detected image (or detector output)
+    assign y_valid = det_valid;
+    assign y_data = det_data;
+    assign det_ready = y_ready;
 
 endmodule
