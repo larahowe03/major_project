@@ -22,7 +22,8 @@ module top_level (
 	input logic [3:0] KEY,
 	
 	output logic zebra_crossing_stop,
-	output logic [7:0] LEDG
+	output logic [7:0] LEDG,
+	output logic [6:0] HEX0, HEX1, HEX2, HEX3	
 
 );
 	logic sys_reset = 1'b0;
@@ -147,7 +148,7 @@ module top_level (
 	logic [7:0]  pr_y_data;
 	logic        crossing_detected;
 	logic        detection_valid;
-	logic [7:0]  stripe_count;
+	logic [7:0]  long_run_count;
 	logic [15:0] confidence;
 
 	pattern_recognition #(
@@ -166,11 +167,20 @@ module top_level (
 	  .kernel            (AGGRESSIVE),   // <— fix: const aggregate
 	  .crossing_detected (crossing_detected),
 	  .detection_valid   (detection_valid),
-	  .stripe_count      (stripe_count),
+	  .long_run_count      (long_run_count),
 	  .y_valid           (pr_y_valid),
 	  .y_ready           (1'b1),
 	  .y_data            (pr_y_data)
 	);
+
+	display u_display (
+		.clk(clk),
+    	.long_run_count(long_run_count),
+		.display0(HEX0),
+		.display1(HEX1),
+		.display2(HEX2),
+		.display3(HEX3)
+	)
 
 	assign zebra_crossing_stop = crossing_detected & detection_valid;
 	assign LEDG[7] = zebra_crossing_stop;  // lights up when zebra detected
