@@ -23,7 +23,7 @@ module microphone_top_level #(
 	output [6:0] HEX6,
 	output [6:0] HEX7,
 	output [15:0] LEDR,
-	// output [7:0] LEDG,
+	output [7:0] LEDG,
 	input  [3:0] KEY,
 	input	 AUD_ADCDAT,
 	input    AUD_BCLK,     // 3.072 MHz clock from the WM8731
@@ -175,8 +175,8 @@ module microphone_top_level #(
 			pitch_stretch <= pitch_stretch - 1;
 	end
 
-	// assign LEDG[0] = whistle_detected;
-	// assign LEDG[1] = beep_detected;
+	assign LEDG[0] = whistle_detected;
+	assign LEDG[1] = beep_detected;
 
 endmodule
 

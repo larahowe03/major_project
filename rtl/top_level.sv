@@ -19,7 +19,7 @@ module top_level (
 	output [6:0] HEX4,
 	output [6:0] HEX5,
 	output [6:0] HEX6,
-	output [6:0] HEX7,
+	output [6:0] HEX7
 );
     logic enable;
     logic measure_pulse;
@@ -66,11 +66,15 @@ module top_level (
         .distanceRAW(distanceRAW)
     );
 
+    logic whistle_detected, beep_detected;
+    assign LEDG[7] = whistle_detected;
+    assign LEDG[8] = beep_detected;
+
     microphone_top_level u_microphone_top_level (
         .CLOCK_50(CLOCK_50),
         .KEY(KEYS),
-        .whistle_detected(LEDG[7]), // Output whistle detection to LEDG[7]
-        .beep_detected(LEDG[8]),
+        .whistle_detected(whistle_detected), // Output whistle detection to LEDG[7]
+        .beep_detected(beep_detected),       // Output beep detection to LEDG[8]
         .LEDR(),
         .HEX0(HEX0),
         .HEX1(HEX1),

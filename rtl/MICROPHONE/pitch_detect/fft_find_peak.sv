@@ -71,11 +71,13 @@ module fft_find_peak #(
     always_ff @(posedge clk or posedge reset) begin
         if (reset) begin
             peak_k <= 0;
-            peak <= 0;
+//            peak <= 0;
         end else if (peak_valid) begin
             peak_k <= peak_k + ( $signed(peak_k_raw) - $signed(peak_k) ) >>> SMOOTH_SHIFT;
-            peak <= peak + ( $signed(peak_raw) - $signed(peak) ) >>> SMOOTH_SHIFT;
+//            peak <= peak + ( $signed(peak_raw) - $signed(peak) ) >>> SMOOTH_SHIFT;
         end
     end
+	 
+	 assign peak = peak_raw;
 
 endmodule

@@ -115,7 +115,7 @@ module fft_pitch_detect # (
 
 	assign peak_display = peak >> (W-8); // Scale down for display purposes
 
-	localparam int PEAK_THRESHOLD = 100; // decimal threshold for valid pitch
+	localparam int PEAK_THRESHOLD = 210; // decimal threshold for valid pitch
 
 	always_ff @(posedge fft_clk or posedge reset) begin
 		if (reset) begin
