@@ -166,12 +166,4 @@ obstacle_detect #(
 );
 
 
-// ----------------------
-// Debug LEDs
-// ----------------------
-
-assign LEDR[17] = stop_front;          // obstacle detected
-assign LEDR[16] = stop_back;   		   // valid pulse from sonar
-assign LEDR[15] = start;               // trigger pulse (every 1s)
-
-endmodule
+#
