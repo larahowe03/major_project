@@ -127,6 +127,9 @@ module top_level (
 	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] white_count;
 
 	// FIXED: Correct instantiation syntax
+	logic [7:0] blob_count;
+    logic [31:0] blob_areas [0:255];
+
 	pattern_recognition #(
 		.IMG_WIDTH(IMG_WIDTH),
 		.IMG_HEIGHT(IMG_HEIGHT),
@@ -162,7 +165,7 @@ module top_level (
 
 	display u_display (
 		.clk(clk_video),           // FIXED: Use clk_video
-    	.value(white_count),
+    	.value(blob_count),
 		.display0(HEX0),
 		.display1(HEX1),
 		.display2(HEX2),
