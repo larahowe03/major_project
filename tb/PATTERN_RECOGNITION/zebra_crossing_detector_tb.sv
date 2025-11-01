@@ -18,20 +18,17 @@ module zebra_crossing_detector_tb;
     logic [7:0] stripe_count;
     
     // Image BRAM signals
-    logic [$clog2(TOTAL_PIXELS)-1:0] pixel_addr;
-    logic pixel_data;
+    logic [$clog2(TOTAL_PIXELS)-1:0] bram_addr;
+    logic [1:0] bram_data;
     
     // Visited BRAM signals
-    logic [$clog2(TOTAL_PIXELS)-1:0] visited_addr;
-    logic visited_we;
+    logic [$clog2(TOTAL_PIXELS)-1:0] mark_visited_addr;
+    logic mark_visited_we;
     logic visited_wdata;
     logic visited_rdata;
     
     // Test image memory (loaded from MIF)
-    logic test_image [0:TOTAL_PIXELS-1];
-    
-    // Visited memory for testbench
-    logic visited_mem [0:TOTAL_PIXELS-1];
+    logic [1:0] test_image [0:TOTAL_PIXELS-1];
     
     // ========================================================================
     // Clock generation
@@ -44,49 +41,29 @@ module zebra_crossing_detector_tb;
     // ========================================================================
     // Load test image from MIF file
     // ========================================================================
-	 // Count white pixels
-    integer white_count = 0;
 
 	 initial begin
         // Load binary MIF file
-        $readmemb("test_img_conv.mif", test_image);
-        $display("Loaded test image from test_img_conv.mif");
-        
+        $readmemb("test_img_conv.mif", test_image); // file still 0 or 1
         for (int i = 0; i < TOTAL_PIXELS; i++) begin
-            if (test_image[i] == 1'b1) white_count++;
+            test_image[i] = test_image[i] ? 2'b01 : 2'b00; // convert to 2-bit
         end
         $display("Total pixels: %0d", TOTAL_PIXELS);
-        $display("White pixels: %0d (%0.2f%%)", white_count, 
-                 100.0 * white_count / TOTAL_PIXELS);
     end
     
     // ========================================================================
     // Image BRAM simulation (read-only)
     // ========================================================================
     always_ff @(posedge clk) begin
-        if (pixel_addr < TOTAL_PIXELS) begin
-            pixel_data <= test_image[pixel_addr];
-        end else begin
-            pixel_data <= 1'b0;
-        end
-    end
-    
-    // ========================================================================
-    // Visited BRAM simulation (read/write)
-    // ========================================================================
-    
-    always_ff @(posedge clk) begin
-        // Write port
-        if (visited_we) begin
-            visited_mem[visited_addr] <= visited_wdata;
-        end
-        
-        // Read port
-        if (visited_addr < TOTAL_PIXELS) begin
-            visited_rdata <= visited_mem[visited_addr];
-        end else begin
-            visited_rdata <= 1'b0;
-        end
+        // Mark visited (write port)
+        if (mark_visited_we && bram_addr < TOTAL_PIXELS)
+            test_image[mark_visited_addr] <= 2'b10; // Mark as visited
+
+        // Read port (read-only for DUT)
+        if (bram_addr < TOTAL_PIXELS)
+            bram_data <= test_image[bram_addr];
+        else
+            bram_data <= 2'b00;
     end
     
     // ========================================================================
@@ -103,12 +80,12 @@ module zebra_crossing_detector_tb;
         .detection_valid(detection_valid),
         .crossing_detected(crossing_detected),
         .stripe_count(stripe_count),
-        .pixel_addr(pixel_addr),
-        .pixel_data(pixel_data),
-        .visited_addr(visited_addr),
-        .visited_we(visited_we),
-        .visited_wdata(visited_wdata),
-        .visited_rdata(visited_rdata)
+        .bram_addr(bram_addr),
+        .bram_data(bram_data),
+        .mark_visited_addr(mark_visited_addr),
+        .mark_visited_we(mark_visited_we)
+        // .visited_wdata(visited_wdata),
+        // .visited_rdata(visited_rdata)
     );
     
     // ========================================================================
@@ -182,7 +159,7 @@ module zebra_crossing_detector_tb;
     // ========================================================================
     initial begin
         $dumpfile("zebra_detector.vcd");
-        $dumpvars(0, tb_zebra_crossing_detector);
+        $dumpvars(0, zebra_crossing_detector_tb);
     end
     
     // ========================================================================
@@ -194,13 +171,15 @@ module zebra_crossing_detector_tb;
         $fwrite(file, "P1\n%0d %0d\n", IMG_WIDTH, IMG_HEIGHT);
         for (int y = 0; y < IMG_HEIGHT; y++) begin
             for (int x = 0; x < IMG_WIDTH; x++) begin
-                $fwrite(file, "%0d ", visited_mem[y * IMG_WIDTH + x]);
+                // Output 1 if visited (2’b10), else 0
+                $fwrite(file, "%0d ", (test_image[y * IMG_WIDTH + x] == 2'b10) ? 1 : 0);
             end
             $fwrite(file, "\n");
         end
         $fclose(file);
         $display("Visited map saved to visited_map.pbm");
     endtask
+
     
     // Save visited map after detection completes
     always @(posedge detection_valid) begin
