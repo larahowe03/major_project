@@ -1,274 +1,247 @@
 module zebra_crossing_detector #(
     parameter IMG_WIDTH = 640,
     parameter IMG_HEIGHT = 480,
-    parameter W = 8,
-    parameter WHITE_THRESHOLD = 8'd180,
-    parameter MIN_BLOB_AREA = 500,        // Minimum pixels for valid blob
-    parameter MAX_BLOB_AREA = 50000,      // Maximum pixels for valid blob
-    parameter MIN_BLOBS = 3               // Need at least 3 blobs for zebra
+    parameter MIN_EDGE_LENGTH = 50  // Minimum pixels for valid stripe
 )(
     input logic clk,
     input logic rst_n,
+    input logic valid_to_read,
     
-    // Control
-    input logic start_detection,
-    output logic detection_done,
+    output logic detection_valid,
+    output logic crossing_detected,
+    output logic [7:0] stripe_count,
     
-    // BRAM read interface
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] bram_addr,
-    input logic [W-1:0] bram_data,
-    
-    // BRAM write interface (for labeling)
-    output logic bram_we,
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] bram_wr_addr,
-    output logic [7:0] bram_wr_data,
-    
-    // Detection results
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] white_count,
-    output logic [7:0] blob_count,
-    output logic [31:0] blob_areas [0:255],  // Area of each blob
-    output logic zebra_detected
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] pixel_addr,
+    input logic pixel_data
 );
 
-    typedef enum logic [3:0] {
-        IDLE,
-        FIRST_PASS_READ,
-        FIRST_PASS_WAIT,
-        FIRST_PASS_LABEL,
-        MEASURE_AREAS_READ,
-        MEASURE_AREAS_WAIT,
-        MEASURE_AREAS_COUNT,
-        FILTER_BLOBS,
-        DONE
+    typedef enum logic [2:0] {
+        IDLE, 
+        WAIT_READ,
+        SCAN,
+        CHECK_NEIGHBOR,
+        FOLLOW_EDGE,
+        CHECK_LOOP
     } state_t;
-    
+
     state_t state;
-	 logic [7:0] assigned_label;
 
     // Position tracking
-    logic [$clog2(IMG_WIDTH)-1:0] x_pos;
-    logic [$clog2(IMG_HEIGHT)-1:0] y_pos;
+    logic [$clog2(IMG_WIDTH)-1:0] x_pos, x_scan_pos;
+    logic [$clog2(IMG_HEIGHT)-1:0] y_pos, y_scan_pos;
     
-    assign bram_addr = y_pos * IMG_WIDTH + x_pos;
-    assign bram_wr_addr = bram_addr;
-    
-    // Pixel classification
-    logic is_white;
-    assign is_white = (bram_data >= WHITE_THRESHOLD);
-    
-    // Connected component labeling
-    logic [7:0] current_label;
-    logic [7:0] label_buffer [0:IMG_WIDTH-1];  // Previous row labels
-    logic [7:0] prev_pixel_label;              // Left neighbor label
-    
-    // Area measurement
-    logic [31:0] area_counters [0:255];
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] total_white_pixels;
-    
-    // Valid blob tracking
-    logic [7:0] valid_blob_count;
-    logic blob_valid [0:255];
-    
-    // ========================================================================
-    // Two-Pass Connected Component Labeling
-    // ========================================================================
-    logic has_left, has_above;
+    // Edge following
+    logic [$clog2(IMG_WIDTH)-1:0] x_edge, x_start, x_prev;
+    logic [$clog2(IMG_HEIGHT)-1:0] y_edge, y_start, y_prev;
+    logic [15:0] edge_length;
+    logic [7:0] num_stripes;
+    logic found_loop;
 
+    // 8-neighbor offsets
+    logic signed [2:0] neighbor_dx [0:7];
+    logic signed [2:0] neighbor_dy [0:7];
+    logic [2:0] neighbor_idx;
+    
+    initial begin
+        neighbor_dx[0] = -1; neighbor_dy[0] = -1;  // NW
+        neighbor_dx[1] =  0; neighbor_dy[1] = -1;  // N
+        neighbor_dx[2] =  1; neighbor_dy[2] = -1;  // NE
+        neighbor_dx[3] = -1; neighbor_dy[3] =  0;  // W
+        neighbor_dx[4] =  1; neighbor_dy[4] =  0;  // E
+        neighbor_dx[5] = -1; neighbor_dy[5] =  1;  // SW
+        neighbor_dx[6] =  0; neighbor_dy[6] =  1;  // S
+        neighbor_dx[7] =  1; neighbor_dy[7] =  1;  // SE
+    end
+
+    // Mark visited pixels
+    logic visited [0:IMG_WIDTH*IMG_HEIGHT-1];
+
+    // Border margins
+    localparam BORDER = 20;
+    localparam START_X = BORDER;
+    localparam END_X = IMG_WIDTH - BORDER - 1;
+    localparam START_Y = BORDER;
+    localparam END_Y = IMG_HEIGHT - BORDER - 1;
+
+    // Helper signals
+    logic [$clog2(IMG_WIDTH)-1:0] next_x;
+    logic [$clog2(IMG_HEIGHT)-1:0] next_y;
+    logic in_bounds;
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] next_addr, current_addr;
+    
+    always_comb begin
+        next_x = x_edge + neighbor_dx[neighbor_idx];
+        next_y = y_edge + neighbor_dy[neighbor_idx];
+        in_bounds = (next_x >= START_X) && (next_x <= END_X) && 
+                    (next_y >= START_Y) && (next_y <= END_Y);
+        next_addr = next_y * IMG_WIDTH + next_x;
+        current_addr = y_edge * IMG_WIDTH + x_edge;
+    end
+
+    integer i;
+
+    // FSM
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE;
-            x_pos <= '0;
-            y_pos <= '0;
-            current_label <= 8'd1;
-            detection_done <= 1'b0;
-            zebra_detected <= 1'b0;
-            white_count <= '0;
-            blob_count <= '0;
-            valid_blob_count <= '0;
-            bram_we <= 1'b0;
-            total_white_pixels <= '0;
+            x_pos <= START_X;
+            y_pos <= START_Y;
+            pixel_addr <= '0;
+            detection_valid <= 1'b0;
+            crossing_detected <= 1'b0;
+            num_stripes <= '0;
+            stripe_count <= '0;
             
-            // Initialize arrays
-            for (int i = 0; i < 256; i++) begin
-                area_counters[i] <= '0;
-                blob_areas[i] <= '0;
-                blob_valid[i] <= 1'b0;
+            for (i = 0; i < IMG_WIDTH*IMG_HEIGHT; i = i + 1) begin
+                visited[i] <= 1'b0;
             end
-            
-            for (int i = 0; i < IMG_WIDTH; i++) begin
-                label_buffer[i] <= '0;
-            end
-            
-            prev_pixel_label <= '0;
-            
         end else begin
-            bram_we <= 1'b0;  // Default
-            detection_done <= 1'b0;
+            detection_valid <= 1'b0;
             
             case (state)
-                // ============================================================
-                // IDLE - Wait for start
-                // ============================================================
                 IDLE: begin
-                    if (start_detection) begin
-                        x_pos <= '0;
-                        y_pos <= '0;
-                        current_label <= 8'd1;
-                        total_white_pixels <= '0;
+                    if (valid_to_read) begin
+                        state <= WAIT_READ;
+                        x_pos <= START_X;
+                        y_pos <= START_Y;
+                        pixel_addr <= START_Y * IMG_WIDTH + START_X;
+                        num_stripes <= '0;
                         
-                        for (int i = 0; i < 256; i++) begin
-                            area_counters[i] <= '0;
-                            blob_valid[i] <= 1'b0;
+                        // Clear visited array
+                        for (i = 0; i < IMG_WIDTH*IMG_HEIGHT; i = i + 1) begin
+                            visited[i] <= 1'b0;
                         end
-                        
-                        for (int i = 0; i < IMG_WIDTH; i++) begin
-                            label_buffer[i] <= '0;
-                        end
-                        
-                        prev_pixel_label <= '0;
-                        state <= FIRST_PASS_READ;
                     end
                 end
                 
-                // ============================================================
-                // FIRST PASS - Label connected components
-                // ============================================================
-                FIRST_PASS_READ: begin
-                    state <= FIRST_PASS_WAIT;
+                WAIT_READ: begin
+                    state <= SCAN;
                 end
                 
-                FIRST_PASS_WAIT: begin
-                    state <= FIRST_PASS_LABEL;
-                end
-                
-                FIRST_PASS_LABEL: begin
-                    assigned_label = 8'd0;
+                SCAN: begin
+                    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] scan_addr;
+                    scan_addr = y_pos * IMG_WIDTH + x_pos;
                     
-                    if (is_white) begin
-                        total_white_pixels <= total_white_pixels + 1;
+                    // Check if current pixel is unvisited white edge
+                    if (pixel_data == 1'b1 && !visited[scan_addr]) begin
+                        // Found start of potential closed loop!
+                        x_start <= x_pos;
+                        y_start <= y_pos;
+                        x_edge <= x_pos;
+                        y_edge <= y_pos;
+                        x_prev <= x_pos;
+                        y_prev <= y_pos;
+                        x_scan_pos <= x_pos;
+                        y_scan_pos <= y_pos;
                         
-                        // Check 4-connectivity (left and above)
-                        has_left = (x_pos > 0) && (prev_pixel_label != 8'd0);
-                        has_above = (y_pos > 0) && (label_buffer[x_pos] != 8'd0);
+                        edge_length <= 1;
+                        found_loop <= 1'b0;
+                        visited[scan_addr] <= 1'b1;
                         
-                        if (has_left && has_above) begin
-                            // Both neighbors are labeled - use minimum
-                            assigned_label = (prev_pixel_label < label_buffer[x_pos]) ? 
-                                           prev_pixel_label : label_buffer[x_pos];
-                        end else if (has_left) begin
-                            // Only left neighbor
-                            assigned_label = prev_pixel_label;
-                        end else if (has_above) begin
-                            // Only above neighbor
-                            assigned_label = label_buffer[x_pos];
+                        neighbor_idx <= 0;
+                        state <= CHECK_NEIGHBOR;
+                    end else begin
+                        // Continue scanning
+                        if (x_pos == END_X) begin
+                            x_pos <= START_X;
+                            if (y_pos == END_Y) begin
+                                state <= CHECK_LOOP;
+                            end else begin
+                                y_pos <= y_pos + 1;
+                                pixel_addr <= (y_pos + 1) * IMG_WIDTH + START_X;
+                            end
                         end else begin
-                            // New blob - assign new label
-                            assigned_label = current_label;
-                            current_label <= current_label + 1;
+                            x_pos <= x_pos + 1;
+                            pixel_addr <= pixel_addr + 1;
+                        end
+                    end
+                end
+                
+                CHECK_NEIGHBOR: begin
+                    if (neighbor_idx == 8) begin
+                        // Checked all neighbors, no unvisited white pixels found
+                        // Check if we're back at start
+                        if ((x_edge == x_start) && (y_edge == y_start) && (edge_length > 1)) begin
+                            found_loop <= 1'b1;
                         end
                         
-                        prev_pixel_label <= assigned_label;
-                        label_buffer[x_pos] <= assigned_label;
+                        // Resume scanning
+                        state <= SCAN;
+                        x_pos <= x_scan_pos + 1;
+                        y_pos <= y_scan_pos;
                         
-                        // Write label to BRAM (for second pass)
-                        bram_we <= 1'b1;
-                        bram_wr_data <= assigned_label;
+                        if (x_scan_pos == END_X) begin
+                            x_pos <= START_X;
+                            y_pos <= y_scan_pos + 1;
+                            pixel_addr <= (y_scan_pos + 1) * IMG_WIDTH + START_X;
+                        end else begin
+                            pixel_addr <= y_scan_pos * IMG_WIDTH + (x_scan_pos + 1);
+                        end
+                        
+                        // Check if this was a valid stripe (closed loop >= 50 pixels)
+                        if (found_loop && edge_length >= MIN_EDGE_LENGTH) begin
+                            num_stripes <= num_stripes + 1;
+                        end
                         
                     end else begin
-                        // Black pixel
-                        prev_pixel_label <= 8'd0;
-                        label_buffer[x_pos] <= 8'd0;
-                        bram_we <= 1'b1;
-                        bram_wr_data <= 8'd0;
-                    end
-                    
-                    // Move to next pixel
-                    if (x_pos == IMG_WIDTH - 1) begin
-                        x_pos <= '0;
-                        prev_pixel_label <= 8'd0;
-                        
-                        if (y_pos == IMG_HEIGHT - 1) begin
-                            // First pass complete
-                            y_pos <= '0;
-                            blob_count <= current_label - 1;
-                            state <= MEASURE_AREAS_READ;
+                        // Check this neighbor
+                        if (in_bounds) begin
+                            pixel_addr <= next_addr;
+                            state <= FOLLOW_EDGE;
                         end else begin
-                            y_pos <= y_pos + 1;
-                            state <= FIRST_PASS_READ;
+                            neighbor_idx <= neighbor_idx + 1;
+                        end
+                    end
+                end
+                
+                FOLLOW_EDGE: begin
+                    // Check if this neighbor is part of the edge
+                    logic is_start, is_prev;
+                    is_start = (next_x == x_start) && (next_y == y_start);
+                    is_prev = (next_x == x_prev) && (next_y == y_prev);
+                    
+                    if (pixel_data == 1'b1) begin
+                        if (is_start && edge_length >= MIN_EDGE_LENGTH) begin
+                            // Found closed loop!
+                            found_loop <= 1'b1;
+                            num_stripes <= num_stripes + 1;
+                            
+                            // Done with this edge, resume scan
+                            neighbor_idx <= 8;  // Force exit from neighbor check
+                            state <= CHECK_NEIGHBOR;
+                            
+                        end else if (!visited[next_addr] && !is_prev) begin
+                            // Found next edge pixel (not where we came from)
+                            visited[next_addr] <= 1'b1;
+                            edge_length <= edge_length + 1;
+                            
+                            // Move to this pixel
+                            x_prev <= x_edge;
+                            y_prev <= y_edge;
+                            x_edge <= next_x;
+                            y_edge <= next_y;
+                            
+                            // Start checking neighbors of new pixel
+                            neighbor_idx <= 0;
+                            state <= CHECK_NEIGHBOR;
+                            
+                        end else begin
+                            // Already visited or came from here, try next neighbor
+                            neighbor_idx <= neighbor_idx + 1;
+                            state <= CHECK_NEIGHBOR;
                         end
                     end else begin
-                        x_pos <= x_pos + 1;
-                        state <= FIRST_PASS_READ;
+                        // Not an edge pixel, try next neighbor
+                        neighbor_idx <= neighbor_idx + 1;
+                        state <= CHECK_NEIGHBOR;
                     end
                 end
                 
-                // ============================================================
-                // SECOND PASS - Measure areas
-                // ============================================================
-                MEASURE_AREAS_READ: begin
-                    state <= MEASURE_AREAS_WAIT;
-                end
-                
-                MEASURE_AREAS_WAIT: begin
-                    state <= MEASURE_AREAS_COUNT;
-                end
-                
-                MEASURE_AREAS_COUNT: begin
-                    // Read label from BRAM
-                    logic [7:0] pixel_label;
-                    pixel_label = bram_data;
-                    
-                    if (pixel_label != 8'd0) begin
-                        area_counters[pixel_label] <= area_counters[pixel_label] + 1;
-                    end
-                    
-                    // Move to next pixel
-                    if (x_pos == IMG_WIDTH - 1) begin
-                        x_pos <= '0;
-                        
-                        if (y_pos == IMG_HEIGHT - 1) begin
-                            y_pos <= '0;
-                            state <= FILTER_BLOBS;
-                        end else begin
-                            y_pos <= y_pos + 1;
-                            state <= MEASURE_AREAS_READ;
-                        end
-                    end else begin
-                        x_pos <= x_pos + 1;
-                        state <= MEASURE_AREAS_READ;
-                    end
-                end
-                
-                // ============================================================
-                // FILTER - Count valid blobs
-                // ============================================================
-                FILTER_BLOBS: begin
-                    valid_blob_count = 0;
-                    
-                    for (int i = 1; i < 256; i++) begin
-                        blob_areas[i] <= area_counters[i];
-                        
-                        if (area_counters[i] >= MIN_BLOB_AREA && 
-                            area_counters[i] <= MAX_BLOB_AREA) begin
-                            blob_valid[i] <= 1'b1;
-                            valid_blob_count = valid_blob_count + 1;
-                        end else begin
-                            blob_valid[i] <= 1'b0;
-                        end
-                    end
-                    
-                    // Check if zebra crossing detected
-                    zebra_detected <= (valid_blob_count >= MIN_BLOBS);
-                    white_count <= total_white_pixels;
-                    
-                    state <= DONE;
-                end
-                
-                // ============================================================
-                // DONE
-                // ============================================================
-                DONE: begin
-                    detection_done <= 1'b1;
+                CHECK_LOOP: begin
+                    // Finished scanning entire image
+                    crossing_detected <= (num_stripes >= 3);
+                    stripe_count <= num_stripes;
+                    detection_valid <= 1'b1;
                     state <= IDLE;
                 end
                 

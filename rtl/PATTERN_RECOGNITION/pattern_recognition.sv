@@ -28,9 +28,7 @@ module pattern_recognition #(
     // Detection outputs
     output logic crossing_detected,
     output logic detection_valid,
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] white_count,
-    output logic [7:0] blob_count,
-    output logic [31:0] blob_areas [0:255],
+    output logic [7:0] stripe_count,
     
     // Optional: edge-detected image output
     output logic y_valid,
@@ -51,7 +49,7 @@ module pattern_recognition #(
         .KERNEL_W(KERNEL_W),
         .W(W),
         .W_FRAC(W_FRAC)
-    ) edge_filter (
+    ) u_convolution_filter (
         .clk(clk),
         .rst_n(rst_n),
         .x_valid(x_valid),
@@ -66,10 +64,13 @@ module pattern_recognition #(
     // ========================================================================
     // Step 2: BRAM writer (captures binary edge image)
     // ========================================================================
-    bram_writer #(
+
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] read_addr;
+    logic read_data;
+    image_bram #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT)
-    ) u_bram_writer (
+    ) u_image_bram (
         .clk(clk),
         .rst_n(rst_n),
         .x_valid(y_valid),
@@ -78,21 +79,32 @@ module pattern_recognition #(
         .capture_trigger(capture_trigger),
         .valid_to_read(valid_to_read),
         .capture_complete(capture_complete),
-        .capturing(capturing)
+        .capturing(capturing),
+
+        // reading
+        .read_addr(read_addr),  // address to read from
+        .read_data(read_data)   // result from reading
     );
-    
-    // Stub outputs for blob detector (not implemented)
-    assign crossing_detected = 1'b0;
-    assign detection_valid = 1'b0;
-    assign white_count = '0;
-    assign blob_count = '0;
-    
-    // Initialize blob_areas array
-    integer i;
-    always_comb begin
-        for (i = 0; i < 256; i = i + 1) begin
-            blob_areas[i] = '0;
-        end
-    end
+
+    zebra_crossing_detector #(
+        .IMG_WIDTH(IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT),
+        .MIN_EDGE_LENGTH(50)
+    ) u_zebra_crossing_detector (
+        .clk(clk),
+        .rst_n(rst_n),
+        
+        // Control
+        .valid_to_read(valid_to_read),
+        
+        // Outputs
+        .detection_valid(detection_valid),
+        .crossing_detected(crossing_detected),
+        .stripe_count(stripe_count),
+
+        // BRAM read interface
+        .pixel_addr(read_addr),
+        .pixel_data(read_data)
+    );
     
 endmodule

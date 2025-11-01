@@ -123,9 +123,7 @@ module top_level (
 	logic [7:0] pr_y_data;
 	logic crossing_detected;
 	logic detection_valid;
-	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] white_count;
-	logic [7:0] blob_count;
-	logic [31:0] blob_areas [0:255];
+	logic [7:0] stripe_count;
 
 	// Example: Trigger capture with a button
     assign capture_trigger = ~KEY[3];  // Press KEY[3] to capture frame
@@ -162,10 +160,8 @@ module top_level (
 		
 		// Detection outputs
 		.crossing_detected(crossing_detected),
-		.detection_valid(detection_valid),
-		.white_count(white_count),
-		.blob_count(blob_count),
-		.blob_areas(blob_areas),
+		.detection_valid(detection_valid),    
+		.stripe_count(stripe_count),
 		
 		// Edge-detected image output
 		.y_valid(pr_y_valid),
@@ -179,7 +175,7 @@ module top_level (
 	// Display blob count on 7-segment displays
 	display u_display (
 		.clk(clk_video),
-		.value(blob_count),
+		.value(stripe_count),
 		.display0(HEX0),
 		.display1(HEX1),
 		.display2(HEX2),
