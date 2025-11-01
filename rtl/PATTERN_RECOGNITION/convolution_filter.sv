@@ -4,7 +4,8 @@ module convolution_filter #(
     parameter KERNEL_H = 3,
     parameter KERNEL_W = 3,
     parameter W = 8,          
-    parameter W_FRAC = 0    
+    parameter W_FRAC = 0,
+    parameter EDGE_THRESHOLD = 8'd200  
 )(
     input logic clk,
     input logic rst_n,
@@ -171,6 +172,20 @@ module convolution_filter #(
     end
     
     // ========================================================================
+    // NEW: BINARY THRESHOLDING (Convert to pure black or white)
+    // ========================================================================
+    
+    logic [W-1:0] binary_result;
+    
+    always_comb begin
+        if (truncated_result >= EDGE_THRESHOLD) begin
+            binary_result = 8'd255;  // WHITE (edge detected)
+        end else begin
+            binary_result = 8'd0;    // BLACK (no edge)
+        end
+    end
+    
+    // ========================================================================
     // 7. OUTPUT REGISTER (Pipeline and handshake control)
     // ========================================================================
     
@@ -196,13 +211,13 @@ module convolution_filter #(
                 convolution_valid_d1 <= convolution_valid;
                 x_data_d1 <= x_data;  // Delay input data
                 
-                // Output convolution result (with proper fixed-point truncation)
+                // Output binary convolution result
                 // Use DELAYED convolution_valid to match the y_valid timing
                 if (convolution_valid_d1) begin
-                    y_data <= truncated_result;  // Extract properly scaled bits
+                    y_data <= binary_result;  // CHANGED: Use binary result instead
                 end else begin
-                    // Border handling: pass through delayed input pixel
-                    y_data <= x_data_d1;
+                    // Border handling: pass through black
+                    y_data <= 8'd0;  // CHANGED: Output black for borders
                 end
                 
                 // Set valid after 1 cycle delay (for ALL pixels, not just convolved ones)
