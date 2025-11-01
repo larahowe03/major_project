@@ -169,13 +169,11 @@ module pattern_recognition #(
         .start_detection(start_blob_detection),
         .detection_done(blob_detection_done),
         
-        // BRAM read interface
+        // BRAM interface - use bram_addr for BOTH read and write
         .bram_addr(blob_bram_addr),
         .bram_data(blob_bram_rdata),
-        
-        // BRAM write interface (for labeling)
         .bram_we(blob_bram_we),
-        .bram_wr_addr(blob_bram_addr),  // Same address bus
+        .bram_wr_addr(),              // FIXED: Leave unconnected (it's same as bram_addr)
         .bram_wr_data(blob_bram_wdata),
         
         // Detection results
