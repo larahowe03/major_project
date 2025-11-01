@@ -1,6 +1,6 @@
 module pattern_recognition #(
-    parameter IMG_WIDTH = 320,
-    parameter IMG_HEIGHT = 240,
+    parameter IMG_WIDTH = 640,
+    parameter IMG_HEIGHT = 480,
     parameter KERNEL_H = 3,
     parameter KERNEL_W = 3,
     parameter W = 8,

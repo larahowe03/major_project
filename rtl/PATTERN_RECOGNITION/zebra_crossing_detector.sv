@@ -1,6 +1,6 @@
 module zebra_crossing_detector #(
-    parameter IMG_WIDTH = 320,
-    parameter IMG_HEIGHT = 240,
+    parameter IMG_WIDTH = 640,
+    parameter IMG_HEIGHT = 480,
     parameter W = 8,
     parameter WHITE_THRESHOLD = 8'd180
 )(

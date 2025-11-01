@@ -1,7 +1,7 @@
 module zebra_crossing_detector_tb;
 
-    parameter IMG_WIDTH = 320;
-    parameter IMG_HEIGHT = 240;
+    parameter IMG_WIDTH = 640;
+    parameter IMG_HEIGHT = 480;
     parameter W = 8;
     parameter SCAN_STEP = 4;
     

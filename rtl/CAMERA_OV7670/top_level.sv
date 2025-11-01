@@ -32,7 +32,8 @@ module top_level (
 	// todo: for state machine
 	output logic zebra_crossing_stop  // FIXED: Removed trailing comma
 );
-	logic rst_n = 1'b0; // todo: change to rst_n when this is sorted
+	logic rst_n;
+   assign rst_n = KEY[0]; // todo: change to rst_n when this is sorted
 
 	// Camera and VGA PLL
 	logic clk_video, send_camera_config;
@@ -43,7 +44,7 @@ module top_level (
 	assign VGA_CLK = clk_video;
 
 	video_pll U0(
-		.areset(rst_n),
+		.areset(~rst_n),
 		.inclk0(CLOCK_50),
 		.c0(clk_video),
 		.locked(video_pll_locked)
@@ -87,7 +88,7 @@ module top_level (
 		.rd_clk(clk_video),
 		.wr_clk(OV7670_PCLK),
 		.ready(vga_ready), 
-		.rst(rst_n),
+		.rst(~rst_n),
 		.wren(wren),
 		.wraddress(wraddress), 
 		.image_start(filter_sop_out),
@@ -109,8 +110,8 @@ module top_level (
 	// aggressive edge kernel
 	localparam KERNEL_H = 3;
 	localparam KERNEL_W = 3;
-	localparam IMG_HEIGHT = 240;
-	localparam IMG_WIDTH = 320;
+	localparam IMG_HEIGHT = 480;
+	localparam IMG_WIDTH = 640;
 	localparam logic signed [7:0] AGGRESSIVE [0:2][0:2] = '{'{-8'sd1, -8'sd1, -8'sd1},
 											 				'{-8'sd1,  8'sd8, -8'sd1},
 											 				'{-8'sd1, -8'sd1, -8'sd1}};
@@ -135,7 +136,7 @@ module top_level (
 		.W_FRAC(0)
 	) u_pattern_recognition (
 		.clk(clk_video),           // FIXED: Use clk_video instead of CLOCK_50
-		.rst_n(~rst_n),
+		.rst_n(rst_n),
 		
 		// Input pixel stream (from camera)
 		.x_valid(pix_valid),       // FIXED: Connect to actual signal
@@ -181,7 +182,7 @@ module top_level (
 	// Drive VGA with selected pixels
 	vga_driver u_vga_driver (
 		.clk(clk_video),
-		.rst(rst_n),
+		.rst(~rst_n),
 		.pixel(display_pixel),
 		.hsync(VGA_HS),
 		.vsync(VGA_VS),
