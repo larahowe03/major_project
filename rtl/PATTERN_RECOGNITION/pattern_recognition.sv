@@ -28,17 +28,16 @@ module pattern_recognition #(
     output logic [W-1:0] y_data
 );
     
+    // Signals between convolution and zebra detector
     logic conv_valid;
     logic conv_ready;
     logic [W-1:0] conv_data;
     
-    // Signals for zebra detector
-    logic zebra_x_ready;
-    logic zebra_y_valid;
+    // Unused output from zebra detector
     logic is_white;
     
     // ========================================================================
-    // Instantiate convolution filter
+    // Step 1: Convolution filter (edge detection)
     // ========================================================================
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
@@ -50,44 +49,45 @@ module pattern_recognition #(
     ) edge_filter (
         .clk(clk),
         .rst_n(rst_n),
+        // Input from camera
         .x_valid(x_valid),
         .x_ready(x_ready),
         .x_data(x_data),
+        // Output to zebra detector
         .y_valid(conv_valid),
         .y_ready(conv_ready),
         .y_data(conv_data),
         .kernel(kernel)
     );
     
-    // Pass convolution output to module outputs
-    assign y_valid = conv_valid;
-    assign y_data = conv_data;
-    assign conv_ready = y_ready;
-            
     // ========================================================================
-    // Instantiate zebra crossing detector
+    // Step 2: Zebra crossing detector (on edge-detected image)
     // ========================================================================
     zebra_crossing_detector #(
-        .IMG_WIDTH(320),
-        .IMG_HEIGHT(240),        
-        .W(8),
+        .IMG_WIDTH(IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT),        
+        .W(W),
         .WHITE_THRESHOLD(8'd180)
     ) u_zebra_crossing_detector (
         .clk(clk),       
         .rst_n(rst_n),
         
-        // Input stream - using original input
-        .x_valid(x_valid),
-        .x_ready(zebra_x_ready),  
-        .x_data(x_data),
+        // Input from convolution filter (edge-detected pixels)
+        .x_valid(conv_valid),
+        .x_ready(conv_ready),  
+        .x_data(conv_data),
         
-        // Output stream (pass-through)
-        .y_valid(zebra_y_valid), 
+        // Output to display (pass-through of edge-detected image)
+        .y_valid(y_valid), 
         .y_ready(y_ready),
+        // Detection results
         .is_white(is_white),
         .white_count(white_count),
         .zebra_detected(crossing_detected),
         .detection_valid(detection_valid)
     );
+    
+    // Pass through the edge-detected image for display
+    assign y_data = conv_data;  // Show edge-detected output
 
 endmodule
