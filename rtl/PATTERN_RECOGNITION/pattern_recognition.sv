@@ -4,10 +4,7 @@ module pattern_recognition #(
     parameter KERNEL_H = 3,
     parameter KERNEL_W = 3,
     parameter W = 8,
-    parameter W_FRAC = 0,
-    parameter MIN_BLOB_AREA = 500,
-    parameter MAX_BLOB_AREA = 50000,
-    parameter MIN_BLOBS = 3
+    parameter W_FRAC = 0
 )(
     input logic clk,
     input logic rst_n,

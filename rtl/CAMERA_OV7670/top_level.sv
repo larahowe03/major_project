@@ -139,10 +139,7 @@ module top_level (
 		.KERNEL_H(KERNEL_H),
 		.KERNEL_W(KERNEL_W),
 		.W(8),
-		.W_FRAC(0),
-		.MIN_BLOB_AREA(500),      // Minimum blob size
-		.MAX_BLOB_AREA(50000),    // Maximum blob size
-		.MIN_BLOBS(3)             // Need at least 3 blobs for zebra
+		.W_FRAC(0)
 	) u_pattern_recognition (
 		.clk(clk_video),
 		.rst_n(rst_n),
@@ -172,7 +169,7 @@ module top_level (
 	// Pattern recognition is always ready to output
 	assign pr_y_ready = 1'b1;
 
-	// Display blob count on 7-segment displays
+	// Display stripe count on 7-segment displays
 	display u_display (
 		.clk(clk_video),
 		.value(stripe_count),

@@ -91,10 +91,7 @@ module zebra_crossing_detector #(
             crossing_detected <= 1'b0;
             num_stripes <= '0;
             stripe_count <= '0;
-            
-            for (i = 0; i < IMG_WIDTH*IMG_HEIGHT; i = i + 1) begin
-                visited[i] <= 1'b0;
-            end
+            visited <= '{default: 1'b0};  // ✅ FIXED: Initialize entire array to 0
         end else begin
             detection_valid <= 1'b0;
             
@@ -108,9 +105,7 @@ module zebra_crossing_detector #(
                         num_stripes <= '0;
                         
                         // Clear visited array
-                        for (i = 0; i < IMG_WIDTH*IMG_HEIGHT; i = i + 1) begin
-                            visited[i] <= 1'b0;
-                        end
+                        visited <= '{default: 1'b0};  // ✅ FIXED: Initialize entire array to 0
                     end
                 end
                 
