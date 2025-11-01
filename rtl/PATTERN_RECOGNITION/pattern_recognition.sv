@@ -17,12 +17,11 @@ module pattern_recognition #(
     output logic x_ready,
     input logic [W-1:0] x_data,
 
-    // todo: temp
+    // BRAM capture control
     input logic capture_trigger,
     output logic valid_to_read,
     output logic capturing,
 
-    
     // Edge detection kernel
     input logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1],
     
@@ -39,8 +38,11 @@ module pattern_recognition #(
     output logic [W-1:0] y_data
 );
     
+    logic bram_x_ready;  // ADDED: separate ready signal for BRAM writer
+    logic capture_complete;
+    
     // ========================================================================
-    // Step 1: Convolution filter (edge detection) - STANDALONE
+    // Step 1: Convolution filter (edge detection)
     // ========================================================================
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
@@ -53,44 +55,31 @@ module pattern_recognition #(
         .clk(clk),
         .rst_n(rst_n),
         .x_valid(x_valid),
-        .x_ready(x_ready),        // Direct connection
+        .x_ready(x_ready),
         .x_data(x_data),
-        .y_valid(y_valid),        // Direct connection
-        .y_ready(y_ready),        // Connect y_ready!
-        .y_data(y_data),          // Direct connection
+        .y_valid(y_valid),
+        .y_ready(y_ready),
+        .y_data(y_data),
         .kernel(kernel)
     );
 
-    // In your top-level or pattern_recognition module:
-
+    // ========================================================================
+    // Step 2: BRAM writer (captures binary edge image)
+    // ========================================================================
     bram_writer #(
-        .IMG_WIDTH(640),
-        .IMG_HEIGHT(480)
+        .IMG_WIDTH(IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT)
     ) u_bram_writer (
-        .clk(clk_video),
+        .clk(clk),
         .rst_n(rst_n),
         .x_valid(y_valid),
-//        .x_ready(y_ready),
+        .x_ready(bram_x_ready),  // FIXED: Connected properly
         .x_data(y_data),
-        .capture_trigger(capture_trigger),    // Pulse high to start capture
-        .valid_to_read(valid_to_read),  // Goes high when done
-        .capturing(capturing)                 // High while actively capturing
+        .capture_trigger(capture_trigger),
+        .valid_to_read(valid_to_read),
+        .capture_complete(capture_complete),
+        .capturing(capturing)
     );
-
-    // Use valid_to_read to start blob detection
-//    always_ff @(posedge clk_video or negedge rst_n) begin
-//        if (!rst_n) begin
-//            start_blob_detection <= 1'b0;
-//        end else begin
-//            if (valid_to_read) begin
-//                start_blob_detection <= 1'b1;  // Start analysis
-//            end else begin
-//                start_blob_detection <= 1'b0;
-//            end
-//        end
-//    end
-
-// _________--------_________--___-_---_-_-_-__________
     
     // Stub outputs for blob detector (not implemented)
     assign crossing_detected = 1'b0;
