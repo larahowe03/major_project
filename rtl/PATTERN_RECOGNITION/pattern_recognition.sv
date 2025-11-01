@@ -70,7 +70,7 @@ module pattern_recognition #(
         .clk(clk_video),
         .rst_n(rst_n),
         .x_valid(y_valid),
-        .x_ready(y_ready),
+//        .x_ready(y_ready),
         .x_data(y_data),
         .capture_trigger(capture_trigger),    // Pulse high to start capture
         .capture_complete(capture_complete),  // Goes high when done
@@ -78,17 +78,17 @@ module pattern_recognition #(
     );
 
     // Use capture_complete to start blob detection
-    always_ff @(posedge clk_video or negedge rst_n) begin
-        if (!rst_n) begin
-            start_blob_detection <= 1'b0;
-        end else begin
-            if (capture_complete) begin
-                start_blob_detection <= 1'b1;  // Start analysis
-            end else begin
-                start_blob_detection <= 1'b0;
-            end
-        end
-    end
+//    always_ff @(posedge clk_video or negedge rst_n) begin
+//        if (!rst_n) begin
+//            start_blob_detection <= 1'b0;
+//        end else begin
+//            if (capture_complete) begin
+//                start_blob_detection <= 1'b1;  // Start analysis
+//            end else begin
+//                start_blob_detection <= 1'b0;
+//            end
+//        end
+//    end
 
 // _________--------_________--___-_---_-_-_-__________
     

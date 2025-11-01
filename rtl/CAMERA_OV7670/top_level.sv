@@ -192,7 +192,7 @@ module top_level (
 	
 	// Show detection status on other LEDs
 	assign LEDG[6] = detection_valid;      // Detection cycle complete
-	assign LEDG[5:0] = blob_count[5:0];    // Show blob count on LEDs
+//	assign LEDG[5:0] = blob_count[5:0];    // Show blob count on LEDs
 
 	// --------------- Visualise: choose raw or processed on VGA ---------------
 	

@@ -5,7 +5,7 @@ module convolution_filter #(
     parameter KERNEL_W = 3,
     parameter W = 8,          
     parameter W_FRAC = 0,
-    parameter EDGE_THRESHOLD = 8'd200  
+    parameter EDGE_THRESHOLD = 8'd150  
 )(
     input logic clk,
     input logic rst_n,

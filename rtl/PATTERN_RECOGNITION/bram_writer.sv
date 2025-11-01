@@ -7,7 +7,7 @@ module bram_writer #(
     
     // Input stream
     input logic x_valid,
-    output logic x_ready,
+//    output logic x_ready,
     input logic [7:0] x_data,
     
     // Control signals
