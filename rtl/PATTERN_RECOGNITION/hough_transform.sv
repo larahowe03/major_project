@@ -37,7 +37,9 @@ module hough_transform #(
     // ------------------------------------------------------------
     logic signed [15:0] cos_q, sin_q;
     logic [THETA_W-1:0] theta_idx;
-    trig_lut_rom #(.THETA_STEPS(THETA_STEPS)) trig_rom_inst (
+    trig_lut_rom #(
+        .THETA_STEPS(THETA_STEPS)
+    ) trig_rom_inst (
         .clk       (clk),
         .theta_idx (theta_idx),
         .cos_q     (cos_q),

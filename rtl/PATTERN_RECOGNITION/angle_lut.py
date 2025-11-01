@@ -1,58 +1,67 @@
 import numpy as np
 
 # ====================================================
-# Parameters
+# CONFIGURATION
 # ====================================================
-THETA_STEPS = 180
-AMPLITUDE = 32767  # Q1.15 scaling
+THETA_STEPS = 180           # number of LUT entries (0°–179°)
+AMPLITUDE = 32767           # Q1.15 scaling
 MODULE_NAME = "trig_lut_rom"
 
+COS_FILE = "cos_lut.mem"
+SIN_FILE = "sin_lut.mem"
+VERILOG_FILE = f"{MODULE_NAME}.v"
+
 # ====================================================
-# Generate Q1.15 sin/cos values
+# GENERATE LUT DATA
 # ====================================================
 angles_deg = np.arange(THETA_STEPS)
 angles_rad = np.deg2rad(angles_deg)
+
+# Q1.15 scaled signed integers
 cos_vals = np.round(np.cos(angles_rad) * AMPLITUDE).astype(np.int16)
 sin_vals = np.round(np.sin(angles_rad) * AMPLITUDE).astype(np.int16)
 
-# helper for Verilog literals
-def to_signed16(v):
-    if v < 0:
-        return f"16'sh{(v + (1<<16)) & 0xFFFF:04X}"
-    else:
-        return f"16'sh{v:04X}"
+# Write .mem files (hex, 4 digits per line)
+def write_mem(filename, data):
+    with open(filename, "w") as f:
+        for val in data:
+            f.write(f"{(val & 0xFFFF):04X}\n")
+
+write_mem(COS_FILE, cos_vals)
+write_mem(SIN_FILE, sin_vals)
+
+print(f"✅ Wrote {COS_FILE} and {SIN_FILE} ({THETA_STEPS} entries each).")
 
 # ====================================================
-# Write Verilog module
+# GENERATE SYNTHESIZABLE VERILOG MODULE (M9K)
 # ====================================================
-with open(f"{MODULE_NAME}.v", "w") as f:
+with open(VERILOG_FILE, "w") as f:
     f.write("// ============================================================\n")
-    f.write(f"// Auto-generated Q1.15 trig LUT ROM ({THETA_STEPS} entries)\n")
-    f.write("// ============================================================\n")
-    f.write(f"module {MODULE_NAME} (\n")
+    f.write("// Auto-generated trig LUT ROM (Q1.15 fixed-point)\n")
+    f.write("// Synchronous BRAM-based sine/cosine lookup for DE2 (M9K)\n")
+    f.write("// ============================================================\n\n")
+    f.write(f"module {MODULE_NAME} #(\n")
+    f.write(f"    parameter THETA_STEPS = {THETA_STEPS}\n")
+    f.write(") (\n")
     f.write("    input  logic clk,\n")
-    f.write(f"    input  logic [$clog2({THETA_STEPS})-1:0] theta_idx,\n")
+    f.write(f"    input  logic [$clog2(THETA_STEPS)-1:0] theta_idx,\n")
     f.write("    output logic signed [15:0] cos_q,\n")
     f.write("    output logic signed [15:0] sin_q\n")
     f.write(");\n\n")
 
-    # declare arrays
-    f.write(f"    // Synchronous ROMs (Q1.15 fixed-point)\n")
-    f.write(f"    reg signed [15:0] cos_rom [0:{THETA_STEPS-1}];\n")
-    f.write(f"    reg signed [15:0] sin_rom [0:{THETA_STEPS-1}];\n\n")
+    f.write("    // ------------------------------------------------------------\n")
+    f.write("    // M9K-based ROMs (synchronous, 1-cycle latency)\n")
+    f.write("    // ------------------------------------------------------------\n")
+    f.write('    (* ramstyle = "M9K", romstyle = "M9K" *) reg signed [15:0] cos_rom [0:THETA_STEPS-1];\n')
+    f.write('    (* ramstyle = "M9K", romstyle = "M9K" *) reg signed [15:0] sin_rom [0:THETA_STEPS-1];\n\n')
 
-    # initial block
+    f.write("    // Initialize ROM contents from external .mem files\n")
     f.write("    initial begin\n")
-    for i in range(THETA_STEPS):
-        f.write(f"        cos_rom[{i}] = {to_signed16(int(cos_vals[i]))};"
-                f"  // cos({i:3d}°) = {cos_vals[i]/32768:.6f}\n")
-    f.write("\n")
-    for i in range(THETA_STEPS):
-        f.write(f"        sin_rom[{i}] = {to_signed16(int(sin_vals[i]))};"
-                f"  // sin({i:3d}°) = {sin_vals[i]/32768:.6f}\n")
+    f.write(f'        $readmemh("{COS_FILE}", cos_rom);\n')
+    f.write(f'        $readmemh("{SIN_FILE}", sin_rom);\n')
     f.write("    end\n\n")
 
-    # synchronous read
+    f.write("    // Synchronous read (block RAM behavior)\n")
     f.write("    always_ff @(posedge clk) begin\n")
     f.write("        cos_q <= cos_rom[theta_idx];\n")
     f.write("        sin_q <= sin_rom[theta_idx];\n")
@@ -61,4 +70,4 @@ with open(f"{MODULE_NAME}.v", "w") as f:
     f.write("endmodule\n")
     f.write("// ============================================================\n")
 
-print(f"✅ Generated {MODULE_NAME}.v with {THETA_STEPS} entries.")
+print(f"✅ Generated {VERILOG_FILE} for M9K-based design.")
