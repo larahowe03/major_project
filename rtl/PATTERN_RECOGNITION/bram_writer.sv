@@ -1,5 +1,5 @@
 module binary_bram #(
-    param ADDR_WIDTH
+    parameter ADDR_WIDTH
 )(
     input logic clk,
     input logic rst_n,
