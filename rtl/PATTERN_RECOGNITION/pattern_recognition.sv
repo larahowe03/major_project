@@ -80,6 +80,7 @@ module pattern_recognition #(
         // Output to display (pass-through of edge-detected image)
         .y_valid(y_valid), 
         .y_ready(y_ready),
+        .y_data(y_data),
         // Detection results
         .is_white(is_white),
         .white_count(white_count),
