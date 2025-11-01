@@ -33,7 +33,9 @@ module pattern_recognition #(
     output logic [W-1:0] y_data
 );
     
-    logic bram_x_ready;  // ADDED: separate ready signal for BRAM writer
+    localparam ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT);
+    
+    logic bram_x_ready;
     logic capture_complete;
     
     // ========================================================================
@@ -59,56 +61,77 @@ module pattern_recognition #(
     );
 
     // ========================================================================
-    // Step 2: BRAM writer (captures binary edge image)
+    // Step 2: Image BRAM (captures binary edge image)
     // ========================================================================
-
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] bram_read_addr;
+    logic [ADDR_WIDTH-1:0] bram_read_addr;
     logic bram_read_data;
+    
     binary_bram #(
-        .ADDR_WIDTH($clog2(IMG_WIDTH*IMG_HEIGHT))
+        .ADDR_WIDTH(IMG_WIDTH * IMG_HEIGHT)
     ) u_image_bram (
         .clk(clk),
         .rst_n(rst_n),
+        
+        // Write stream
         .x_valid(y_valid),
-        .x_ready(bram_x_ready),  // FIXED: Connected properly
+        .x_ready(bram_x_ready),
         .x_data(y_data),
+        
+        // Read port
+        .read_addr(bram_read_addr),
+        .read_data(bram_read_data),
+        
+        // Control
         .capture_trigger(capture_trigger),
         .valid_to_read(valid_to_read),
         .capture_complete(capture_complete),
-        .capturing(capturing),
-
-        // reading
-        .read_addr(bram_read_addr),  // address to read from
-        .read_data(bram_read_data)   // result from reading
+        .capturing(capturing)
     );
 
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] visited_addr;
+    // ========================================================================
+    // Step 3: Visited BRAM (1-bit per pixel for tracking)
+    // ========================================================================
+    logic [ADDR_WIDTH-1:0] visited_addr;
     logic visited_we, visited_wdata, visited_rdata;
 
-    // Visited BRAM (1-bit per pixel)
-    binary_bram #(
-        .ADDR_WIDTH($clog2(IMG_WIDTH*IMG_HEIGHT))
+    simple_dual_port_bram #(
+        .ADDR_WIDTH(ADDR_WIDTH),
+        .DATA_WIDTH(1)
     ) u_visited_bram (
-        .clock(clk),
-        .wren(visited_we),
-        .wraddress(visited_addr),
-        .wrdata(visited_wdata),
-        .rdaddress(visited_addr),  // Same address for read/write
-        .rddata(visited_rdata)
+        .clk(clk),
+        
+        // Write port
+        .we(visited_we),
+        .waddr(visited_addr),
+        .wdata(visited_wdata),
+        
+        // Read port
+        .raddr(visited_addr),  // Same address for read/write
+        .rdata(visited_rdata)
     );
 
+    // ========================================================================
+    // Step 4: Zebra crossing detector
+    // ========================================================================
     zebra_crossing_detector #(
         .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT)
-    ) u_detector (
+        .IMG_HEIGHT(IMG_HEIGHT),
+        .MIN_EDGE_LENGTH(50)
+    ) u_zebra_crossing_detector (
         .clk(clk),
         .rst_n(rst_n),
         .valid_to_read(valid_to_read),
+        
+        // Outputs
         .detection_valid(detection_valid),
         .crossing_detected(crossing_detected),
         .stripe_count(stripe_count),
+        
+        // Image BRAM read
         .pixel_addr(bram_read_addr),
         .pixel_data(bram_read_data),
+        
+        // Visited BRAM read/write
         .visited_addr(visited_addr),
         .visited_we(visited_we),
         .visited_wdata(visited_wdata),
