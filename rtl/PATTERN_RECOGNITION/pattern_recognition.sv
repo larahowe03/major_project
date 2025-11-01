@@ -88,7 +88,4 @@ module pattern_recognition #(
         .detection_valid(detection_valid)
     );
     
-    // Pass through the edge-detected image for display
-    assign y_data = conv_data;  // Show edge-detected output
-
 endmodule
