@@ -73,9 +73,16 @@ module zebra_crossing_detector #(
     end
 
     // Helper signals
+    logic [1:0] bram_data_d;
+
+    always_ff @(posedge clk) begin
+        bram_data_d <= bram_data;  // sample the BRAM output
+    end
+
     logic is_white, is_visited;
-    assign is_white = (bram_data == 2'b01);
-    assign is_visited = (bram_data == 2'b10);
+    assign is_white   = (bram_data_d == 2'b01);
+    assign is_visited = (bram_data_d == 2'b10);
+
 
     // FSM
     always_ff @(posedge clk or negedge rst_n) begin
