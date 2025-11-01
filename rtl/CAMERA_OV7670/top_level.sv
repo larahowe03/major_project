@@ -32,8 +32,7 @@ module top_level (
 	// todo: for state machine
 	output logic zebra_crossing_stop  // FIXED: Removed trailing comma
 );
-	logic rst_n;
-   assign rst_n = KEY[0];	// todo: change to rst_n when this is sorted
+	logic rst_n = 1'b1; // todo: change to rst_n when this is sorted
 
 	// Camera and VGA PLL
 	logic clk_video, send_camera_config;
