@@ -83,6 +83,24 @@ module zebra_crossing_detector #(
     assign is_white   = (bram_data_d == 2'b01);
     assign is_visited = (bram_data_d == 2'b10);
 
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] scan_addr;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            scan_addr <= START_Y*IMG_WIDTH + START_X;
+        end else if (state == SCAN) begin
+            if (scan_addr == END_Y*IMG_WIDTH + END_X)
+                scan_addr <= scan_addr; // stop at end
+            else
+                scan_addr <= scan_addr + 1; // linear increment
+        end
+    end
+
+    always_ff @(posedge clk) begin
+        if (state == SCAN)
+            bram_addr <= scan_addr;
+    end
+
 
     // ================================================
     // FSM with proper scan + edge-following
