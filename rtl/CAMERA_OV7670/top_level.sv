@@ -1,7 +1,6 @@
 module top_level (
 	// board inputs
 	input 	logic		CLOCK_50,
-	// input 	logic		rst_n,
 	input 	logic [3:0]	KEY,
 
 	// board outputs
@@ -29,11 +28,11 @@ module top_level (
 	output logic        VGA_SYNC_N,
 	output logic        VGA_CLK,
 	
-	// todo: for state machine
-	output logic zebra_crossing_stop  // FIXED: Removed trailing comma
+	// for state machine
+	output logic zebra_crossing_stop
 );
 	logic rst_n;
-   assign rst_n = KEY[0]; // todo: change to rst_n when this is sorted
+	assign rst_n = KEY[0];
 
 	// Camera and VGA PLL
 	logic clk_video, send_camera_config;
@@ -79,8 +78,6 @@ module top_level (
 	logic filter_eop_out;
 	logic vga_ready;
 	logic [11:0] video_data;
-	wire vga_blank;  
-	wire vga_sync;   
 
 	// image buffer between camera and convolution filter
 	image_buffer u_image_buffer (
@@ -96,39 +93,39 @@ module top_level (
 		.data_out(video_data)
 	);
 		
-	wire pix_valid = vga_ready;  // pulses for visible 640x480 pixels
+	wire pix_valid = vga_ready;
 
 	// --------- Convert RGB444 --> 8-bit grayscale for edge detection ---------
 	
 	// Simple average (4-bit channels -> 8-bit via replicate & average)
-	wire [7:0] gray_r = {video_data[11:8], video_data[11:8]};	// 4->8
-	wire [7:0] gray_g = {video_data[7:4], video_data[7:4]}; 	// 4->8
-	wire [7:0] gray_b = {video_data[3:0], video_data[3:0]};  	// 4->8
-	wire [8:0] gray_sum = gray_r + gray_g + gray_b;          	// 9-bit sum
-	wire [7:0] gray_px  = gray_sum / 3;                      	// 8-bit
+	wire [7:0] gray_r = {video_data[11:8], video_data[11:8]};
+	wire [7:0] gray_g = {video_data[7:4], video_data[7:4]};
+	wire [7:0] gray_b = {video_data[3:0], video_data[3:0]};
+	wire [8:0] gray_sum = gray_r + gray_g + gray_b;
+	wire [7:0] gray_px  = gray_sum / 3;
 
 	// aggressive edge kernel
 	localparam KERNEL_H = 3;
 	localparam KERNEL_W = 3;
 	localparam IMG_HEIGHT = 480;
 	localparam IMG_WIDTH = 640;
-	localparam logic signed [7:0] AGGRESSIVE [0:2][0:2] = '{'{-8'sd1, -8'sd1, -8'sd1},
-											 				'{-8'sd1,  8'sd8, -8'sd1},
-											 				'{-8'sd1, -8'sd1, -8'sd1}};
+	localparam logic signed [7:0] AGGRESSIVE [0:2][0:2] = '{
+		'{-8'sd1, -8'sd1, -8'sd1},
+		'{-8'sd1,  8'sd8, -8'sd1},
+		'{-8'sd1, -8'sd1, -8'sd1}
+	};
 
 	// ----------------------- Pattern recognition block -----------------------
 		
-	logic pr_x_ready;  // ADDED: needed for handshake
+	logic pr_x_ready;
 	logic pr_y_valid;
-	logic pr_y_ready;  // ADDED: needed for handshake
+	logic pr_y_ready;
 	logic [7:0] pr_y_data;
 	logic crossing_detected;
 	logic detection_valid;
 	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] white_count;
-
-	// FIXED: Correct instantiation syntax
 	logic [7:0] blob_count;
-    logic [31:0] blob_areas [0:255];
+	logic [31:0] blob_areas [0:255];
 
 	pattern_recognition #(
 		.IMG_WIDTH(IMG_WIDTH),
@@ -136,49 +133,59 @@ module top_level (
 		.KERNEL_H(KERNEL_H),
 		.KERNEL_W(KERNEL_W),
 		.W(8),
-		.W_FRAC(0)
+		.W_FRAC(0),
+		.MIN_BLOB_AREA(500),      // Minimum blob size
+		.MAX_BLOB_AREA(50000),    // Maximum blob size
+		.MIN_BLOBS(3)             // Need at least 3 blobs for zebra
 	) u_pattern_recognition (
-		.clk(clk_video),           // FIXED: Use clk_video instead of CLOCK_50
+		.clk(clk_video),
 		.rst_n(rst_n),
 		
 		// Input pixel stream (from camera)
-		.x_valid(pix_valid),       // FIXED: Connect to actual signal
-		.x_ready(pr_x_ready),      // FIXED: Connect to signal
-		.x_data(gray_px),          // FIXED: Connect grayscale data
+		.x_valid(pix_valid),
+		.x_ready(pr_x_ready),
+		.x_data(gray_px),
 		
 		// Edge detection kernel
 		.kernel(AGGRESSIVE),
 		
 		// Detection outputs
-		.crossing_detected(crossing_detected),  // FIXED: Proper connection
+		.crossing_detected(crossing_detected),
 		.detection_valid(detection_valid),
 		.white_count(white_count),
+		.blob_count(blob_count),
+		.blob_areas(blob_areas),
 		
-		// Optional: edge-detected image output
-		.y_valid(pr_y_valid),      // FIXED: Proper connection
-		.y_ready(pr_y_ready),      // FIXED: Connect to signal
-		.y_data(pr_y_data)         // FIXED: Proper connection
+		// Edge-detected image output
+		.y_valid(pr_y_valid),
+		.y_ready(pr_y_ready),
+		.y_data(pr_y_data)
 	);
 
-	// FIXED: Connect y_ready (pattern recognition is always ready to output)
+	// Pattern recognition is always ready to output
 	assign pr_y_ready = 1'b1;
 
+	// Display blob count on 7-segment displays
 	display u_display (
-		.clk(clk_video),           // FIXED: Use clk_video
-    	.value(blob_count),
+		.clk(clk_video),
+		.value(blob_count),
 		.display0(HEX0),
 		.display1(HEX1),
 		.display2(HEX2),
 		.display3(HEX3)
 	);
 
+	// Zebra crossing detection output
 	assign zebra_crossing_stop = crossing_detected & detection_valid;
-	assign LEDG[7] = zebra_crossing_stop;  // lights up when zebra detected
-	assign LEDG[6:0] = 7'b0;              // keep others off for now
+	assign LEDG[7] = zebra_crossing_stop;  // LED lights up when zebra detected
+	
+	// Show detection status on other LEDs
+	assign LEDG[6] = detection_valid;      // Detection cycle complete
+	assign LEDG[5:0] = blob_count[5:0];    // Show blob count on LEDs
 
 	// --------------- Visualise: choose raw or processed on VGA ---------------
 	
-	wire use_processed = ~KEY[1];		// toggle with button
+	wire use_processed = ~KEY[1];  // toggle with button
 	wire [11:0] processed_rgb444 = {pr_y_data[7:4], pr_y_data[7:4], pr_y_data[7:4]};
 	wire [11:0] display_pixel = use_processed ? processed_rgb444 : video_data;
 
