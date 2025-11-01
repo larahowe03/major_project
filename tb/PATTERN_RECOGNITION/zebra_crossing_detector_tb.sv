@@ -54,7 +54,7 @@ module zebra_crossing_detector_tb;
     // ========================================================================
     // Image BRAM simulation (read-only)
     // ========================================================================
-    always_ff @(posedge clk) begin
+    always @(posedge clk) begin
         // Mark visited (write port)
         if (mark_visited_we && bram_addr < TOTAL_PIXELS)
             test_image[mark_visited_addr] <= 2'b10; // Mark as visited
