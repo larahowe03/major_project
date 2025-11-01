@@ -135,7 +135,7 @@ module top_level (
 		.W_FRAC(0)
 	) u_pattern_recognition (
 		.clk(clk_video),           // FIXED: Use clk_video instead of CLOCK_50
-		.rst_n(rst_n),
+		.rst_n(~rst_n),
 		
 		// Input pixel stream (from camera)
 		.x_valid(pix_valid),       // FIXED: Connect to actual signal
