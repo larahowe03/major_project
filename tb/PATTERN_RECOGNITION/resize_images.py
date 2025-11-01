@@ -1,7 +1,7 @@
 import cv2
 import sys
 
-def resize_image(input_path, output_path=None, width=320, height=240):
+def resize_image(input_path, output_path=None, width=640, height=480):
     """
     Resize an image to specified dimensions.
     
@@ -46,7 +46,7 @@ if __name__ == "__main__":
         output_image = sys.argv[2] if len(sys.argv) > 2 else None
     else:
         # Default example
-        input_image = "real_test_images/not_present.jpg"
-        output_image = "real_test_images/not_present.jpg"
+        input_image = "real_test_images/test_img.png"
+        output_image = "real_test_images/test_img.png"
     
     resize_image(input_image, output_image)

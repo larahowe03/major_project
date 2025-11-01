@@ -92,7 +92,7 @@ module convolution_filter_tb;
         end
         
         // Load input image from MIF file
-        load_mif_file("not_present.mif");
+        load_mif_file("test_img.mif");
         $display("Loaded input image: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
         
         // Select kernel type

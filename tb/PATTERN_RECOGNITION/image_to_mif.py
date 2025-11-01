@@ -37,7 +37,7 @@ def image_to_grayscale_mif(image_file_name, pixel_bits = 8, resolution = [320, 2
     name, _ = os.path.splitext(image_file_name)
 
     # Write image data file (pixel indices)
-    data_filename = f"real_test_images/present.mif"
+    data_filename = f"real_test_images/test_img.mif"
     print(f"\nWriting image data to {data_filename}")
 
     WIDTH = pixel_bits
@@ -65,4 +65,4 @@ def image_to_grayscale_mif(image_file_name, pixel_bits = 8, resolution = [320, 2
     print(f"Memory usage: {DEPTH} words of width {WIDTH} = {round(DEPTH*WIDTH/1000)}kb")
 
 if __name__ == "__main__":
-    image_to_grayscale_mif("real_test_images/present.jpg")
+    image_to_grayscale_mif("real_test_images/test_img.png")
