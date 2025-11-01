@@ -12,7 +12,7 @@ module bram_writer #(
     
     // Control signals
     input logic capture_trigger,      // Pulse this to start capturing a frame
-    output logic capture_complete,    // Goes high when frame is saved
+    output logic valid_to_read,       // Stays high while you can read from bram
     output logic capturing            // High while actively capturing
 );
 
@@ -21,6 +21,8 @@ module bram_writer #(
     state_t state;
     
     localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
+
+    logic capture_complete;
 
     // Just the write address counter
     logic [$clog2(TOTAL_PIXELS)-1:0] write_addr;
@@ -57,6 +59,7 @@ module bram_writer #(
                 end
                 
                 CAPTURING: begin
+                    valid_to_read <= 1'b0;
                     if (handshake) begin
                         // Write to BRAM
                         bram_array[write_addr] <= binary_pixel;
@@ -76,6 +79,7 @@ module bram_writer #(
                     capturing <= 1'b0;
                     capture_complete <= 1'b1;  // Signal completion
                     state <= IDLE;             // Return to idle
+                    valid_to_read <= 1'b1;
                 end
                 
                 default: state <= IDLE;
