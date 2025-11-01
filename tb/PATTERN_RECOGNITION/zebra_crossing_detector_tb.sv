@@ -46,8 +46,8 @@ module tb_zebra_crossing_detector;
     // ========================================================================
     initial begin
         // Load binary MIF file
-        $readmemb("test_image.mif", test_image);
-        $display("Loaded test image from test_image.mif");
+        $readmemb("test_img.mif", test_image);
+        $display("Loaded test image from test_img.mif");
         
         // Count white pixels
         integer white_count = 0;
