@@ -1,113 +1,103 @@
 // ============================================================================
-// Hough Transform Module
-//  - Scans binary edge image from BRAM
-//  - Accumulates votes for θ–ρ pairs
-//  - Finds top peaks (strongest lines)
+// FPGA-synthesizable Hough Transform
+//  - Uses prebuilt trig_lut_rom (Q1.15 fixed-point sin/cos tables)
+//  - LUT outputs registered 1 cycle before multiply
+//  - All math fixed-point integer; no "real", $sin, $cos, $rtoi
 // ============================================================================
 module hough_transform #(
     parameter IMG_WIDTH   = 640,
     parameter IMG_HEIGHT  = 480,
-    parameter THETA_STEPS = 180,     // number of discrete angle bins
-    parameter RHO_BINS    = 1024,    // number of ρ bins
-    parameter ACC_WIDTH   = 8        // bits per accumulator cell
+    parameter THETA_STEPS = 180,
+    parameter RHO_BINS    = 1024,
+    parameter ACC_WIDTH   = 8
 )(
     input  logic clk,
     input  logic rst_n,
     input  logic start,
     output logic done,
 
-    // BRAM interface (read-only)
+    // BRAM interface
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] bram_addr,
-    input  logic [1:0]  bram_data, // 1 = edge pixel, 0 = background
+    input  logic [1:0]  bram_data,     // 1 = edge pixel, 0 = background
 
-    // Line output (after peak detection)
+    // Line output
     output logic [15:0] num_lines,
     output logic [15:0] line_theta [0:15],
     output logic [15:0] line_rho   [0:15]
 );
-
     // ------------------------------------------------------------
-    // Internal parameters and memories
+    // Internal parameters
     // ------------------------------------------------------------
     localparam IMG_SIZE = IMG_WIDTH * IMG_HEIGHT;
     localparam THETA_W  = $clog2(THETA_STEPS);
     localparam RHO_W    = $clog2(RHO_BINS);
 
-    // LUTs for cosθ and sinθ in fixed-point (Q1.15)
-    logic signed [15:0] cos_lut [0:THETA_STEPS-1];
-    logic signed [15:0] sin_lut [0:THETA_STEPS-1];
-    initial begin : init_trig
-        integer i;
-        real angle;
-        for (i = 0; i < THETA_STEPS; i = i + 1) begin
-            angle = (i * 3.14159265) / THETA_STEPS; // 0–π
-            cos_lut[i] = $rtoi($cos(angle) * 32767.0);
-            sin_lut[i] = $rtoi($sin(angle) * 32767.0);
-        end
-    end
+    // ------------------------------------------------------------
+    // Trig lookup ROM (clocked output)
+    // ------------------------------------------------------------
+    logic signed [15:0] cos_q, sin_q;
+    logic [THETA_W-1:0] theta_idx;
+    trig_lut_rom #(.THETA_STEPS(THETA_STEPS)) trig_rom_inst (
+        .clk       (clk),
+        .theta_idx (theta_idx),
+        .cos_q     (cos_q),
+        .sin_q     (sin_q)
+    );
 
-    // Accumulator array (can be mapped to block RAM)
+    // ------------------------------------------------------------
+    // Accumulator memory
+    // ------------------------------------------------------------
     logic [ACC_WIDTH-1:0] acc [0:THETA_STEPS-1][0:RHO_BINS-1];
 
-    // ------------------------------------------------------------
-    // FSM control
-    // ------------------------------------------------------------
-    typedef enum logic [2:0] {
-        IDLE,
-        READ_PIXEL,
-        ACCUM_THETA,
-        FIND_PEAKS,
-        DONE
-    } state_t;
+    // FSM states
+    typedef enum logic [2:0] { IDLE, READ_PIXEL, THETA_REQ, THETA_USE,
+                               FIND_PEAKS, DONE } state_t;
     state_t state;
 
-    // Pixel scan counters
-    logic [$clog2(IMG_WIDTH)-1:0]  x;
+    // counters
+    logic [$clog2(IMG_SIZE)-1:0] pixel_idx;
+    logic [$clog2(IMG_WIDTH)-1:0] x;
     logic [$clog2(IMG_HEIGHT)-1:0] y;
-    logic [$clog2(IMG_SIZE)-1:0]   pixel_idx;
 
-    // θ loop and ρ computation
-    logic [THETA_W-1:0] theta_idx;
+    // rho math
     logic signed [31:0] rho_val;
     logic [RHO_W-1:0]   rho_bin;
 
-    // Peak search
+    // peak search
     logic [ACC_WIDTH-1:0] max_vote;
     logic [THETA_W-1:0]   max_theta;
     logic [RHO_W-1:0]     max_rho;
 
     // ------------------------------------------------------------
-    // FSM sequential logic
+    // Sequential FSM
     // ------------------------------------------------------------
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            state <= IDLE;
-            done  <= 1'b0;
-            pixel_idx <= 0;
-            theta_idx <= 0;
-            num_lines <= 0;
+            state      <= IDLE;
+            pixel_idx  <= '0;
+            theta_idx  <= '0;
+            num_lines  <= '0;
+            done       <= 1'b0;
         end else begin
             case (state)
                 IDLE: begin
                     done <= 1'b0;
                     if (start) begin
-                        // clear accumulator
                         integer i,j;
-                        for (i = 0; i < THETA_STEPS; i = i + 1)
-                            for (j = 0; j < RHO_BINS; j = j + 1)
+                        for (i = 0; i < THETA_STEPS; i++)
+                            for (j = 0; j < RHO_BINS; j++)
                                 acc[i][j] <= '0;
-
                         pixel_idx <= 0;
                         theta_idx <= 0;
-                        state <= READ_PIXEL;
+                        state     <= READ_PIXEL;
                     end
                 end
 
                 READ_PIXEL: begin
                     bram_addr <= pixel_idx;
-                    if (bram_data == 2'b01) begin  // edge pixel
+                    if (bram_data == 2'b01) begin
                         theta_idx <= 0;
-                        state <= ACCUM_THETA;
+                        state     <= THETA_REQ; // request LUT outputs
                     end else begin
                         pixel_idx <= pixel_idx + 1;
                         if (pixel_idx == IMG_SIZE-1)
@@ -115,13 +105,19 @@ module hough_transform #(
                     end
                 end
 
-                ACCUM_THETA: begin
-                    // compute ρ = x*cosθ + y*sinθ
+                // ask ROM for cos/sin (1-cycle latency)
+                THETA_REQ: begin
+                    state <= THETA_USE;
+                end
+
+                // use registered cos/sin values
+                THETA_USE: begin
                     x = pixel_idx % IMG_WIDTH;
                     y = pixel_idx / IMG_WIDTH;
-                    rho_val = (x * cos_lut[theta_idx]) + (y * sin_lut[theta_idx]);
-                    // normalize & bin
-                    rho_bin = (rho_val >>> 15) + (RHO_BINS/2);
+
+                    rho_val = (x * cos_q) + (y * sin_q);
+                    rho_bin = (rho_val >>> 15) + (RHO_BINS >> 1);
+
                     if (rho_bin < RHO_BINS)
                         acc[theta_idx][rho_bin] <= acc[theta_idx][rho_bin] + 1;
 
@@ -131,24 +127,24 @@ module hough_transform #(
                             state <= FIND_PEAKS;
                         else
                             state <= READ_PIXEL;
-                    end else
+                    end else begin
                         theta_idx <= theta_idx + 1;
+                        state     <= THETA_REQ;  // next θ, pipeline repeats
+                    end
                 end
 
                 FIND_PEAKS: begin
-                    // simple linear search for max vote
                     integer i,j;
                     max_vote  = 0;
                     max_theta = 0;
                     max_rho   = 0;
-                    for (i = 0; i < THETA_STEPS; i = i + 1)
-                        for (j = 0; j < RHO_BINS; j = j + 1)
+                    for (i = 0; i < THETA_STEPS; i++)
+                        for (j = 0; j < RHO_BINS; j++)
                             if (acc[i][j] > max_vote) begin
                                 max_vote  = acc[i][j];
                                 max_theta = i;
                                 max_rho   = j;
                             end
-                    // output single dominant line for now
                     line_theta[0] <= max_theta;
                     line_rho[0]   <= max_rho;
                     num_lines     <= 1;
@@ -160,10 +156,7 @@ module hough_transform #(
                     if (!start)
                         state <= IDLE;
                 end
-
-                default: state <= IDLE;
             endcase
         end
     end
-
 endmodule
