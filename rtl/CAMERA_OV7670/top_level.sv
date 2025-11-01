@@ -130,10 +130,10 @@ module top_level (
 	// Example: Trigger capture with a button
     assign capture_trigger = ~KEY[3];  // Press KEY[3] to capture frame
 
-	logic capture_complete, capturing;
+	logic valid_to_read, capturing;
 
 	assign LEDG[0] = capturing;
-	assign LEDG[1] = capture_complete;
+	assign LEDG[1] = valid_to_read;
 	assign LEDG[2] = capture_trigger;
 	pattern_recognition #(
 		.IMG_WIDTH(IMG_WIDTH),
@@ -157,7 +157,7 @@ module top_level (
 		// Edge detection kernel
 		.kernel(AGGRESSIVE),
 		.capture_trigger(capture_trigger),
-		.capture_complete(capture_complete),
+		.valid_to_read(valid_to_read),
 		.capturing(capturing),
 		
 		// Detection outputs

@@ -19,7 +19,7 @@ module pattern_recognition #(
 
     // todo: temp
     input logic capture_trigger,
-    output logic capture_complete,
+    output logic valid_to_read,
     output logic capturing,
 
     
@@ -73,16 +73,16 @@ module pattern_recognition #(
 //        .x_ready(y_ready),
         .x_data(y_data),
         .capture_trigger(capture_trigger),    // Pulse high to start capture
-        .capture_complete(capture_complete),  // Goes high when done
+        .valid_to_read(valid_to_read),  // Goes high when done
         .capturing(capturing)                 // High while actively capturing
     );
 
-    // Use capture_complete to start blob detection
+    // Use valid_to_read to start blob detection
 //    always_ff @(posedge clk_video or negedge rst_n) begin
 //        if (!rst_n) begin
 //            start_blob_detection <= 1'b0;
 //        end else begin
-//            if (capture_complete) begin
+//            if (valid_to_read) begin
 //                start_blob_detection <= 1'b1;  // Start analysis
 //            end else begin
 //                start_blob_detection <= 1'b0;
