@@ -58,7 +58,8 @@ module simple_blob_detector #(
     
     logic is_white;
     assign is_white = (bram_rdata >= WHITE_THRESHOLD);
-    
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] addr;
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE;
@@ -123,7 +124,6 @@ module simple_blob_detector #(
                     end else begin
                         // Pop from stack
                         stack_ptr <= stack_ptr - 1;
-                        logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] addr;
                         addr = stack[stack_ptr - 1];
                         fill_x <= addr % IMG_WIDTH;
                         fill_y <= addr / IMG_WIDTH;

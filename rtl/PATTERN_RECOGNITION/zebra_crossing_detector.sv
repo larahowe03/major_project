@@ -43,7 +43,8 @@ module zebra_crossing_detector #(
     } state_t;
     
     state_t state;
-    
+	 logic [7:0] assigned_label;
+
     // Position tracking
     logic [$clog2(IMG_WIDTH)-1:0] x_pos;
     logic [$clog2(IMG_HEIGHT)-1:0] y_pos;
@@ -71,7 +72,8 @@ module zebra_crossing_detector #(
     // ========================================================================
     // Two-Pass Connected Component Labeling
     // ========================================================================
-    
+    logic has_left, has_above;
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE;
@@ -140,14 +142,12 @@ module zebra_crossing_detector #(
                 end
                 
                 FIRST_PASS_LABEL: begin
-                    logic [7:0] assigned_label;
                     assigned_label = 8'd0;
                     
                     if (is_white) begin
                         total_white_pixels <= total_white_pixels + 1;
                         
                         // Check 4-connectivity (left and above)
-                        logic has_left, has_above;
                         has_left = (x_pos > 0) && (prev_pixel_label != 8'd0);
                         has_above = (y_pos > 0) && (label_buffer[x_pos] != 8'd0);
                         
