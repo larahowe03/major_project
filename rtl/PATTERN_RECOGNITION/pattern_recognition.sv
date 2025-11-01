@@ -20,7 +20,7 @@ module pattern_recognition #(
     // Detection outputs
     output logic crossing_detected,
     output logic detection_valid,
-    output logic [7:0] blob_count,
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] white_count,
     
     // Optional: edge-detected image output
     output logic y_valid,
@@ -31,6 +31,11 @@ module pattern_recognition #(
     logic conv_valid;
     logic conv_ready;
     logic [W-1:0] conv_data;
+    
+    // Signals for zebra detector
+    logic zebra_x_ready;
+    logic zebra_y_valid;
+    logic is_white;
     
     // ========================================================================
     // Instantiate convolution filter
@@ -59,37 +64,30 @@ module pattern_recognition #(
     assign y_data = conv_data;
     assign conv_ready = y_ready;
             
-    // // Zebra crossing detector
-    // zebra_crossing_detector #(
-    //     .IMG_WIDTH(IMG_WIDTH),
-    //     .IMG_HEIGHT(IMG_HEIGHT),
-    //     .W(W),
-    //     .WHITE_THRESHOLD(8'd180),
-    //     .MIN_BLOB_SIZE(50),      // Minimum pixels for a valid stripe
-    //     .MIN_STRIPES(3)           // Need at least 3 stripes for zebra crossing
-    // ) u_zebra_crossing_detector (
-    //     .clk(clk),
-    //     .rst_n(rst_n),
+    // ========================================================================
+    // Instantiate zebra crossing detector
+    // ========================================================================
+    zebra_crossing_detector #(
+        .IMG_WIDTH(320),
+        .IMG_HEIGHT(240),        
+        .W(8),
+        .WHITE_THRESHOLD(8'd180)
+    ) u_zebra_crossing_detector (
+        .clk(clk),       
+        .rst_n(rst_n),
         
-    //     // Input stream
-    //     .x_valid(conv_valid),
-    //     .x_ready(), // TODO
-    //     .x_data(conv_data),
+        // Input stream - using original input
+        .x_valid(x_valid),
+        .x_ready(zebra_x_ready),  
+        .x_data(x_data),
         
-    //     // Output stream (pass-through)
-    //     .y_valid(),
-    //     .y_ready(conv_ready),
-    //     .y_data(),
-        
-    //     // Detection outputs
-    //     .is_white(),                              // Current pixel is white
-    //     .white_count(),  // Total white pixels in frame
-    //     .current_blob(),   // Current white run length
-        
-    //     // Zebra crossing detection
-    //     .blob_count(blob_count),                 // Number of long runs found
-    //     .zebra_detected(crossing_detected),                       // Zebra crossing detected (≥3 long runs)
-    //     .detection_valid(detection_valid)                       // Detection result valid (end of frame)
-    // );
+        // Output stream (pass-through)
+        .y_valid(zebra_y_valid), 
+        .y_ready(y_ready),
+        .is_white(is_white),
+        .white_count(white_count),
+        .zebra_detected(crossing_detected),
+        .detection_valid(detection_valid)
+    );
 
 endmodule

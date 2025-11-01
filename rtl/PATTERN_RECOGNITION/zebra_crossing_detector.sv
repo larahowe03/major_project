@@ -19,7 +19,7 @@ module zebra_crossing_detector #(
     
     // Detection outputs
     output logic is_white,                              // Current pixel is white
-    // output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] white_count,  // Total white pixels in frame
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] white_count,  // Total white pixels in frame
     // output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] current_blob, // Current blob size
     
     // Zebra crossing detection
@@ -93,67 +93,68 @@ module zebra_crossing_detector #(
             // Process every pixel
             if (handshake) begin
                 // Check if connected to previous white pixels
-                logic connected;
-                connected = 1'b0;
+                // logic connected;
+                // connected = 1'b0;
                 
                 if (is_white) begin
                     white_count <= white_count + 1;
                     
-                    // Check horizontal connectivity (left neighbor)
-                    if (x_pos > 0 && prev_pixel_white) begin
-                        connected = 1'b1;
-                    end
+                    // // Check horizontal connectivity (left neighbor)
+                    // if (x_pos > 0 && prev_pixel_white) begin
+                    //     connected = 1'b1;
+                    // end
                     
-                    // Check vertical connectivity (pixel above)
-                    if (y_pos > 0 && prev_row_white[x_pos]) begin
-                        connected = 1'b1;
-                    end
+                    // // Check vertical connectivity (pixel above)
+                    // if (y_pos > 0 && prev_row_white[x_pos]) begin
+                    //     connected = 1'b1;
+                    // end
                     
-                    // Check diagonal connectivity (top-left and top-right)
-                    if (y_pos > 0) begin
-                        if (x_pos > 0 && prev_row_white[x_pos-1]) begin
-                            connected = 1'b1;
-                        end
-                        if (x_pos < IMG_WIDTH-1 && prev_row_white[x_pos+1]) begin
-                            connected = 1'b1;
-                        end
-                    end
+                    // // Check diagonal connectivity (top-left and top-right)
+                    // if (y_pos > 0) begin
+                    //     if (x_pos > 0 && prev_row_white[x_pos-1]) begin
+                    //         connected = 1'b1;
+                    //     end
+                    //     if (x_pos < IMG_WIDTH-1 && prev_row_white[x_pos+1]) begin
+                    //         connected = 1'b1;
+                    //     end
+                    // end
                     
-                    if (connected) begin
-                        // Part of existing blob
-                        current_blob <= current_blob + 1;
-                        in_blob <= 1'b1;
-                    end else begin
-                        // Start of new blob - check if previous blob was valid
-                        if (in_blob && current_blob >= MIN_BLOB_SIZE) begin
-                            blobs_found <= blobs_found + 1;
-                        end
-                        current_blob <= 1;
-                        in_blob <= 1'b1;
-                    end
+                    // if (connected) begin
+                    //     // Part of existing blob
+                    //     current_blob <= current_blob + 1;
+                    //     in_blob <= 1'b1;
+                    // end else begin
+                    //     // Start of new blob - check if previous blob was valid
+                    //     if (in_blob && current_blob >= MIN_BLOB_SIZE) begin
+                    //         blobs_found <= blobs_found + 1;
+                    //     end
+                    //     current_blob <= 1;
+                    //     in_blob <= 1'b1;
+                    // end
                     
-                    prev_pixel_white <= 1'b1;
-                end else begin
-                    // Not white
-                    if (in_blob && current_blob >= MIN_BLOB_SIZE) begin
-                        // End of a valid blob
-                        blobs_found <= blobs_found + 1;
-                    end
+                    // prev_pixel_white <= 1'b1;
+                end 
+                // else begin
+                //     // Not white
+                //     if (in_blob && current_blob >= MIN_BLOB_SIZE) begin
+                //         // End of a valid blob
+                //         blobs_found <= blobs_found + 1;
+                //     end
                     
-                    current_blob <= '0;
-                    in_blob <= 1'b0;
-                    prev_pixel_white <= 1'b0;
-                end
+                //     current_blob <= '0;
+                //     in_blob <= 1'b0;
+                //     prev_pixel_white <= 1'b0;
+                // end
                 
                 // Update previous row bitmap
-                if (x_pos == IMG_WIDTH - 1) begin
-                    // End of row - clear for next row
-                    prev_row_white <= '0;
-                    prev_pixel_white <= 1'b0;
-                end
+                // if (x_pos == IMG_WIDTH - 1) begin
+                //     // End of row - clear for next row
+                //     prev_row_white <= '0;
+                //     prev_pixel_white <= 1'b0;
+                // end
                 
-                // Store current pixel for next row
-                prev_row_white[x_pos] <= is_white;
+                // // Store current pixel for next row
+                // prev_row_white[x_pos] <= is_white;
             end
         end
     end
