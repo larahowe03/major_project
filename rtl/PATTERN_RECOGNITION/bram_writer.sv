@@ -4,14 +4,18 @@ module binary_bram #(
     input logic clk,
     input logic rst_n,
     
-    // Input stream (write)
+    // Input stream (write edge image)
     input logic x_valid,
     output logic x_ready,
     input logic [7:0] x_data,
     
-    // Read port - ADDED
+    // Read port for detector
     input logic [$clog2(ADDR_WIDTH)-1:0] read_addr,
-    output logic read_data,  // 1-bit output
+    output logic [1:0] read_data,  // 2-bit output: 0=black, 1=white, 2=visited
+    
+    // Write port for marking visited
+    input logic mark_visited_we,
+    input logic [$clog2(ADDR_WIDTH)-1:0] mark_visited_addr,
     
     // Control signals
     input logic capture_trigger,
@@ -26,8 +30,8 @@ module binary_bram #(
     
     logic [$clog2(ADDR_WIDTH)-1:0] write_addr;
     
-    // 1-bit BRAM array
-    (* ramstyle = "M9K" *) logic bram_array [0:ADDR_WIDTH-1];
+    // 2-bit BRAM array: 00=black, 01=white, 10=visited
+    (* ramstyle = "M9K" *) logic [1:0] bram_array [0:ADDR_WIDTH-1];
     
     logic handshake;
     assign handshake = x_valid && x_ready;
@@ -35,7 +39,7 @@ module binary_bram #(
     logic binary_pixel;
     assign binary_pixel = (x_data == 8'd255);
     
-    // State machine and capture logic (same as before)
+    // State machine for capture
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE;
@@ -60,7 +64,8 @@ module binary_bram #(
                 
                 CAPTURING: begin
                     if (handshake) begin
-                        bram_array[write_addr] <= binary_pixel;
+                        // Write 0 (black) or 1 (white edge)
+                        bram_array[write_addr] <= binary_pixel ? 2'b01 : 2'b00;
                         
                         if (write_addr == ADDR_WIDTH - 1) begin
                             write_addr <= '0;
@@ -86,11 +91,16 @@ module binary_bram #(
     assign x_ready = (state == CAPTURING);
     
     // ========================================================================
-    // READ PORT - Registered output for BRAM inference
+    // DUAL PORT: Read + Mark Visited
     // ========================================================================
     always_ff @(posedge clk) begin
-        if (valid_to_read)
-            read_data <= bram_array[read_addr];
+        // Write port: Mark as visited (set to 2'b10)
+        if (mark_visited_we && valid_to_read) begin
+            bram_array[mark_visited_addr] <= 2'b10;
+        end
+        
+        // Read port: Always reading
+        read_data <= bram_array[read_addr];
     end
 
 endmodule

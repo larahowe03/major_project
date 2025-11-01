@@ -67,19 +67,23 @@ module pattern_recognition #(
     logic bram_read_data;
     
     binary_bram #(
-        .ADDR_WIDTH(IMG_WIDTH * IMG_HEIGHT)
+        .ADDR_WIDTH(ADDR_WIDTH)
     ) u_image_bram (
         .clk(clk),
         .rst_n(rst_n),
         
-        // Write stream
+        // Write stream (capture)
         .x_valid(y_valid),
         .x_ready(bram_x_ready),
         .x_data(y_data),
         
-        // Read port
+        // Read port (for detector)
         .read_addr(bram_read_addr),
         .read_data(bram_read_data),
+        
+        // Mark visited (from detector)
+        .mark_visited_we(mark_visited_we),
+        .mark_visited_addr(mark_visited_addr),
         
         // Control
         .capture_trigger(capture_trigger),
@@ -91,24 +95,8 @@ module pattern_recognition #(
     // ========================================================================
     // Step 3: Visited BRAM (1-bit per pixel for tracking)
     // ========================================================================
-    logic [ADDR_WIDTH-1:0] visited_addr;
-    logic visited_we, visited_wdata, visited_rdata;
-
-    simple_dual_port_bram #(
-        .ADDR_WIDTH(ADDR_WIDTH),
-        .DATA_WIDTH(1)
-    ) u_visited_bram (
-        .clk(clk),
-        
-        // Write port
-        .we(visited_we),
-        .waddr(visited_addr),
-        .wdata(visited_wdata),
-        
-        // Read port
-        .raddr(visited_addr),  // Same address for read/write
-        .rdata(visited_rdata)
-    );
+    logic [ADDR_WIDTH-1:0] mark_visited_addr;
+    logic mark_visited_we;
 
     // ========================================================================
     // Step 4: Zebra crossing detector
@@ -122,20 +110,15 @@ module pattern_recognition #(
         .rst_n(rst_n),
         .valid_to_read(valid_to_read),
         
-        // Outputs
         .detection_valid(detection_valid),
         .crossing_detected(crossing_detected),
         .stripe_count(stripe_count),
         
-        // Image BRAM read
-        .pixel_addr(bram_read_addr),
-        .pixel_data(bram_read_data),
-        
-        // Visited BRAM read/write
-        .visited_addr(visited_addr),
-        .visited_we(visited_we),
-        .visited_wdata(visited_wdata),
-        .visited_rdata(visited_rdata)
+        // Single BRAM interface
+        .bram_addr(bram_read_addr),
+        .bram_data(bram_read_data),
+        .mark_visited_we(mark_visited_we),
+        .mark_visited_addr(mark_visited_addr)
     );
     
 endmodule

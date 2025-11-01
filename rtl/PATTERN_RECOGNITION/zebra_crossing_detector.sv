@@ -11,15 +11,11 @@ module zebra_crossing_detector #(
     output logic crossing_detected,
     output logic [7:0] stripe_count,
     
-    // Image BRAM (read pixel data)
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] pixel_addr,
-    input logic pixel_data,
-    
-    // Visited BRAM (read/write visited flags)
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] visited_addr,
-    output logic visited_we,
-    output logic visited_wdata,
-    input logic visited_rdata
+    // Single BRAM interface (read + mark visited)
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] bram_addr,
+    input logic [1:0] bram_data,  // 2-bit: 0=black, 1=white, 2=visited
+    output logic mark_visited_we,
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] mark_visited_addr
 );
 
     typedef enum logic [2:0] {
@@ -56,8 +52,6 @@ module zebra_crossing_detector #(
         neighbor_dx[7] =  1; neighbor_dy[7] =  1;
     end
 
-    // ✅ NO MORE HUGE VISITED ARRAY - use BRAM instead!
-
     localparam BORDER = 20;
     localparam START_X = BORDER;
     localparam END_X = IMG_WIDTH - BORDER - 1;
@@ -78,23 +72,27 @@ module zebra_crossing_detector #(
         current_addr = y_edge * IMG_WIDTH + x_edge;
     end
 
+    // Helper signals
+    logic is_white, is_visited;
+    assign is_white = (bram_data == 2'b01);
+    assign is_visited = (bram_data == 2'b10);
+
     // FSM
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE;
             x_pos <= START_X;
             y_pos <= START_Y;
-            pixel_addr <= '0;
-            visited_addr <= '0;
-            visited_we <= 1'b0;
-            visited_wdata <= 1'b0;
+            bram_addr <= '0;
+            mark_visited_we <= 1'b0;
+            mark_visited_addr <= '0;
             detection_valid <= 1'b0;
             crossing_detected <= 1'b0;
             num_stripes <= '0;
             stripe_count <= '0;
         end else begin
             detection_valid <= 1'b0;
-            visited_we <= 1'b0;  // Default: not writing
+            mark_visited_we <= 1'b0;  // Default: not marking
             
             case (state)
                 IDLE: begin
@@ -102,14 +100,12 @@ module zebra_crossing_detector #(
                         state <= WAIT_READ;
                         x_pos <= START_X;
                         y_pos <= START_Y;
-                        pixel_addr <= START_Y * IMG_WIDTH + START_X;
-                        visited_addr <= START_Y * IMG_WIDTH + START_X;
+                        bram_addr <= START_Y * IMG_WIDTH + START_X;
                         num_stripes <= '0;
                     end
                 end
                 
                 WAIT_READ: begin
-                    // Wait for both pixel_data and visited_rdata
                     state <= SCAN;
                 end
                 
@@ -118,7 +114,7 @@ module zebra_crossing_detector #(
                     scan_addr = y_pos * IMG_WIDTH + x_pos;
                     
                     // Check if unvisited white pixel
-                    if (pixel_data == 1'b1 && visited_rdata == 1'b0) begin
+                    if (is_white && !is_visited) begin
                         // Found edge start!
                         x_start <= x_pos;
                         y_start <= y_pos;
@@ -133,9 +129,8 @@ module zebra_crossing_detector #(
                         found_loop <= 1'b0;
                         
                         // Mark as visited
-                        visited_addr <= scan_addr;
-                        visited_we <= 1'b1;
-                        visited_wdata <= 1'b1;
+                        mark_visited_we <= 1'b1;
+                        mark_visited_addr <= scan_addr;
                         
                         neighbor_idx <= 0;
                         state <= CHECK_NEIGHBOR;
@@ -147,13 +142,11 @@ module zebra_crossing_detector #(
                                 state <= CHECK_LOOP;
                             end else begin
                                 y_pos <= y_pos + 1;
-                                pixel_addr <= (y_pos + 1) * IMG_WIDTH + START_X;
-                                visited_addr <= (y_pos + 1) * IMG_WIDTH + START_X;
+                                bram_addr <= (y_pos + 1) * IMG_WIDTH + START_X;
                             end
                         end else begin
                             x_pos <= x_pos + 1;
-                            pixel_addr <= pixel_addr + 1;
-                            visited_addr <= visited_addr + 1;
+                            bram_addr <= bram_addr + 1;
                         end
                     end
                 end
@@ -166,13 +159,11 @@ module zebra_crossing_detector #(
                         if (x_scan_pos == END_X) begin
                             x_pos <= START_X;
                             y_pos <= y_scan_pos + 1;
-                            pixel_addr <= (y_scan_pos + 1) * IMG_WIDTH + START_X;
-                            visited_addr <= (y_scan_pos + 1) * IMG_WIDTH + START_X;
+                            bram_addr <= (y_scan_pos + 1) * IMG_WIDTH + START_X;
                         end else begin
                             x_pos <= x_scan_pos + 1;
                             y_pos <= y_scan_pos;
-                            pixel_addr <= y_scan_pos * IMG_WIDTH + (x_scan_pos + 1);
-                            visited_addr <= y_scan_pos * IMG_WIDTH + (x_scan_pos + 1);
+                            bram_addr <= y_scan_pos * IMG_WIDTH + (x_scan_pos + 1);
                         end
                         
                         if (found_loop && edge_length >= MIN_EDGE_LENGTH) begin
@@ -180,8 +171,7 @@ module zebra_crossing_detector #(
                         end
                     end else begin
                         if (in_bounds) begin
-                            pixel_addr <= next_addr;
-                            visited_addr <= next_addr;
+                            bram_addr <= next_addr;
                             state <= FOLLOW_EDGE;
                         end else begin
                             neighbor_idx <= neighbor_idx + 1;
@@ -194,16 +184,16 @@ module zebra_crossing_detector #(
                     is_start = (next_x == x_start) && (next_y == y_start);
                     is_prev = (next_x == x_prev) && (next_y == y_prev);
                     
-                    if (pixel_data == 1'b1) begin
+                    if (is_white) begin
                         if (is_start && edge_length >= MIN_EDGE_LENGTH) begin
                             found_loop <= 1'b1;
                             num_stripes <= num_stripes + 1;
                             neighbor_idx <= 8;
                             state <= CHECK_NEIGHBOR;
-                        end else if (visited_rdata == 1'b0 && !is_prev) begin
+                        end else if (!is_visited && !is_prev) begin
                             // Mark visited
-                            visited_we <= 1'b1;
-                            visited_wdata <= 1'b1;
+                            mark_visited_we <= 1'b1;
+                            mark_visited_addr <= next_addr;
                             edge_length <= edge_length + 1;
                             
                             x_prev <= x_edge;
