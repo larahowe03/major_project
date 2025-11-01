@@ -15,7 +15,7 @@ module zebra_crossing_detector #(
     // Output stream (pass-through)
     output logic y_valid,
     input logic y_ready,
-    // output logic [W-1:0] y_data,
+    output logic [W-1:0] y_data,
     
     // Detection outputs
     output logic is_white,                              // Current pixel is white
