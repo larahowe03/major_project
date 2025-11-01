@@ -1,6 +1,5 @@
-module image_bram #(
-    parameter IMG_WIDTH = 640,
-    parameter IMG_HEIGHT = 480
+module binary_bram #(
+    param ADDR_WIDTH
 )(
     input logic clk,
     input logic rst_n,
@@ -25,12 +24,10 @@ module image_bram #(
     
     state_t state;
     
-    localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
-
-    logic [$clog2(TOTAL_PIXELS)-1:0] write_addr;
+    logic [$clog2(ADDR_WIDTH)-1:0] write_addr;
     
     // 1-bit BRAM array
-    (* ramstyle = "M9K" *) logic bram_array [0:TOTAL_PIXELS-1];
+    (* ramstyle = "M9K" *) logic bram_array [0:ADDR_WIDTH-1];
     
     logic handshake;
     assign handshake = x_valid && x_ready;
@@ -65,7 +62,7 @@ module image_bram #(
                     if (handshake) begin
                         bram_array[write_addr] <= binary_pixel;
                         
-                        if (write_addr == TOTAL_PIXELS - 1) begin
+                        if (write_addr == ADDR_WIDTH - 1) begin
                             write_addr <= '0;
                             state <= COMPLETE;
                         end else begin

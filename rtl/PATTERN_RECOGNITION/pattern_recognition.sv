@@ -64,9 +64,8 @@ module pattern_recognition #(
 
     logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] bram_read_addr;
     logic bram_read_data;
-    image_bram #(
-        .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT)
+    binary_bram #(
+        .ADDR_WIDTH($clog2(IMG_WIDTH*IMG_HEIGHT))
     ) u_image_bram (
         .clk(clk),
         .rst_n(rst_n),
