@@ -1,7 +1,7 @@
 module zebra_crossing_detector #(
     parameter IMG_WIDTH = 640,
     parameter IMG_HEIGHT = 480,
-    parameter MIN_EDGE_LENGTH = 50  // Minimum pixels for valid stripe
+    parameter MIN_EDGE_LENGTH = 50
 )(
     input logic clk,
     input logic rst_n,
@@ -11,8 +11,15 @@ module zebra_crossing_detector #(
     output logic crossing_detected,
     output logic [7:0] stripe_count,
     
+    // Image BRAM (read pixel data)
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] pixel_addr,
-    input logic pixel_data
+    input logic pixel_data,
+    
+    // Visited BRAM (read/write visited flags)
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] visited_addr,
+    output logic visited_we,
+    output logic visited_wdata,
+    input logic visited_rdata
 );
 
     typedef enum logic [2:0] {
@@ -26,44 +33,37 @@ module zebra_crossing_detector #(
 
     state_t state;
 
-    // Position tracking
     logic [$clog2(IMG_WIDTH)-1:0] x_pos, x_scan_pos;
     logic [$clog2(IMG_HEIGHT)-1:0] y_pos, y_scan_pos;
-    
-    // Edge following
     logic [$clog2(IMG_WIDTH)-1:0] x_edge, x_start, x_prev;
     logic [$clog2(IMG_HEIGHT)-1:0] y_edge, y_start, y_prev;
     logic [15:0] edge_length;
     logic [7:0] num_stripes;
     logic found_loop;
 
-    // 8-neighbor offsets
     logic signed [2:0] neighbor_dx [0:7];
     logic signed [2:0] neighbor_dy [0:7];
     logic [2:0] neighbor_idx;
     
     initial begin
-        neighbor_dx[0] = -1; neighbor_dy[0] = -1;  // NW
-        neighbor_dx[1] =  0; neighbor_dy[1] = -1;  // N
-        neighbor_dx[2] =  1; neighbor_dy[2] = -1;  // NE
-        neighbor_dx[3] = -1; neighbor_dy[3] =  0;  // W
-        neighbor_dx[4] =  1; neighbor_dy[4] =  0;  // E
-        neighbor_dx[5] = -1; neighbor_dy[5] =  1;  // SW
-        neighbor_dx[6] =  0; neighbor_dy[6] =  1;  // S
-        neighbor_dx[7] =  1; neighbor_dy[7] =  1;  // SE
+        neighbor_dx[0] = -1; neighbor_dy[0] = -1;
+        neighbor_dx[1] =  0; neighbor_dy[1] = -1;
+        neighbor_dx[2] =  1; neighbor_dy[2] = -1;
+        neighbor_dx[3] = -1; neighbor_dy[3] =  0;
+        neighbor_dx[4] =  1; neighbor_dy[4] =  0;
+        neighbor_dx[5] = -1; neighbor_dy[5] =  1;
+        neighbor_dx[6] =  0; neighbor_dy[6] =  1;
+        neighbor_dx[7] =  1; neighbor_dy[7] =  1;
     end
 
-    // Mark visited pixels
-    logic visited [0:IMG_WIDTH*IMG_HEIGHT-1];
+    // ✅ NO MORE HUGE VISITED ARRAY - use BRAM instead!
 
-    // Border margins
     localparam BORDER = 20;
     localparam START_X = BORDER;
     localparam END_X = IMG_WIDTH - BORDER - 1;
     localparam START_Y = BORDER;
     localparam END_Y = IMG_HEIGHT - BORDER - 1;
 
-    // Helper signals
     logic [$clog2(IMG_WIDTH)-1:0] next_x;
     logic [$clog2(IMG_HEIGHT)-1:0] next_y;
     logic in_bounds;
@@ -78,8 +78,6 @@ module zebra_crossing_detector #(
         current_addr = y_edge * IMG_WIDTH + x_edge;
     end
 
-    integer i;
-
     // FSM
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -87,13 +85,16 @@ module zebra_crossing_detector #(
             x_pos <= START_X;
             y_pos <= START_Y;
             pixel_addr <= '0;
+            visited_addr <= '0;
+            visited_we <= 1'b0;
+            visited_wdata <= 1'b0;
             detection_valid <= 1'b0;
             crossing_detected <= 1'b0;
             num_stripes <= '0;
             stripe_count <= '0;
-            visited <= '{default: 1'b0};  // ✅ FIXED: Initialize entire array to 0
         end else begin
             detection_valid <= 1'b0;
+            visited_we <= 1'b0;  // Default: not writing
             
             case (state)
                 IDLE: begin
@@ -102,14 +103,13 @@ module zebra_crossing_detector #(
                         x_pos <= START_X;
                         y_pos <= START_Y;
                         pixel_addr <= START_Y * IMG_WIDTH + START_X;
+                        visited_addr <= START_Y * IMG_WIDTH + START_X;
                         num_stripes <= '0;
-                        
-                        // Clear visited array
-                        visited <= '{default: 1'b0};  // ✅ FIXED: Initialize entire array to 0
                     end
                 end
                 
                 WAIT_READ: begin
+                    // Wait for both pixel_data and visited_rdata
                     state <= SCAN;
                 end
                 
@@ -117,9 +117,9 @@ module zebra_crossing_detector #(
                     logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] scan_addr;
                     scan_addr = y_pos * IMG_WIDTH + x_pos;
                     
-                    // Check if current pixel is unvisited white edge
-                    if (pixel_data == 1'b1 && !visited[scan_addr]) begin
-                        // Found start of potential closed loop!
+                    // Check if unvisited white pixel
+                    if (pixel_data == 1'b1 && visited_rdata == 1'b0) begin
+                        // Found edge start!
                         x_start <= x_pos;
                         y_start <= y_pos;
                         x_edge <= x_pos;
@@ -131,12 +131,16 @@ module zebra_crossing_detector #(
                         
                         edge_length <= 1;
                         found_loop <= 1'b0;
-                        visited[scan_addr] <= 1'b1;
+                        
+                        // Mark as visited
+                        visited_addr <= scan_addr;
+                        visited_we <= 1'b1;
+                        visited_wdata <= 1'b1;
                         
                         neighbor_idx <= 0;
                         state <= CHECK_NEIGHBOR;
                     end else begin
-                        // Continue scanning
+                        // Move to next scan position
                         if (x_pos == END_X) begin
                             x_pos <= START_X;
                             if (y_pos == END_Y) begin
@@ -144,44 +148,40 @@ module zebra_crossing_detector #(
                             end else begin
                                 y_pos <= y_pos + 1;
                                 pixel_addr <= (y_pos + 1) * IMG_WIDTH + START_X;
+                                visited_addr <= (y_pos + 1) * IMG_WIDTH + START_X;
                             end
                         end else begin
                             x_pos <= x_pos + 1;
                             pixel_addr <= pixel_addr + 1;
+                            visited_addr <= visited_addr + 1;
                         end
                     end
                 end
                 
                 CHECK_NEIGHBOR: begin
                     if (neighbor_idx == 8) begin
-                        // Checked all neighbors, no unvisited white pixels found
-                        // Check if we're back at start
-                        if ((x_edge == x_start) && (y_edge == y_start) && (edge_length > 1)) begin
-                            found_loop <= 1'b1;
-                        end
-                        
                         // Resume scanning
                         state <= SCAN;
-                        x_pos <= x_scan_pos + 1;
-                        y_pos <= y_scan_pos;
                         
                         if (x_scan_pos == END_X) begin
                             x_pos <= START_X;
                             y_pos <= y_scan_pos + 1;
                             pixel_addr <= (y_scan_pos + 1) * IMG_WIDTH + START_X;
+                            visited_addr <= (y_scan_pos + 1) * IMG_WIDTH + START_X;
                         end else begin
+                            x_pos <= x_scan_pos + 1;
+                            y_pos <= y_scan_pos;
                             pixel_addr <= y_scan_pos * IMG_WIDTH + (x_scan_pos + 1);
+                            visited_addr <= y_scan_pos * IMG_WIDTH + (x_scan_pos + 1);
                         end
                         
-                        // Check if this was a valid stripe (closed loop >= 50 pixels)
                         if (found_loop && edge_length >= MIN_EDGE_LENGTH) begin
                             num_stripes <= num_stripes + 1;
                         end
-                        
                     end else begin
-                        // Check this neighbor
                         if (in_bounds) begin
                             pixel_addr <= next_addr;
+                            visited_addr <= next_addr;
                             state <= FOLLOW_EDGE;
                         end else begin
                             neighbor_idx <= neighbor_idx + 1;
@@ -190,50 +190,40 @@ module zebra_crossing_detector #(
                 end
                 
                 FOLLOW_EDGE: begin
-                    // Check if this neighbor is part of the edge
                     logic is_start, is_prev;
                     is_start = (next_x == x_start) && (next_y == y_start);
                     is_prev = (next_x == x_prev) && (next_y == y_prev);
                     
                     if (pixel_data == 1'b1) begin
                         if (is_start && edge_length >= MIN_EDGE_LENGTH) begin
-                            // Found closed loop!
                             found_loop <= 1'b1;
                             num_stripes <= num_stripes + 1;
-                            
-                            // Done with this edge, resume scan
-                            neighbor_idx <= 8;  // Force exit from neighbor check
+                            neighbor_idx <= 8;
                             state <= CHECK_NEIGHBOR;
-                            
-                        end else if (!visited[next_addr] && !is_prev) begin
-                            // Found next edge pixel (not where we came from)
-                            visited[next_addr] <= 1'b1;
+                        end else if (visited_rdata == 1'b0 && !is_prev) begin
+                            // Mark visited
+                            visited_we <= 1'b1;
+                            visited_wdata <= 1'b1;
                             edge_length <= edge_length + 1;
                             
-                            // Move to this pixel
                             x_prev <= x_edge;
                             y_prev <= y_edge;
                             x_edge <= next_x;
                             y_edge <= next_y;
                             
-                            // Start checking neighbors of new pixel
                             neighbor_idx <= 0;
                             state <= CHECK_NEIGHBOR;
-                            
                         end else begin
-                            // Already visited or came from here, try next neighbor
                             neighbor_idx <= neighbor_idx + 1;
                             state <= CHECK_NEIGHBOR;
                         end
                     end else begin
-                        // Not an edge pixel, try next neighbor
                         neighbor_idx <= neighbor_idx + 1;
                         state <= CHECK_NEIGHBOR;
                     end
                 end
                 
                 CHECK_LOOP: begin
-                    // Finished scanning entire image
                     crossing_detected <= (num_stripes >= 3);
                     stripe_count <= num_stripes;
                     detection_valid <= 1'b1;

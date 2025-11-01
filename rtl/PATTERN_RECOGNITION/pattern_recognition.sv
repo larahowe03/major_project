@@ -62,8 +62,8 @@ module pattern_recognition #(
     // Step 2: BRAM writer (captures binary edge image)
     // ========================================================================
 
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] read_addr;
-    logic read_data;
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] bram_read_addr;
+    logic bram_read_data;
     image_bram #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT)
@@ -79,29 +79,41 @@ module pattern_recognition #(
         .capturing(capturing),
 
         // reading
-        .read_addr(read_addr),  // address to read from
-        .read_data(read_data)   // result from reading
+        .read_addr(bram_read_addr),  // address to read from
+        .read_data(bram_read_data)   // result from reading
+    );
+
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] visited_addr;
+    logic visited_we, visited_wdata, visited_rdata;
+
+    // Visited BRAM (1-bit per pixel)
+    binary_bram #(
+        .ADDR_WIDTH($clog2(IMG_WIDTH*IMG_HEIGHT))
+    ) u_visited_bram (
+        .clock(clk),
+        .wren(visited_we),
+        .wraddress(visited_addr),
+        .wrdata(visited_wdata),
+        .rdaddress(visited_addr),  // Same address for read/write
+        .rddata(visited_rdata)
     );
 
     zebra_crossing_detector #(
         .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT),
-        .MIN_EDGE_LENGTH(50)
-    ) u_zebra_crossing_detector (
+        .IMG_HEIGHT(IMG_HEIGHT)
+    ) u_detector (
         .clk(clk),
         .rst_n(rst_n),
-        
-        // Control
         .valid_to_read(valid_to_read),
-        
-        // Outputs
         .detection_valid(detection_valid),
         .crossing_detected(crossing_detected),
         .stripe_count(stripe_count),
-
-        // BRAM read interface
-        .pixel_addr(read_addr),
-        .pixel_data(read_data)
+        .pixel_addr(bram_read_addr),
+        .pixel_data(bram_read_data),
+        .visited_addr(visited_addr),
+        .visited_we(visited_we),
+        .visited_wdata(visited_wdata),
+        .visited_rdata(visited_rdata)
     );
     
 endmodule
