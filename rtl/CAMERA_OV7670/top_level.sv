@@ -1,17 +1,27 @@
 module top_level (
-	input 	logic 		 CLOCK_50,
-	input  	logic        OV7670_PCLK,
-	output 	logic        OV7670_XCLK,
-	input 	logic        OV7670_VSYNC,
-	input  	logic        OV7670_HREF,
-	input  	logic [7:0]  OV7670_DATA,
-	output 	logic        OV7670_SIOC,
-	inout  	wire         OV7670_SIOD,
-	output 	logic        OV7670_PWDN,
-	output 	logic        OV7670_RESET,
+	// board inputs
+	input 	logic		CLOCK_50,
+	// input 	logic		rst_n,
+	input 	logic [3:0]	KEY,
+
+	// board outputs
+	output logic [7:0]	LEDG,
+	output logic [6:0]	HEX0, HEX1, HEX2, HEX3,
+
+	// camera inputs and outputs
+	input  	logic		OV7670_PCLK,
+	output 	logic		OV7670_XCLK,
+	input 	logic		OV7670_VSYNC,
+	input  	logic		OV7670_HREF,
+	input  	logic [7:0]	OV7670_DATA,
+	output 	logic		OV7670_SIOC,
+	inout  	wire		OV7670_SIOD,
+	output 	logic		OV7670_PWDN,
+	output 	logic		OV7670_RESET,
 	
+	// vga inputs and outputs
 	output logic        VGA_HS,
-	output logic        VGA_VS,
+	output logic		VGA_VS,
 	output logic [7:0]  VGA_R,
 	output logic [7:0]  VGA_G,
 	output logic [7:0]  VGA_B,
@@ -19,47 +29,42 @@ module top_level (
 	output logic        VGA_SYNC_N,
 	output logic        VGA_CLK,
 	
-	input logic [3:0] KEY,
-	
+	// todo: for state machine
 	output logic zebra_crossing_stop,
-	output logic [7:0] LEDG,
-	output logic [6:0] HEX0, HEX1, HEX2, HEX3	
-
 );
-	logic sys_reset = 1'b0;
+	logic sys_reset = 1'b0;	// todo: change to rst_n when this is sorted
 
-	//Camera and VGA PLL
-	logic       clk_video;
-	logic 		send_camera_config; 
-	assign 		send_camera_config = !KEY[2];
-	logic			video_pll_locked;
-	logic 		config_finished;
-	assign 		OV7670_XCLK = clk_video;
-	
+	// Camera and VGA PLL
+	logic clk_video, send_camera_config;
+	assign send_camera_config = !KEY[2]; // camera reset
+
+	logic video_pll_locked, config_finished;
+	assign OV7670_XCLK = clk_video;
+	assign VGA_CLK = clk_video;
+
 	video_pll U0(
-		 .areset(sys_reset),
-		 .inclk0(CLOCK_50),
-		 .c0(clk_video),
-		 .locked(video_pll_locked)
+		.areset(sys_reset),
+		.inclk0(CLOCK_50),
+		.c0(clk_video),
+		.locked(video_pll_locked)
 	);
 	
-	//Camera programming and data stream
+	// Camera programming and data stream
 	logic [16:0] wraddress;
 	logic [11:0] wrdata;
 	logic wren;
 
-	ov7670_controller U1(
+	ov7670_controller u_ov7670_controller (
 		.clk(clk_video),  
-		.resend (send_camera_config),
-		.config_finished (config_finished),
-		.sioc   (OV7670_SIOC),
-		.siod   (OV7670_SIOD),
-		.reset  (OV7670_RESET),
-		.pwdn   (OV7670_PWDN)
+		.resend(send_camera_config),
+		.config_finished(config_finished),
+		.sioc(OV7670_SIOC),
+		.siod(OV7670_SIOD),
+		.reset(OV7670_RESET),
+		.pwdn(OV7670_PWDN)
 	);
-
 	
-	ov7670_pixel_capture DUT1 (
+	ov7670_pixel_capture u_ov7670_pixel_capture (
 		.pclk(OV7670_PCLK),
 		.vsync(OV7670_VSYNC),
 		.href(OV7670_HREF),
@@ -69,8 +74,6 @@ module top_level (
 		.we(wren)
 	);
 
-
-
 	logic filter_sop_out;
 	logic filter_eop_out;
 	logic vga_ready;
@@ -78,8 +81,8 @@ module top_level (
 	wire vga_blank;  
 	wire vga_sync;   
 
-
-	image_buffer U3
+	// image buffer between camera and convolution filter
+	image_buffer u_image_buffer
 	(
 		.data_in(wrdata),
 		.rd_clk(clk_video),
@@ -92,16 +95,7 @@ module top_level (
 		.image_end(filter_eop_out),
 		.data_out(video_data)
 	);
-	assign VGA_CLK = clk_video;
-	
-	// =========================================================================
-	// ********* COMMENT THIS BLOCK OUT FOR ORIGINAL TOP_LEVEL CODE *********
-	
-	// --------------------------- From image_buffer ---------------------------
-	
-	// vga_ready comes from vga_driver and is already wired to image_buffer.ready
-	// Use it as our "x_valid" (pixel present in active video)
-	
+		
 	wire pix_valid = vga_ready;  // pulses for visible 640x480 pixels
 
 	// --------- Convert RGB444 --> 8-bit grayscale for edge detection ---------
@@ -114,23 +108,7 @@ module top_level (
 	wire [8:0] gray_sum = gray_r + gray_g + gray_b;          	// 9-bit sum
 	wire [7:0] gray_px  = gray_sum / 3;                      	// 8-bit
 
-	// ----------------- Sobel-X kernel (signed 8-bit) -----------------
-	
-//	logic signed [7:0] sobel_x [0:2][0:2];
-//	
-//	initial begin
-//	sobel_x[0][0] = -1; sobel_x[0][1] =  0; sobel_x[0][2] =  1;
-//	sobel_x[1][0] = -2; sobel_x[1][1] =  0; sobel_x[1][2] =  2;
-//	sobel_x[2][0] = -1; sobel_x[2][1] =  0; sobel_x[2][2] =  1;
-//	end
-
-	// signed 8-bit 3x3 Sobel-y kernel
-//	localparam logic signed [7:0] SOBEL_Y [0:2][0:2] = '{
-//											 '{-8'sd1, -8'sd2, -8'sd1},
-//											 '{ 8'sd0,  8'sd0,  8'sd0},
-//											 '{ 8'sd1,  8'sd2,  8'sd1}
-//										};
-//										
+// aggressive edge kernel
 	localparam logic signed [7:0] AGGRESSIVE [0:2][0:2] = '{
 											 '{-8'sd1, -8'sd1, -8'sd1},
 											 '{-8'sd1,  8'sd8, -8'sd1},
@@ -144,7 +122,7 @@ module top_level (
 	// (image_buffer doubles the 320x240 source to 640x480; feeding 640x480
 	// keeps the detector’s internal (x,y) counters correct.)
 	
-	logic        pr_y_valid;
+	logic        pr_y_valid; // todo: not used
 	logic [7:0]  pr_y_data;
 	logic        crossing_detected;
 	logic        detection_valid;
@@ -152,25 +130,25 @@ module top_level (
 	logic [15:0] confidence;
 
 	pattern_recognition #(
-	  .IMG_WIDTH (640),
+	  .IMG_WIDTH(640),
 	  .IMG_HEIGHT(480),
-	  .KERNEL_H  (3),
-	  .KERNEL_W  (3),
-	  .W         (8),
-	  .W_FRAC    (0)
-	) PR (
-	  .clk               (clk_video),
-	  .rst_n             (~sys_reset),
-	  .x_valid           (pix_valid),
-	  .x_ready           (),          // <— fix: explicitly unconnected
-	  .x_data            (gray_px),
-	  .kernel            (AGGRESSIVE),   // <— fix: const aggregate
-	  .crossing_detected (crossing_detected),
-	  .detection_valid   (detection_valid),
-	  .blob_count      (blob_count),
-	  .y_valid           (pr_y_valid),
-	  .y_ready           (1'b1),
-	  .y_data            (pr_y_data)
+	  .KERNEL_H(3),
+	  .KERNEL_W(3),
+	  .W(8),
+	  .W_FRAC(0)
+	) u_pattern_recognition (
+	  .clk(clk_video),
+	  .rst_n(~sys_reset),
+	  .x_valid(pix_valid),
+	  .x_ready(),          // <— fix: explicitly unconnected
+	  .x_data(gray_px),
+	  .kernel(AGGRESSIVE),
+	  .crossing_detected(crossing_detected),
+	  .detection_valid(detection_valid),
+	  .blob_count(blob_count),
+	  .y_valid(pr_y_valid),
+	  .y_ready(1'b1),
+	  .y_data(pr_y_data)
 	);
 
 	always_ff @(posedge clk or negedge rst_n) begin
@@ -197,7 +175,7 @@ module top_level (
 	wire [11:0] display_pixel = use_processed ? processed_rgb444 : video_data;
 
 	// Drive VGA with selected pixels
-	vga_driver U4 (
+	vga_driver u_vga_driver (
 		.clk(clk_video),
 		.rst(sys_reset),
 		.pixel(display_pixel),
@@ -210,28 +188,5 @@ module top_level (
 		.VGA_SYNC_N(VGA_SYNC_N),
 		.ready(vga_ready)
 	);
-
-	// =========================================================================
-
-	
-	// =========================================================================
-	// ********* UNCOMMENT THIS TO GET THE ORIGINAL *********
-	
-//	vga_driver U4(
-//		 .clk(clk_video), 
-//		 .rst(sys_reset),
-//		 .pixel(video_data),
-//		 .hsync(VGA_HS),
-//		 .vsync(VGA_VS),
-//		 .r(VGA_R),
-//		 .g(VGA_G),
-//		 .b(VGA_B),
-//	    .VGA_BLANK_N(VGA_BLANK_N),
-//	    .VGA_SYNC_N(VGA_SYNC_N),
-//		 .ready(vga_ready)
-//	);
-
-	// =========================================================================
-		
 	
 endmodule

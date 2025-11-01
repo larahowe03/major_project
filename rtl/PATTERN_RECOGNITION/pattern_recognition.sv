@@ -59,37 +59,37 @@ module pattern_recognition #(
     assign y_data = conv_data;
     assign conv_ready = y_ready;
             
-    // Zebra crossing detector
-    zebra_crossing_detector #(
-        .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT),
-        .W(W),
-        .WHITE_THRESHOLD(8'd180),
-        .MIN_BLOB_SIZE(50),      // Minimum pixels for a valid stripe
-        .MIN_STRIPES(3)           // Need at least 3 stripes for zebra crossing
-    ) u_zebra_crossing_detector (
-        .clk(clk),
-        .rst_n(rst_n),
+    // // Zebra crossing detector
+    // zebra_crossing_detector #(
+    //     .IMG_WIDTH(IMG_WIDTH),
+    //     .IMG_HEIGHT(IMG_HEIGHT),
+    //     .W(W),
+    //     .WHITE_THRESHOLD(8'd180),
+    //     .MIN_BLOB_SIZE(50),      // Minimum pixels for a valid stripe
+    //     .MIN_STRIPES(3)           // Need at least 3 stripes for zebra crossing
+    // ) u_zebra_crossing_detector (
+    //     .clk(clk),
+    //     .rst_n(rst_n),
         
-        // Input stream
-        .x_valid(conv_valid),
-        .x_ready(), // TODO
-        .x_data(conv_data),
+    //     // Input stream
+    //     .x_valid(conv_valid),
+    //     .x_ready(), // TODO
+    //     .x_data(conv_data),
         
-        // Output stream (pass-through)
-        .y_valid(),
-        .y_ready(conv_ready),
-        .y_data(),
+    //     // Output stream (pass-through)
+    //     .y_valid(),
+    //     .y_ready(conv_ready),
+    //     .y_data(),
         
-        // Detection outputs
-        .is_white(),                              // Current pixel is white
-        .white_count(),  // Total white pixels in frame
-        .current_blob(),   // Current white run length
+    //     // Detection outputs
+    //     .is_white(),                              // Current pixel is white
+    //     .white_count(),  // Total white pixels in frame
+    //     .current_blob(),   // Current white run length
         
-        // Zebra crossing detection
-        .blob_count(blob_count),                 // Number of long runs found
-        .zebra_detected(crossing_detected),                       // Zebra crossing detected (≥3 long runs)
-        .detection_valid(detection_valid)                       // Detection result valid (end of frame)
-    );
+    //     // Zebra crossing detection
+    //     .blob_count(blob_count),                 // Number of long runs found
+    //     .zebra_detected(crossing_detected),                       // Zebra crossing detected (≥3 long runs)
+    //     .detection_valid(detection_valid)                       // Detection result valid (end of frame)
+    // );
 
 endmodule

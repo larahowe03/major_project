@@ -2,9 +2,7 @@ module zebra_crossing_detector #(
     parameter IMG_WIDTH = 320,
     parameter IMG_HEIGHT = 240,
     parameter W = 8,
-    parameter WHITE_THRESHOLD = 8'd180,
-    parameter MIN_BLOB_SIZE = 50,       // Minimum connected pixels for a valid stripe
-    parameter MIN_STRIPES = 3           // Need at least 3 stripes for zebra crossing
+    parameter WHITE_THRESHOLD = 8'd180
 )(
     input logic clk,
     input logic rst_n,
@@ -17,15 +15,15 @@ module zebra_crossing_detector #(
     // Output stream (pass-through)
     output logic y_valid,
     input logic y_ready,
-    output logic [W-1:0] y_data,
+    // output logic [W-1:0] y_data,
     
     // Detection outputs
     output logic is_white,                              // Current pixel is white
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] white_count,  // Total white pixels in frame
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] current_blob, // Current blob size
+    // output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] white_count,  // Total white pixels in frame
+    // output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] current_blob, // Current blob size
     
     // Zebra crossing detection
-    output logic [7:0] blob_count,                     // Number of blobs found (≥MIN_BLOB_SIZE)
+    // output logic [7:0] blob_count,                     // Number of blobs found (≥MIN_BLOB_SIZE)
     output logic zebra_detected,                       // Zebra crossing detected (≥3 blobs)
     output logic detection_valid                       // Detection result valid (end of frame)
 );
@@ -66,30 +64,30 @@ module zebra_crossing_detector #(
     assign is_white = (x_data >= WHITE_THRESHOLD);
     
     // Store previous row to check vertical connectivity
-    logic [IMG_WIDTH-1:0] prev_row_white;  // Bitmap of previous row
-    logic prev_pixel_white;                 // Previous pixel in current row
+    // logic [IMG_WIDTH-1:0] prev_row_white;  // Bitmap of previous row
+    // logic prev_pixel_white;                 // Previous pixel in current row
     
-    // Blob detection state
-    logic in_blob;
-    logic [7:0] blobs_found;
+    // // Blob detection state
+    // logic in_blob;
+    // logic [7:0] blobs_found;
     
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             white_count <= '0;
-            current_blob <= '0;
-            blobs_found <= '0;
-            in_blob <= 1'b0;
-            prev_row_white <= '0;
-            prev_pixel_white <= 1'b0;
+            // current_blob <= '0;
+            // blobs_found <= '0;
+            // in_blob <= 1'b0;
+            // prev_row_white <= '0;
+            // prev_pixel_white <= 1'b0;
         end else begin
             // Reset at start of frame
             if (handshake && x_pos == 0 && y_pos == 0) begin
                 white_count <= '0;
-                current_blob <= '0;
-                blobs_found <= '0;
-                in_blob <= 1'b0;
-                prev_row_white <= '0;
-                prev_pixel_white <= 1'b0;
+                // current_blob <= '0;
+                // blobs_found <= '0;
+                // in_blob <= 1'b0;
+                // prev_row_white <= '0;
+                // prev_pixel_white <= 1'b0;
             end
             
             // Process every pixel
@@ -163,25 +161,25 @@ module zebra_crossing_detector #(
     // Detection logic
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            blob_count <= '0;
+            // blob_count <= '0;
             zebra_detected <= 1'b0;
             detection_valid <= 1'b0;
         end else begin
-            detection_valid <= 1'b0;
+            // detection_valid <= 1'b0;
             
-            // At end of frame, finalize detection
-            if (frame_end) begin
-                detection_valid <= 1'b1;
+            // // At end of frame, finalize detection
+            // if (frame_end) begin
+            //     detection_valid <= 1'b1;
                 
-                // Check if last blob was valid
-                if (in_blob && current_blob >= MIN_BLOB_SIZE) begin
-                    blob_count <= blobs_found + 1;
-                    zebra_detected <= ((blobs_found + 1) >= MIN_STRIPES);
-                end else begin
-                    blob_count <= blobs_found;
-                    zebra_detected <= (blobs_found >= MIN_STRIPES);
-                end
-            end
+            //     // Check if last blob was valid
+            //     if (in_blob && current_blob >= MIN_BLOB_SIZE) begin
+            //         blob_count <= blobs_found + 1;
+            //         zebra_detected <= ((blobs_found + 1) >= MIN_STRIPES);
+            //     end else begin
+            //         blob_count <= blobs_found;
+            //         zebra_detected <= (blobs_found >= MIN_STRIPES);
+            //     end
+            // end
         end
     end
 
