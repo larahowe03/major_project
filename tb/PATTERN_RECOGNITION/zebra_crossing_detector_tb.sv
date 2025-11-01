@@ -37,26 +37,74 @@ module zebra_crossing_detector_tb;
     end
     
     // ========================================================================
-    // Load test image from MIF file
+    // Load test image from MIF file (MIF parser version)
     // ========================================================================
 
-	 initial begin
-        // Load binary MIF file
-        $readmemb("test_img_conv.mif", test_image); // file still 0 or 1
-        for (int i = 0; i < TOTAL_PIXELS; i++) begin
-            test_image[i] = test_image[i] ? 2'b01 : 2'b00; // convert to 2-bit
-        end
+    initial begin
+        load_mif_file("test_img_conv.mif");
         $display("Total pixels: %0d", TOTAL_PIXELS);
     end
+
+    // ------------------------------------------------------------------------
+    // MIF File Loader Task
+    // ------------------------------------------------------------------------
+    task load_mif_file(input string filename);
+        integer fd, status, addr, data;
+        integer entries_loaded;
+        reg [200*8:1] line;
+        integer colon_pos, i_char;
+        begin
+            fd = $fopen(filename, "r");
+            if (fd == 0) begin
+                $display("ERROR: Cannot open file %s", filename);
+                $finish;
+            end
+
+            $display("Parsing MIF file: %s", filename);
+            entries_loaded = 0;
+            
+            // Read line by line
+            while (!$feof(fd)) begin
+                status = $fgets(line, fd);
+                if (status == 0) continue;
+                
+                // Skip header and END lines
+                if (line[8*3 +: 24] == "DEP" || line[8*3 +: 24] == "WID" ||
+                    line[8*3 +: 24] == "ADD" || line[8*3 +: 24] == "DAT" ||
+                    line[8*3 +: 24] == "CON" || line[8*3 +: 24] == "BEG" ||
+                    line[8*3 +: 24] == "END")
+                    continue;
+
+                // Try to parse lines like "00010 : 7F;"
+                status = $sscanf(line, "%h : %h;", addr, data);
+                if (status == 2 && addr < TOTAL_PIXELS) begin
+                    // Threshold: treat as binary image — if nonzero pixel, mark white (2'b01)
+                    test_image[addr] = (data != 0) ? 2'b01 : 2'b00;
+                    entries_loaded++;
+                    
+                    if (entries_loaded <= 5)
+                        $display("  addr=%0h data=%0h => %b", addr, data, test_image[addr]);
+                end
+            end
+            
+            $fclose(fd);
+            $display("MIF loading complete. Loaded %0d entries.", entries_loaded);
+            
+            if (entries_loaded == 0) begin
+                $display("ERROR: No data loaded from MIF file!");
+                $finish;
+            end
+        end
+    endtask
     
     // ========================================================================
-    // Image BRAM simulation (read-only)
+    // Image BRAM simulation
     // ========================================================================
 
     initial bram_data = 2'b00;
     always @(posedge clk) begin
         // Mark visited (write port)
-        if (mark_visited_we && bram_addr < TOTAL_PIXELS)
+        if (mark_visited_we && mark_visited_addr < TOTAL_PIXELS)
             test_image[mark_visited_addr] <= 2'b10; // Mark as visited
 
         // Read port (read-only for DUT)
@@ -87,14 +135,12 @@ module zebra_crossing_detector_tb;
     );
     
     // ========================================================================
-    // Test stimulus
+    // Test stimulus (unchanged)
     // ========================================================================
     initial begin
-        // Initialize
         rst_n = 0;
         valid_to_read = 0;
         
-        // Wait and reset
         #(CLK_PERIOD * 10);
         rst_n = 1;
         #(CLK_PERIOD * 5);
@@ -103,10 +149,8 @@ module zebra_crossing_detector_tb;
         $display("Starting zebra crossing detection...");
         $display("========================================\n");
         
-        // Start detection
         valid_to_read = 1;
         
-        // Wait for detection to complete
         wait(detection_valid);
         #(CLK_PERIOD);
         
@@ -117,15 +161,12 @@ module zebra_crossing_detector_tb;
         $display("Zebra crossing detected: %s", crossing_detected ? "YES" : "NO");
         $display("========================================\n");
         
-        // Additional cycles for waveform viewing
         #(CLK_PERIOD * 20);
         
-        // End simulation
-        if (crossing_detected && stripe_count >= 3) begin
+        if (crossing_detected && stripe_count >= 3)
             $display("✓ TEST PASSED: Zebra crossing detected with %0d stripes", stripe_count);
-        end else begin
+        else
             $display("✗ TEST FAILED: Expected zebra crossing detection");
-        end
         
         $finish;
     end
@@ -134,10 +175,8 @@ module zebra_crossing_detector_tb;
     // Timeout watchdog
     // ========================================================================
     initial begin
-        // Timeout after reasonable time (adjust based on expected runtime)
-        #(CLK_PERIOD * 10_000_000);  // 200ms at 50MHz
+        #(CLK_PERIOD * 10_000_000);
         $display("\n✗ ERROR: Simulation timeout!");
-        $display("Detection did not complete in expected time.");
         $finish;
     end
     
@@ -153,7 +192,7 @@ module zebra_crossing_detector_tb;
     end
     
     // ========================================================================
-    // Waveform dump (for viewing in GTKWave/ModelSim)
+    // Waveform dump
     // ========================================================================
     initial begin
         $dumpfile("zebra_detector.vcd");
@@ -161,7 +200,7 @@ module zebra_crossing_detector_tb;
     end
     
     // ========================================================================
-    // Optional: Save visited map for debugging
+    // Optional: Save visited map
     // ========================================================================
     task save_visited_map;
         integer file;
@@ -169,7 +208,6 @@ module zebra_crossing_detector_tb;
         $fwrite(file, "P1\n%0d %0d\n", IMG_WIDTH, IMG_HEIGHT);
         for (int y = 0; y < IMG_HEIGHT; y++) begin
             for (int x = 0; x < IMG_WIDTH; x++) begin
-                // Output 1 if visited (2’b10), else 0
                 $fwrite(file, "%0d ", (test_image[y * IMG_WIDTH + x] == 2'b10) ? 1 : 0);
             end
             $fwrite(file, "\n");
@@ -177,9 +215,7 @@ module zebra_crossing_detector_tb;
         $fclose(file);
         $display("Visited map saved to visited_map.pbm");
     endtask
-
     
-    // Save visited map after detection completes
     always @(posedge detection_valid) begin
         #(CLK_PERIOD * 2);
         save_visited_map();
