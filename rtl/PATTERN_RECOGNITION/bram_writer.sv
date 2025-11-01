@@ -10,7 +10,7 @@ module binary_bram #(
     input logic [7:0] x_data,
     
     // Read port - ADDED
-    input logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] read_addr,
+    input logic [$clog2(ADDR_WIDTH)-1:0] read_addr,
     output logic read_data,  // 1-bit output
     
     // Control signals
