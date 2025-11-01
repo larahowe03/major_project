@@ -127,6 +127,13 @@ module top_level (
 	logic [7:0] blob_count;
 	logic [31:0] blob_areas [0:255];
 
+	// Example: Trigger capture with a button
+    assign capture_trigger = ~KEY[3];  // Press KEY[3] to capture frame
+
+	logic capture_complete, capturing;
+
+	assign LEDG[0] = capturing;
+	assign LEDG[1] = capture_complete;
 	pattern_recognition #(
 		.IMG_WIDTH(IMG_WIDTH),
 		.IMG_HEIGHT(IMG_HEIGHT),
@@ -148,6 +155,9 @@ module top_level (
 		
 		// Edge detection kernel
 		.kernel(AGGRESSIVE),
+		.capture_trigger(capture_trigger),
+		.capture_complete(capture_complete),
+		.capturing(capturing),
 		
 		// Detection outputs
 		.crossing_detected(crossing_detected),

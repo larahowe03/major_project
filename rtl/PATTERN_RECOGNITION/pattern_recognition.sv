@@ -16,6 +16,12 @@ module pattern_recognition #(
     input logic x_valid,
     output logic x_ready,
     input logic [W-1:0] x_data,
+
+    // todo: temp
+    input logic capture_trigger,
+    output logic capture_complete,
+    output logic capturing,
+
     
     // Edge detection kernel
     input logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1],
@@ -54,6 +60,37 @@ module pattern_recognition #(
         .y_data(y_data),          // Direct connection
         .kernel(kernel)
     );
+
+    // In your top-level or pattern_recognition module:
+
+    bram_writer #(
+        .IMG_WIDTH(640),
+        .IMG_HEIGHT(480)
+    ) u_bram_writer (
+        .clk(clk_video),
+        .rst_n(rst_n),
+        .x_valid(y_valid),
+        .x_ready(y_ready),
+        .x_data(y_data),
+        .capture_trigger(capture_trigger),    // Pulse high to start capture
+        .capture_complete(capture_complete),  // Goes high when done
+        .capturing(capturing)                 // High while actively capturing
+    );
+
+    // Use capture_complete to start blob detection
+    always_ff @(posedge clk_video or negedge rst_n) begin
+        if (!rst_n) begin
+            start_blob_detection <= 1'b0;
+        end else begin
+            if (capture_complete) begin
+                start_blob_detection <= 1'b1;  // Start analysis
+            end else begin
+                start_blob_detection <= 1'b0;
+            end
+        end
+    end
+
+// _________--------_________--___-_---_-_-_-__________
     
     // Stub outputs for blob detector (not implemented)
     assign crossing_detected = 1'b0;
