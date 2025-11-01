@@ -34,37 +34,7 @@ module pattern_recognition #(
 );
     
     // ========================================================================
-    // Internal signals
-    // ========================================================================
-    
-    // Convolution -> BRAM writer
-    logic conv_valid;
-    logic conv_ready;
-    logic [W-1:0] conv_data;
-    
-    // BRAM writer -> passthrough
-    logic bram_y_valid;
-    logic bram_y_ready;
-    logic [W-1:0] bram_y_data;
-    logic frame_complete;
-    
-    // BRAM write interface (from stream)
-    logic stream_bram_we;
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] stream_bram_addr;
-    logic [W-1:0] stream_bram_data;
-    
-    // BRAM read/write interface (for blob detector)
-    logic blob_bram_we;
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] blob_bram_addr;
-    logic [W-1:0] blob_bram_rdata;
-    logic [7:0] blob_bram_wdata;
-    
-    // Blob detector control
-    logic start_blob_detection;
-    logic blob_detection_done;
-    
-    // ========================================================================
-    // Step 1: Convolution filter (edge detection)
+    // Step 1: Convolution filter (edge detection) - STANDALONE
     // ========================================================================
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
@@ -77,113 +47,26 @@ module pattern_recognition #(
         .clk(clk),
         .rst_n(rst_n),
         .x_valid(x_valid),
-        .x_ready(x_ready),
+        .x_ready(x_ready),        // Direct connection
         .x_data(x_data),
-        .y_valid(conv_valid),
-        .y_ready(conv_ready),
-        .y_data(conv_data),
+        .y_valid(y_valid),        // Direct connection
+        .y_ready(y_ready),        // Connect y_ready!
+        .y_data(y_data),          // Direct connection
         .kernel(kernel)
     );
     
-    // ========================================================================
-    // Step 2: Stream to BRAM (saves edge-detected image)
-    // ========================================================================
-    stream_to_bram #(
-        .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT),
-        .W(W)
-    ) u_bram_writer (
-        .clk(clk),
-        .rst_n(rst_n),
-        .x_valid(conv_valid),
-        .x_ready(conv_ready),
-        .x_data(conv_data),
-        .y_valid(bram_y_valid),
-        .y_ready(bram_y_ready),
-        .y_data(bram_y_data),
-        .bram_we(stream_bram_we),
-        .bram_addr(stream_bram_addr),
-        .bram_data(stream_bram_data),
-        .frame_complete(frame_complete)
-    );
+    // Stub outputs for blob detector (not implemented)
+    assign crossing_detected = 1'b0;
+    assign detection_valid = 1'b0;
+    assign white_count = '0;
+    assign blob_count = '0;
     
-    // Connect passthrough to outputs (for VGA display)
-    assign y_valid = bram_y_valid;
-    assign y_data = bram_y_data;
-    assign bram_y_ready = y_ready;
-    
-    // ========================================================================
-    // Step 3: Dual-port BRAM (edge-detected frame buffer)
-    // ========================================================================
-    edge_frame_buffer #(
-        .ADDR_WIDTH($clog2(IMG_WIDTH*IMG_HEIGHT)),
-        .DATA_WIDTH(W)
-    ) u_frame_buffer (
-        .clock(clk),
-        
-        // Port A: Write from stream (edge-detected pixels)
-        .data_a(stream_bram_data),
-        .address_a(stream_bram_addr),
-        .wren_a(stream_bram_we),
-        .q_a(),  // Not used
-        
-        // Port B: Read/Write for blob detector
-        .data_b(blob_bram_wdata),
-        .address_b(blob_bram_addr),
-        .wren_b(blob_bram_we),
-        .q_b(blob_bram_rdata)
-    );
-    
-    // ========================================================================
-    // Step 4: Trigger blob detection on frame complete
-    // ========================================================================
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            start_blob_detection <= 1'b0;
-        end else begin
-            // Pulse start_blob_detection when frame completes
-            if (frame_complete && !start_blob_detection) begin
-                start_blob_detection <= 1'b1;
-            end else begin
-                start_blob_detection <= 1'b0;
-            end
+    // Initialize blob_areas array
+    integer i;
+    always_comb begin
+        for (i = 0; i < 256; i = i + 1) begin
+            blob_areas[i] = '0;
         end
     end
-    
-    // ========================================================================
-    // Step 5: Blob detector (connected component analysis)
-    // ========================================================================
-    zebra_crossing_detector #(
-        .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT),
-        .W(W),
-        .WHITE_THRESHOLD(8'd180),
-        .MIN_BLOB_AREA(MIN_BLOB_AREA),
-        .MAX_BLOB_AREA(MAX_BLOB_AREA),
-        .MIN_BLOBS(MIN_BLOBS)
-    ) u_zebra_crossing_detector (
-        .clk(clk),
-        .rst_n(rst_n),
-        
-        // Control
-        .start_detection(start_blob_detection),
-        .detection_done(blob_detection_done),
-        
-        // BRAM interface - use bram_addr for BOTH read and write
-        .bram_addr(blob_bram_addr),
-        .bram_data(blob_bram_rdata),
-        .bram_we(blob_bram_we),
-        .bram_wr_addr(),              // FIXED: Leave unconnected (it's same as bram_addr)
-        .bram_wr_data(blob_bram_wdata),
-        
-        // Detection results
-        .white_count(white_count),
-        .blob_count(blob_count),
-        .blob_areas(blob_areas),
-        .zebra_detected(crossing_detected)
-    );
-    
-    // Detection valid when blob analysis completes
-    assign detection_valid = blob_detection_done;
     
 endmodule
