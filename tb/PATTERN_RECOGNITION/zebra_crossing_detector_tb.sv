@@ -24,8 +24,6 @@ module zebra_crossing_detector_tb;
     // Visited BRAM signals
     logic [$clog2(TOTAL_PIXELS)-1:0] mark_visited_addr;
     logic mark_visited_we;
-    logic visited_wdata;
-    logic visited_rdata;
     
     // Test image memory (loaded from MIF)
     logic [1:0] test_image [0:TOTAL_PIXELS-1];
@@ -54,6 +52,8 @@ module zebra_crossing_detector_tb;
     // ========================================================================
     // Image BRAM simulation (read-only)
     // ========================================================================
+
+    initial bram_data = 2'b00;
     always @(posedge clk) begin
         // Mark visited (write port)
         if (mark_visited_we && bram_addr < TOTAL_PIXELS)
@@ -84,8 +84,6 @@ module zebra_crossing_detector_tb;
         .bram_data(bram_data),
         .mark_visited_addr(mark_visited_addr),
         .mark_visited_we(mark_visited_we)
-        // .visited_wdata(visited_wdata),
-        // .visited_rdata(visited_rdata)
     );
     
     // ========================================================================
