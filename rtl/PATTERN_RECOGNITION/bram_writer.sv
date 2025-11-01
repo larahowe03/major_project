@@ -26,7 +26,7 @@ module bram_writer #(
     logic [$clog2(TOTAL_PIXELS)-1:0] write_addr;
     
     // 1-bit BRAM array
-    (* ramstyle = "M9K" *) logic bram_array [0:TOTAL_PIXELS-1];
+    logic bram_array [0:TOTAL_PIXELS-1];
     
     logic handshake;
     assign handshake = x_valid && x_ready;
