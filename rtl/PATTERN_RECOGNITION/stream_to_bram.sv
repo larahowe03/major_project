@@ -19,7 +19,10 @@ module stream_to_bram #(
     // BRAM write interface
     output logic bram_we,
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] bram_addr,
-    output logic [W-1:0] bram_data
+    output logic [W-1:0] bram_data,
+    
+    // Frame completion signal - ADDED THIS!
+    output logic frame_complete
 );
 
     logic [$clog2(IMG_WIDTH)-1:0] x_pos;
@@ -33,12 +36,16 @@ module stream_to_bram #(
         if (!rst_n) begin
             x_pos <= '0;
             y_pos <= '0;
+            frame_complete <= 1'b0;  // ADDED THIS!
         end else begin
+            frame_complete <= 1'b0;  // ADDED THIS! (default to 0, pulse high for 1 cycle)
+            
             if (handshake) begin
                 if (x_pos == IMG_WIDTH - 1) begin
                     x_pos <= '0;
                     if (y_pos == IMG_HEIGHT - 1) begin
                         y_pos <= '0;
+                        frame_complete <= 1'b1;  // ADDED THIS! (pulse when frame ends)
                     end else begin
                         y_pos <= y_pos + 1;
                     end
