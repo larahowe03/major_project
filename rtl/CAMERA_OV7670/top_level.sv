@@ -134,6 +134,7 @@ module top_level (
 
 	assign LEDG[0] = capturing;
 	assign LEDG[1] = capture_complete;
+	assign LEDG[2] = capture_trigger;
 	pattern_recognition #(
 		.IMG_WIDTH(IMG_WIDTH),
 		.IMG_HEIGHT(IMG_HEIGHT),
