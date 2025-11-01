@@ -144,7 +144,7 @@ module convolution_filter_tb;
         
         // Save output
         repeat(100) @(posedge clk);
-        save_output_image("test_img.mif");
+        save_output_image("test_img_conv.mif");
         
         $display("\n=== TEST COMPLETE ===");
         $display("Input pixels:  %0d", pixel_in_count);

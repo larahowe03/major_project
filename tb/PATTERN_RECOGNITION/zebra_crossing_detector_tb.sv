@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module tb_zebra_crossing_detector;
+module zebra_crossing_detector_tb;
 
     // Parameters
     localparam IMG_WIDTH = 640;
@@ -49,8 +49,8 @@ module tb_zebra_crossing_detector;
 
 	 initial begin
         // Load binary MIF file
-        $readmemb("test_img.mif", test_image);
-        $display("Loaded test image from test_img.mif");
+        $readmemb("test_img_conv.mif", test_image);
+        $display("Loaded test image from test_img_conv.mif");
         
         for (int i = 0; i < TOTAL_PIXELS; i++) begin
             if (test_image[i] == 1'b1) white_count++;
@@ -74,12 +74,6 @@ module tb_zebra_crossing_detector;
     // ========================================================================
     // Visited BRAM simulation (read/write)
     // ========================================================================
-    initial begin
-        // Initialize visited memory to 0
-        for (int i = 0; i < TOTAL_PIXELS; i++) begin
-            visited_mem[i] = 1'b0;
-        end
-    end
     
     always_ff @(posedge clk) begin
         // Write port

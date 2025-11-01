@@ -63,8 +63,6 @@ module pattern_recognition #(
     // ========================================================================
     // Step 2: Image BRAM (captures binary edge image)
     // ========================================================================
-    logic [ADDR_WIDTH-1:0] bram_read_addr;
-    logic bram_read_data;
     
     binary_bram #(
         .ADDR_WIDTH(ADDR_WIDTH)
@@ -95,8 +93,6 @@ module pattern_recognition #(
     // ========================================================================
     // Step 3: Visited BRAM (1-bit per pixel for tracking)
     // ========================================================================
-    logic [ADDR_WIDTH-1:0] mark_visited_addr;
-    logic mark_visited_we;
 
     // ========================================================================
     // Step 4: Zebra crossing detector
