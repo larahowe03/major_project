@@ -133,6 +133,8 @@ module top_level (
 	assign LEDG[0] = capturing;
 	assign LEDG[1] = valid_to_read;
 	assign LEDG[2] = capture_trigger;
+
+	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels;
 	pattern_recognition #(
 		.IMG_WIDTH(IMG_WIDTH),
 		.IMG_HEIGHT(IMG_HEIGHT),
@@ -158,7 +160,9 @@ module top_level (
 		// Edge-detected image output
 		.y_valid(pr_y_valid),
 		.y_ready(pr_y_ready),
-		.y_data(pr_y_data)
+		.y_data(pr_y_data),
+
+		.num_white_pixels(num_white_pixels)
 	);
 
 	// Pattern recognition is always ready to output
@@ -166,7 +170,7 @@ module top_level (
 
 	// Display stripe count on 7-segment displays
 	display u_display (
-		.clk(clk_video),
+		.clk(num_white_pixels),
 		.value(1'b1),
 		.display0(HEX0),
 		.display1(HEX1),

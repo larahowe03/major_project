@@ -25,7 +25,9 @@ module pattern_recognition #(
     // Edge-detected image output (for VGA display)
     output logic y_valid,
     input  logic y_ready,
-    output logic [W-1:0] y_data
+    output logic [W-1:0] y_data,
+
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels
 );
 
     localparam ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT);
@@ -35,6 +37,7 @@ module pattern_recognition #(
     // Step 1: Convolution filter (edge detection)
     // Also outputs black/white thresholded image
     // ========================================================================
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels;
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
@@ -51,7 +54,8 @@ module pattern_recognition #(
         .y_valid(y_valid),
         .y_ready(y_ready),
         .y_data(y_data),
-        .kernel(kernel)
+        .kernel(kernel),
+        .num_white_pixels(num_white_pixels)
     );
 
     // ========================================================================

@@ -21,7 +21,9 @@ module convolution_filter #(
     output logic [W-1:0] y_data,
     
     // Impulse response
-    input logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1]
+    input logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1],
+
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels
 );
 
     // ========================================================================
@@ -218,13 +220,32 @@ module convolution_filter #(
                 end else begin
                     // Border handling: pass through black
                     y_data <= 8'd0;  // CHANGED: Output black for borders
-                end
-                
+                end                
                 // Set valid after 1 cycle delay (for ALL pixels, not just convolved ones)
                 y_valid <= x_valid_d1;  // Output valid whenever input was valid
             end else if (y_ready && y_valid) begin
                 // Clear valid when downstream consumes data (only if no new data)
                 y_valid <= 1'b0;
+            end
+        end
+    end
+
+    // ========================================================================
+    // WHITE PIXEL COUNTER (FIXED)
+    // ========================================================================
+    
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            num_white_pixels <= '0;
+        end else begin
+            // Reset counter at start of new frame
+            if (handshake && last_pixel_d1) begin
+                num_white_pixels <= '0;
+            end else begin                
+                // Count white pixels ONLY when convolution is valid
+                if (handshake && convolution_valid_d1 && binary_result_d1 == 8'd255) begin
+                    num_white_pixels <= num_white_pixels + 1'b1;
+                end
             end
         end
     end
