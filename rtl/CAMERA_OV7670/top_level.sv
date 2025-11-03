@@ -162,11 +162,27 @@ module top_level (
 		.y_ready(pr_y_ready),
 		.y_data(pr_y_data),
 
-		.num_white_pixels(num_white_pixels)
+		.num_white_pixels(num_white_pixels),
+		.white_count_valid(white_count_valid)
 	);
 
 	// Pattern recognition is always ready to output
 	assign pr_y_ready = 1'b1;
+
+	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels_show;
+	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] temp_counter;
+
+	always_ff @(posedge clk or negedge rst_n) begin
+		if (!rst_n) begin
+			num_white_pixels_show <= '0;
+			temp_counter <= '0;
+		end else begin
+			if (white_count_valid && temp_counter > 500) begin
+				num_white_pixels_show <= num_white_pixels;
+				temp_counter <= '0;
+			end
+		end
+	end
 
 	// Display stripe count on 7-segment displays
 	display u_display (

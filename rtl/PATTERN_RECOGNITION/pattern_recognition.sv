@@ -27,7 +27,8 @@ module pattern_recognition #(
     input  logic y_ready,
     output logic [W-1:0] y_data,
 
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels,
+    output logic white_count_valid
 );
 
     localparam ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT);
@@ -54,7 +55,8 @@ module pattern_recognition #(
         .y_ready(y_ready),
         .y_data(y_data),
         .kernel(kernel),
-        .num_white_pixels(num_white_pixels)
+        .num_white_pixels(num_white_pixels),
+        .white_count_valid(white_count_valid)
     );
 
     // ========================================================================
