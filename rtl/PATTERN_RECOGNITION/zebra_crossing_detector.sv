@@ -70,7 +70,7 @@ module zebra_crossing_detector #(
         logic [$clog2(IMG_HEIGHT)-1:0] y;
     } coord_t;
 
-    localparam STACK_SIZE = 128; // or larger depending on max stripe width
+    localparam STACK_SIZE = 64; // or larger depending on max stripe width
     coord_t stack [0:STACK_SIZE-1];
     logic [$clog2(STACK_SIZE)-1:0] sp;
     logic [$clog2(STACK_SIZE)-1:0] component_size;
