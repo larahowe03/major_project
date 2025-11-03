@@ -223,13 +223,15 @@ module top_level (
 	wire use_convolved = ~KEY[1];  // toggle with button
 	wire [11:0] convolved_rgb444 = {pr_y_data[7:4], pr_y_data[7:4], pr_y_data[7:4]};
 	wire [11:0] thresholded_rgb444 = {pr_y_data_bw[7:4], pr_y_data_bw[7:4], pr_y_data_bw[7:4]};
+	wire [11:0] raw_camera_rgb444 = video_data;  // Original RGB444 from camera
 	wire [11:0] display_pixel = use_convolved ? convolved_rgb444 : thresholded_rgb444;
+	wire [11:0] true_display_pixel = SW[0] ? display_pixel : raw_camera_rgb444;
 
 	// Drive VGA with selected pixels
 	vga_driver u_vga_driver (
 		.clk(clk_video),
 		.rst(~rst_n),
-		.pixel(display_pixel),
+		.pixel(true_display_pixel),
 		.hsync(VGA_HS),
 		.vsync(VGA_VS),
 		.r(VGA_R),
