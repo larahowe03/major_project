@@ -72,8 +72,8 @@ module pattern_recognition #(
     
     // Threshold BRAM
     binary_bram #(
-        .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT)
+        .IMG_WIDTH(IMG_WIDTH),    // ← ADD
+        .IMG_HEIGHT(IMG_HEIGHT)   // ← ADD
     ) u_bw_image_bram (
         .clk(clk),
         .rst_n(rst_n),
@@ -92,8 +92,8 @@ module pattern_recognition #(
 
     // Edge BRAM
     binary_bram #(
-        .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT)
+        .IMG_WIDTH(IMG_WIDTH),    // ← ADD
+        .IMG_HEIGHT(IMG_HEIGHT)   // ← ADD
     ) u_edge_image_bram (
         .clk(clk),
         .rst_n(rst_n),

@@ -1,6 +1,6 @@
 module binary_bram #(
-    parameter IMG_WIDTH = 320,
-    parameter IMG_HEIGHT = 240
+    parameter IMG_WIDTH = 320,   // ← ADD THESE
+    parameter IMG_HEIGHT = 240   // ← ADD THESE
 )(
     input logic clk,
     input logic rst_n,
@@ -26,14 +26,14 @@ module binary_bram #(
 );
 
     localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;  // 76,800
-    localparam ADDR_WIDTH = $clog2(TOTAL_PIXELS);
+    localparam ADDR_WIDTH = $clog2(TOTAL_PIXELS);      // 17
 
     typedef enum logic [1:0] {IDLE, CAPTURING, COMPLETE} state_t;
     state_t state;
     
     logic [ADDR_WIDTH-1:0] write_addr;
     
-    // FIXED: Use exact pixel count
+    // ✅ FIXED: Use exact pixel count, not 2^ADDR_WIDTH
     (* ramstyle = "M9K" *) logic [1:0] bram_array [0:TOTAL_PIXELS-1];
     
     logic handshake;
@@ -75,7 +75,7 @@ module binary_bram #(
                     if (handshake) begin
                         bram_array[write_addr] <= binary_pixel ? 2'b01 : 2'b00;
                         
-                        // FIXED: Check against actual pixel count
+                        // ✅ FIXED: Use TOTAL_PIXELS instead of 2^ADDR_WIDTH
                         if (write_addr == TOTAL_PIXELS - 1) begin
                             write_addr <= '0;
                             state <= COMPLETE;
