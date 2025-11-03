@@ -121,7 +121,6 @@ module top_level (
 	logic pr_y_valid;
 	logic pr_y_ready;
 	logic [7:0] pr_y_data;
-	logic [7:0] pr_y_data_bw;
 	logic crossing_detected;
 	logic detection_valid;
 	logic [7:0] stripe_count;
@@ -140,7 +139,7 @@ module top_level (
 	assign LEDG[1] = valid_to_read;
 	assign LEDG[2] = capture_trigger;
 	
-	pattern_recognition #(
+	pattern_recognition_lara #(
 		.IMG_WIDTH(IMG_WIDTH),
 		.IMG_HEIGHT(IMG_HEIGHT),
 		.KERNEL_H(KERNEL_H),
@@ -161,13 +160,21 @@ module top_level (
 		.capture_trigger(capture_trigger),
 		.valid_to_read(valid_to_read),
 		.capturing(capturing),
-				
+		
+		// Detection outputs
+		.crossing_detected(crossing_detected),
+		.detection_valid(detection_valid),    
+		.stripe_count(stripe_count),
+		
 		// Live edge-detected image output (continuous)
 		.y_valid(pr_y_valid),
 		.y_ready(pr_y_ready),
 		.y_data(pr_y_data),
-		.y_data_bw(pr_y_data_bw)
 		
+		// Binary image output (from BRAM, after capture)
+		.binary_valid(binary_valid),
+		.binary_ready(binary_ready),
+		.binary_data(binary_data)
 	);
 
 	// Display stripe count on 7-segment displays
@@ -193,12 +200,12 @@ module top_level (
 	
 	// Live convolution output (continuous stream)
 	wire [11:0] conv_rgb444 = {pr_y_data[7:4], pr_y_data[7:4], pr_y_data[7:4]};
-
-	// Live grayscale threshold output (continuous stream)
-	wire [11:0] gray_rgb444 = {pr_y_data_bw[7:4], pr_y_data_bw[7:4], pr_y_data_bw[7:4]};
+	
+	// Captured binary image from BRAM (with visited pixels shown as gray)
+	wire [11:0] binary_rgb444 = {binary_data[7:4], binary_data[7:4], binary_data[7:4]};
 	
 	// Select which to display
-	wire [11:0] processed_pixel = show_binary ? gray_rgb444 : conv_rgb444;
+	wire [11:0] processed_pixel = show_binary ? binary_rgb444 : conv_rgb444;
 	
 	// Mux between camera raw and processed
 	wire show_processed = ~KEY[1];  // Same key, but different naming for clarity
