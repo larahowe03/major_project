@@ -4,7 +4,7 @@ module zebra_crossing_detector #(
     parameter ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT),
     parameter MIN_WHITE_PIXELS = 61440,    // 20% of 307200 pixels
     parameter MAX_WHITE_PIXELS = 208320,   // 70% of 307200 pixels
-    parameter MIN_EDGE_PIXELS = 5000,   // guesstimate
+    parameter MIN_EDGE_PIXELS = 3500,   // guesstimate
     parameter MIN_CONNECTED_EDGE_PIXELS = 20,
     parameter MIN_CONNECTED_EDGE_INSTANCES = 10
 )(
@@ -78,7 +78,6 @@ module zebra_crossing_detector #(
     logic [$clog2(IMG_WIDTH)-1:0] x_pos, x_pos_tracking;
     logic [$clog2(IMG_HEIGHT)-1:0] y_pos, y_pos_tracking;
 
-    // position tracking
     // Add state machine
     typedef enum logic [1:0] {
         IDLE,
