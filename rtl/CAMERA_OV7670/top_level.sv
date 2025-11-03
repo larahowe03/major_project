@@ -140,7 +140,7 @@ module top_level (
 	assign LEDG[1] = valid_to_read;
 	assign LEDG[2] = capture_trigger;
 	
-	pattern_recognition_lara #(
+	pattern_recognition #(
 		.IMG_WIDTH(IMG_WIDTH),
 		.IMG_HEIGHT(IMG_HEIGHT),
 		.KERNEL_H(KERNEL_H),
@@ -161,22 +161,13 @@ module top_level (
 		.capture_trigger(capture_trigger),
 		.valid_to_read(valid_to_read),
 		.capturing(capturing),
-		
-		// Detection outputs
-		.crossing_detected(crossing_detected),
-		.detection_valid(detection_valid),    
-		.stripe_count(stripe_count),
-		
+				
 		// Live edge-detected image output (continuous)
 		.y_valid(pr_y_valid),
 		.y_ready(pr_y_ready),
 		.y_data(pr_y_data),
-		.y_data_bw(pr_y_data_bw),
+		.y_data_bw(pr_y_data_bw)
 		
-		// Binary image output (from BRAM, after capture)
-		.binary_valid(binary_valid),
-		.binary_ready(binary_ready),
-		.binary_data(binary_data)
 	);
 
 	// Display stripe count on 7-segment displays
