@@ -5,7 +5,7 @@ module convolution_filter #(
     parameter KERNEL_W = 3,
     parameter W = 8,          
     parameter W_FRAC = 0,
-    parameter EDGE_THRESHOLD = 8'd150  
+    parameter EDGE_THRESHOLD = 8'd40  // Changed from 150 to 40
 )(
     input logic clk,
     input logic rst_n,
@@ -18,15 +18,15 @@ module convolution_filter #(
     // Output stream (ready-valid handshake)
     output logic y_valid,
     input logic y_ready,
-    output logic [W-1:0] y_data,
-    output logic [W-1:0] y_data_bw,
+    output logic [W-1:0] y_data,      // Binary edge detection (convolution + threshold)
+    output logic [W-1:0] y_data_bw,   // Binary threshold on ORIGINAL grayscale
     
     // Impulse response
     input logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1]
 );
 
     // ========================================================================
-    // 1. POSITION TRACKING (X, Y coordinates in the image)
+    // 1. POSITION TRACKING
     // ========================================================================
     
     logic [$clog2(IMG_WIDTH)-1:0] x_pos;
@@ -35,7 +35,6 @@ module convolution_filter #(
     logic handshake;
     assign handshake = x_valid && x_ready;
         
-    // Scan across each row down the image
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             x_pos <= '0;
@@ -56,8 +55,6 @@ module convolution_filter #(
         end
     end
     
-    // We can output valid convolution results after buffering enough rows/cols
-    // Need (KERNEL_H-1) rows buffered and (KERNEL_W-1) columns processed
     wire convolution_valid_now = (x_pos >= KERNEL_W - 1) && (y_pos >= KERNEL_H - 1);
 
     logic convolution_valid;
@@ -70,12 +67,11 @@ module convolution_filter #(
 
     
     // ========================================================================
-    // 2. LINE BUFFERS (Store previous rows for 2D windowing)
+    // 2. LINE BUFFERS
     // ========================================================================
     
     logic [W-1:0] line_buffer [0:KERNEL_H-1][0:IMG_WIDTH-1];
     
-    // Initialize line buffer to prevent xxx values
     integer init_row, init_col;
     initial begin
         for (init_row = 0; init_row < KERNEL_H; init_row = init_row + 1) begin
@@ -87,7 +83,6 @@ module convolution_filter #(
     
     always_ff @(posedge clk) begin
         if (handshake) begin
-            // Shift rows: line[i] <- line[i-1], line[0] <- new data
             for (int row = KERNEL_H - 1; row > 0; row--) begin
                 line_buffer[row][x_pos] <= line_buffer[row-1][x_pos];
             end
@@ -96,12 +91,11 @@ module convolution_filter #(
     end
     
     // ========================================================================
-    // 3. 2D SHIFT REGISTER (KERNEL_H x KERNEL_W sliding window)
+    // 3. 2D SHIFT REGISTER
     // ========================================================================
     
     logic [W-1:0] window_reg [0:KERNEL_H-1][0:KERNEL_W-1];
     
-    // Initialize window register to prevent xxx values
     integer init_wrow, init_wcol;
     initial begin
         for (init_wrow = 0; init_wrow < KERNEL_H; init_wrow = init_wrow + 1) begin
@@ -114,18 +108,16 @@ module convolution_filter #(
     always_ff @(posedge clk) begin
         if (handshake) begin
             for (int row = 0; row < KERNEL_H; row++) begin
-                // Shift horizontally within each row
                 for (int col = KERNEL_W - 1; col > 0; col--) begin
                     window_reg[row][col] <= window_reg[row][col-1];
                 end
-                // Load new column from line buffers
                 window_reg[row][0] <= line_buffer[row][x_pos];
             end
         end
     end
     
     // ========================================================================
-    // 4. MULTIPLY EACH WINDOW ELEMENT BY KERNEL COEFFICIENT
+    // 4. MULTIPLY
     // ========================================================================
     
     logic signed [2*W-1:0] mult_result [0:KERNEL_H-1][0:KERNEL_W-1];
@@ -139,7 +131,7 @@ module convolution_filter #(
     end
     
     // ========================================================================
-    // 5. MULTIPLY-ACCUMULATE (MAC): Sum all multiplication results
+    // 5. ACCUMULATE
     // ========================================================================
     
     localparam int NUM_TAPS = KERNEL_H * KERNEL_W;
@@ -155,29 +147,26 @@ module convolution_filter #(
     end
     
     // ========================================================================
-    // 6. FIXED-POINT TRUNCATION WITH CLAMPING
+    // 6. TRUNCATION WITH CLAMPING
     // ========================================================================
     
-    // Truncate and clamp to prevent negative wraparound
     logic [W-1:0] truncated_result;
     
     always_comb begin
-        // Check for negative (MSB of macc is sign bit)
-        if (macc[$clog2(NUM_TAPS) + 2*W]) begin  // If negative (sign bit = 1)
-            truncated_result = 8'd0;  // Clamp to black
-        end else if (macc > (255 << W_FRAC)) begin  // If overflow
-            truncated_result = 8'd255;  // Clamp to white
+        if (macc[$clog2(NUM_TAPS) + 2*W]) begin  // Negative
+            truncated_result = 8'd0;
+        end else if (macc > (255 << W_FRAC)) begin  // Overflow
+            truncated_result = 8'd255;
         end else begin
-            truncated_result = macc[W+W_FRAC-1:W_FRAC];  // Normal extraction
+            truncated_result = macc[W+W_FRAC-1:W_FRAC];
         end
     end
     
     // ========================================================================
-    // NEW: BINARY THRESHOLDING (Convert to pure black or white)
+    // 7. BINARY THRESHOLDING FOR EDGES
     // ========================================================================
     
     logic [W-1:0] binary_edge_result;
-    logic [W-1:0] binary_white_result;
     
     always_comb begin
         if (truncated_result >= EDGE_THRESHOLD) begin
@@ -185,24 +174,17 @@ module convolution_filter #(
         end else begin
             binary_edge_result = 8'd0;    // BLACK (no edge)
         end
-        if (truncated_result >= WHITE_THRESHOLD) begin
-            binary_white_result = 8'd255;  // WHITE (edge detected)
-        end else begin
-            binary_white_result = 8'd0;    // BLACK (no edge)
-        end
     end
     
     // ========================================================================
-    // 7. OUTPUT REGISTER (Pipeline and handshake control)
+    // 8. OUTPUT REGISTER
     // ========================================================================
     
-    // Backpressure: we're ready if downstream is ready or our output register is empty
     assign x_ready = y_ready | ~y_valid;
     
-    // Delay valid by 1 cycle to account for pipeline
     logic x_valid_d1;
     logic convolution_valid_d1;
-    logic [W-1:0] x_data_d1;  // Also delay the input data for border passthrough
+    logic [W-1:0] x_data_d1;  // Original input data delayed
 
     localparam WHITE_THRESHOLD = 150;
     
@@ -215,27 +197,25 @@ module convolution_filter #(
             convolution_valid_d1 <= 1'b0;
             x_data_d1 <= '0;
         end else begin
-            // Update pipeline when handshake occurs
             if (handshake) begin
                 x_valid_d1 <= x_valid;
                 convolution_valid_d1 <= convolution_valid;
-                x_data_d1 <= x_data;  // Delay input data
+                x_data_d1 <= x_data;  // Keep original input for y_data_bw
                 
-                // Output binary convolution result
-                // Use DELAYED convolution_valid to match the y_valid timing
                 if (convolution_valid_d1) begin
-                    y_data <= binary_edge_result;  // CHANGED: Use binary result instead
-                    y_data_bw <= binary_white_result;
+                    // y_data: Binary edge detection (convolution result)
+                    y_data <= binary_edge_result;
+                    
+                    // y_data_bw: Simple threshold on ORIGINAL grayscale input
+                    y_data_bw <= (x_data_d1 >= WHITE_THRESHOLD) ? 8'd255 : 8'd0;
                 end else begin
-                    // Border handling: pass through black
-                    y_data <= 8'd0;  // CHANGED: Output black for borders
-                    y_data_bw <= 8'd0;  // CHANGED: Output black for borders
+                    // Border handling: output black
+                    y_data <= 8'd0;
+                    y_data_bw <= 8'd0;
                 end
                 
-                // Set valid after 1 cycle delay (for ALL pixels, not just convolved ones)
-                y_valid <= x_valid_d1;  // Output valid whenever input was valid
+                y_valid <= x_valid_d1;
             end else if (y_ready && y_valid) begin
-                // Clear valid when downstream consumes data (only if no new data)
                 y_valid <= 1'b0;
             end
         end
