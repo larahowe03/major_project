@@ -49,6 +49,8 @@ module combined_bram #(
     assign binary_bw   = (x_data_bw   == 8'd255);
 
     logic initial_reading;
+
+    localparam [ADDR_WIDTH-1:0] MAX_ADDR = 2**ADDR_WIDTH - 1;
     
     // ============================
     // State machine for capture
@@ -81,7 +83,7 @@ module combined_bram #(
                     // Write edge pixels
                     if (handshake_edge) begin
                         bram_array[write_addr_edge][3:2] <= binary_edge ? 2'b01 : 2'b00;
-                        if (write_addr_edge == 2**ADDR_WIDTH - 1)
+                        if (write_addr_edge == MAX_ADDR)
                             write_addr_edge <= '0;
                         else
                             write_addr_edge <= write_addr_edge + 1;
@@ -90,15 +92,15 @@ module combined_bram #(
                     // Write BW pixels
                     if (handshake_bw) begin
                         bram_array[write_addr_bw][1:0] <= binary_bw ? 2'b01 : 2'b00;
-                        if (write_addr_bw == 2**ADDR_WIDTH - 1)
+                        if (write_addr_bw == MAX_ADDR)
                             write_addr_bw <= '0;
                         else
                             write_addr_bw <= write_addr_bw + 1;
                     end
 
                     // Check if capture is complete
-                    if ((write_addr_edge == 2**ADDR_WIDTH-1 || !handshake_edge) &&
-                        (write_addr_bw   == 2**ADDR_WIDTH-1 || !handshake_bw)) begin
+                    if ((write_addr_edge == MAX_ADDR || !handshake_edge) &&
+                        (write_addr_bw   == MAX_ADDR || !handshake_bw)) begin
                         state <= COMPLETE;
                     end
                 end
