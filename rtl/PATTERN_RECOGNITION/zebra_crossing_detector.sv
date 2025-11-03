@@ -34,7 +34,12 @@ module zebra_crossing_detector #(
     output logic num_edge_pixels_fulfilled,
     output logic num_connected_edge_instances_fulfilled,
     
-    output logic capture_trigger
+    output logic capture_trigger,
+
+    // NEW: Output connected components count
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components,
+    output logic components_done
+
 );
 
     // Criteria 1: need enough white regions
@@ -95,6 +100,9 @@ module zebra_crossing_detector #(
     // Visited bitmap for edge pixels only
     logic visited [0:MAX_EDGES-1];
 
+    // In state machine, expose the internal counter:
+    assign num_connected_components = num_connected_edge_instances;
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE;
@@ -109,6 +117,7 @@ module zebra_crossing_detector #(
         end else begin
             case(state)
                 IDLE: begin
+                    components_done <= 1'b0;  // Clear signal
                     if (valid_to_read) begin
                         state <= SCAN_EDGES;
                         current_edge_idx <= '0;
@@ -183,6 +192,7 @@ module zebra_crossing_detector #(
                 end
 
                 DONE: begin
+                    components_done <= 1'b1;  // Signal that count is ready
                     state <= IDLE;
                     capture_trigger <= 1'b1;
                 end
