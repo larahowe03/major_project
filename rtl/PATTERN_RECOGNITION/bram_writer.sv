@@ -31,13 +31,15 @@ module binary_bram #(
     logic [ADDR_WIDTH-1:0] write_addr;
     
     // 2-bit BRAM array: 00=black, 01=white, 10=visited
-    (* ramstyle = "M9K" *) logic [1:0] bram_array [0:ADDR_WIDTH-1];
+    (* ramstyle = "M9K" *) logic [1:0] bram_array [0:2**ADDR_WIDTH-1];
     
     logic handshake;
     assign handshake = x_valid && x_ready;
     
     logic binary_pixel;
     assign binary_pixel = (x_data == 8'd255);
+
+    logic initial_reading;
     
     // State machine for capture
     always_ff @(posedge clk or negedge rst_n) begin
@@ -47,6 +49,7 @@ module binary_bram #(
             capture_complete <= 1'b0;
             capturing <= 1'b0;
             valid_to_read <= 1'b0;
+            initial_reading <= 1'b1;
         end else begin
             capture_complete <= 1'b0;
             
@@ -54,11 +57,12 @@ module binary_bram #(
                 IDLE: begin
                     capturing <= 1'b0;
                     
-                    if (capture_trigger) begin
+                    if (capture_trigger || initial_reading) begin
                         state <= CAPTURING;
                         capturing <= 1'b1;
                         write_addr <= '0;
                         valid_to_read <= 1'b0;
+                        initial_reading <= 1'b0;
                     end
                 end
                 
