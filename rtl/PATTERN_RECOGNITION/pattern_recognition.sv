@@ -65,7 +65,7 @@ module pattern_recognition #(
     );
 
     // ========================================================================
-    // BW Image BRAM
+    // BRAM
     // ========================================================================
     logic [ADDR_WIDTH-1:0] bw_addr;
     logic [1:0] bw_data;
@@ -79,41 +79,16 @@ module pattern_recognition #(
         .rst_n(rst_n),
         .x_valid(y_valid_bw),
         .x_ready(),
-        .x_data(y_data_bw),
-        .read_addr(bw_addr),
-        .read_data(bw_data),
-        .mark_visited_we(mark_visited_we),
-        .mark_visited_addr(mark_visited_addr),
+        .x_data_edge(y_data),
+        .x_data_threshold(y_data_bw),
+        .read_addr_edge(bw_addr),
+        .read_addr_threshold(edge_addr),
+        .read_data_edge(bw_data),
+        .read_data_threshold(edge_data),
         .capture_trigger(capture_trigger),
         .valid_to_read(valid_to_read),
         .capture_complete(),
         .capturing(capturing)
-    );
-
-    // ========================================================================
-    // Edge Image BRAM
-    // ========================================================================
-    logic [ADDR_WIDTH-1:0] edge_addr;
-    logic [1:0] edge_data;
-    logic mark_visited_we;
-    logic [ADDR_WIDTH-1:0] mark_visited_addr;
-    
-    binary_bram #(
-        .ADDR_WIDTH(ADDR_WIDTH)
-    ) u_edge_image_bram (
-        .clk(clk),
-        .rst_n(rst_n),
-        .x_valid(y_valid),
-        .x_ready(),
-        .x_data(y_data),
-        .read_addr(edge_addr),
-        .read_data(edge_data),
-        .mark_visited_we(mark_visited_we),
-        .mark_visited_addr(mark_visited_addr),
-        .capture_trigger(capture_trigger),
-        .valid_to_read(),
-        .capture_complete(),
-        .capturing()
     );
 
     // ========================================================================
