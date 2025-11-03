@@ -34,10 +34,11 @@ module pattern_recognition #(
     output logic num_connected_edge_instances_fulfilled
 );
 
-    localparam ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT);
     localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
 
-    // Convolution filter
+    // ========================================================================
+    // Convolution filter - counts pixels, no BRAM needed
+    // ========================================================================
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
@@ -63,7 +64,7 @@ module pattern_recognition #(
     );
 
     // ========================================================================
-    // Position tracking for writing to sparse storage
+    // Position tracking for sparse storage writes
     // ========================================================================
     logic [$clog2(IMG_WIDTH)-1:0] x_pos;
     logic [$clog2(IMG_HEIGHT)-1:0] y_pos;
@@ -91,7 +92,7 @@ module pattern_recognition #(
     wire frame_complete = (x_pos == IMG_WIDTH - 1) && (y_pos == IMG_HEIGHT - 1) && y_valid;
 
     // ========================================================================
-    // Sparse Edge Storage (NEW!)
+    // Sparse Edge Storage - ONLY storage needed!
     // ========================================================================
     logic [$clog2(MAX_EDGES)-1:0] edge_read_idx;
     logic [$clog2(IMG_WIDTH)-1:0] edge_x;
@@ -132,32 +133,7 @@ module pattern_recognition #(
     );
 
     // ========================================================================
-    // Threshold BRAM (keep for white pixel ratio check)
-    // ========================================================================
-    logic [ADDR_WIDTH-1:0] threshold_addr;
-    logic [1:0] threshold_data;
-    
-    binary_bram #(
-        .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT)
-    ) u_threshold_bram (
-        .clk(clk),
-        .rst_n(rst_n),
-        .x_valid(y_valid_bw),
-        .x_ready(),
-        .x_data(y_data_bw),
-        .read_addr(threshold_addr),
-        .read_data(threshold_data),
-        .mark_visited_we(1'b0),
-        .mark_visited_addr('0),
-        .capture_trigger(capture_trigger),
-        .valid_to_read(),
-        .capture_complete(),
-        .capturing()
-    );
-
-    // ========================================================================
-    // Zebra Crossing Detector (sparse version)
+    // Zebra Crossing Detector - no BRAM interface needed!
     // ========================================================================
     zebra_crossing_detector #(
         .IMG_WIDTH(IMG_WIDTH),
@@ -180,14 +156,12 @@ module pattern_recognition #(
         .edge_valid(edge_valid),
         .num_edges(num_edges),
         
-        // Threshold interface
-        .threshold_addr(threshold_addr),
-        .threshold_data(threshold_data),
-        
+        // Pixel counts (no BRAM needed!)
         .num_white_edge_pixels(num_white_edge_pixels),
         .num_white_threshold_pixels(num_white_threshold_pixels),
         .white_count_valid(white_count_valid),
         
+        // Outputs
         .num_threshold_pixels_fulfilled(num_threshold_pixels_fulfilled),
         .num_edge_pixels_fulfilled(num_edge_pixels_fulfilled),
         .num_connected_edge_instances_fulfilled(num_connected_edge_instances_fulfilled),

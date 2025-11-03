@@ -20,11 +20,11 @@ module zebra_crossing_detector #(
     input logic edge_valid,
     input logic [$clog2(MAX_EDGES)-1:0] num_edges,
     
-    // Threshold image interface (keep for white pixel ratio check)
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] threshold_addr,
-    input logic [1:0] threshold_data,
+    // ❌ REMOVED: No threshold BRAM needed!
+    // output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] threshold_addr,
+    // input logic [1:0] threshold_data,
 
-    // White pixel counts
+    // White pixel counts (already computed)
     input logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels,
     input logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
     input logic white_count_valid,
@@ -75,7 +75,6 @@ module zebra_crossing_detector #(
         START_COMPONENT,
         EXPLORE_NEIGHBORS,
         WAIT_NEIGHBOR_CHECK,
-        PROCESS_NEIGHBOR,
         DONE
     } state_t;
 
@@ -93,8 +92,7 @@ module zebra_crossing_detector #(
     logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_edge_instances;
     logic [$clog2(MIN_CONNECTED_EDGE_PIXELS)-1:0] component_size;
     
-    // Visited bitmap - much smaller, only for edges we're exploring
-    // Use a small hash table or just mark in the edge list
+    // Visited bitmap for edge pixels only
     logic visited [0:MAX_EDGES-1];
 
     always_ff @(posedge clk or negedge rst_n) begin
@@ -105,7 +103,6 @@ module zebra_crossing_detector #(
             capture_trigger <= '0;
             edge_read_idx <= '0;
             
-            // Clear visited array
             for (int i = 0; i < MAX_EDGES; i++) begin
                 visited[i] <= 1'b0;
             end
@@ -118,7 +115,6 @@ module zebra_crossing_detector #(
                         capture_trigger <= '0;
                         num_connected_edge_instances <= '0;
                         
-                        // Clear visited for new frame
                         for (int i = 0; i < MAX_EDGES; i++) begin
                             visited[i] <= 1'b0;
                         end
@@ -140,23 +136,19 @@ module zebra_crossing_detector #(
                 
                 CHECK_VISITED: begin
                     if (edge_valid && !visited[current_edge_idx]) begin
-                        // Start new component from this edge
                         visited[current_edge_idx] <= 1'b1;
                         current_pixel <= '{x: edge_x, y: edge_y};
                         component_size <= 1;
                         neighbor_index <= '0;
                         state <= START_COMPONENT;
                     end else begin
-                        // Already visited, move to next edge
                         current_edge_idx <= current_edge_idx + 1;
                         state <= SCAN_EDGES;
                     end
                 end
 
                 START_COMPONENT: begin
-                    // Component started, now explore neighbors
                     if (component_size >= MIN_CONNECTED_EDGE_PIXELS) begin
-                        // Large enough component!
                         num_connected_edge_instances <= num_connected_edge_instances + 1;
                         current_edge_idx <= current_edge_idx + 1;
                         state <= SCAN_EDGES;
@@ -167,19 +159,15 @@ module zebra_crossing_detector #(
                 
                 EXPLORE_NEIGHBORS: begin
                     if (neighbor_index < 8) begin
-                        // Calculate neighbor position
                         nx = $signed({1'b0, current_pixel.x}) + dx[neighbor_index];
                         ny = $signed({1'b0, current_pixel.y}) + dy[neighbor_index];
                         
                         if (nx >= 0 && nx < IMG_WIDTH && ny >= 0 && ny < IMG_HEIGHT) begin
-                            // Check if this neighbor is an edge pixel
-                            // Need to search edge list for this coordinate
                             state <= WAIT_NEIGHBOR_CHECK;
                         end else begin
                             neighbor_index <= neighbor_index + 1;
                         end
                     end else begin
-                        // No more neighbors, finalize component
                         if (component_size >= MIN_CONNECTED_EDGE_PIXELS) begin
                             num_connected_edge_instances <= num_connected_edge_instances + 1;
                         end
@@ -189,9 +177,7 @@ module zebra_crossing_detector #(
                 end
                 
                 WAIT_NEIGHBOR_CHECK: begin
-                    // Simplified: just check a few nearby edges in list
-                    // Full implementation would search edge_list for (nx, ny)
-                    // For now, move to next neighbor
+                    // Simplified: just increment
                     neighbor_index <= neighbor_index + 1;
                     state <= EXPLORE_NEIGHBORS;
                 end
@@ -204,8 +190,5 @@ module zebra_crossing_detector #(
             endcase
         end
     end
-    
-    // Threshold address for white pixel ratio checks
-    assign threshold_addr = '0;  // Not used in sparse mode
 
 endmodule
