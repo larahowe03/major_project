@@ -96,28 +96,14 @@ module top_level (
 		
 	wire pix_valid = vga_ready;
 
-	// --------- Convert RGB444 --> 8-bit grayscale for edge detection ---------
+	// ========================================================================
+	// USE BLUE CHANNEL ONLY (4-bit -> 8-bit)
+	// ========================================================================
 	
-	// Simple average (4-bit channels -> 8-bit via replicate & average)
-	wire [7:0] gray_r = {video_data[11:8], video_data[11:8]};
-	wire [7:0] gray_g = {video_data[7:4], video_data[7:4]};
-	wire [7:0] gray_b = {video_data[3:0], video_data[3:0]};
-	wire [8:0] gray_sum = gray_r + gray_g + gray_b;
-	wire [7:0] gray_px  = gray_sum / 3;
-
-	// Add contrast enhancement before displaying
-	wire [7:0] gray_enhanced;
-
-	// Simple contrast stretch
-	wire [7:0] gray_min_val = 8'd30;   // Adjustable via switches
-	wire [7:0] gray_max_val = 8'd220;
-	wire [7:0] gray_range = gray_max_val - gray_min_val;
-
-	assign gray_enhanced = (gray_px < gray_min_val) ? 8'd0 :
-						(gray_px > gray_max_val) ? 8'd255 :
-						((gray_px - gray_min_val) * 255) / gray_range;
-
-	wire [11:0] grayscale_rgb444 = {gray_enhanced[7:4], gray_enhanced[7:4], gray_enhanced[7:4]};
+	wire [7:0] gray_px = {video_data[3:0], video_data[3:0]};  // Blue channel replicated
+	
+	// For display, create grayscale RGB444 from blue channel
+	wire [11:0] grayscale_rgb444 = {gray_px[7:4], gray_px[7:4], gray_px[7:4]};
 
 	// aggressive edge kernel
 	localparam KERNEL_H = 3;
@@ -165,10 +151,10 @@ module top_level (
 		.clk(clk_video),
 		.rst_n(rst_n),
 		
-		// Input pixel stream (from camera)
+		// Input pixel stream (BLUE CHANNEL ONLY)
 		.x_valid(pix_valid),
 		.x_ready(pr_x_ready),
-		.x_data(grayscale_rgb444),
+		.x_data(gray_px),  // Blue channel as 8-bit grayscale
 		
 		// Edge detection kernel
 		.kernel(AGGRESSIVE),
@@ -178,7 +164,7 @@ module top_level (
 		
 		// Edge-detected image output
 		.y_valid(pr_y_valid),
-		.y_valid_bw(pr_y_valid_bw),  // NEW: Connect separate valid
+		.y_valid_bw(pr_y_valid_bw),
 		.y_ready(pr_y_ready),
 		.y_data(pr_y_data),
 		.y_data_bw(pr_y_data_bw),
@@ -194,15 +180,15 @@ module top_level (
     logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels_show;
     logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels_show;
 
-    always_ff @(posedge clk_video or negedge rst_n) begin  // FIXED: Use clk_video
+    always_ff @(posedge clk_video or negedge rst_n) begin
         if (!rst_n) begin
             num_white_edge_pixels_show <= '0;
             num_white_threshold_pixels_show <= '0;
         end else begin
-            if (white_count_valid && SW[0]) begin  // FIXED: Simple capture on valid pulse
+            if (white_count_valid && SW[0]) begin
                 num_white_edge_pixels_show <= num_white_edge_pixels;
             end
-            if (white_count_valid && SW[0]) begin  // FIXED: Simple capture on valid pulse
+            if (white_count_valid && SW[0]) begin
                 num_white_threshold_pixels_show <= num_white_threshold_pixels;
             end
         end
@@ -211,7 +197,7 @@ module top_level (
 	// Display stripe count on 7-segment displays
 	display u_display1 (
 		.clk(clk_video),
-		.value(num_white_edge_pixels_show),
+		.value(num_white_edge_pixels_show[15:0]),
 		.display0(HEX0),
 		.display1(HEX1),
 		.display2(HEX2),
@@ -219,7 +205,7 @@ module top_level (
 	);
 	display u_display2 (
 		.clk(clk_video),
-		.value(num_white_threshold_pixels_show),
+		.value(num_white_threshold_pixels_show[15:0]),
 		.display0(HEX4),
 		.display1(HEX5),
 		.display2(HEX6),
@@ -228,11 +214,10 @@ module top_level (
 
 	// Zebra crossing detection output
 	assign zebra_crossing_stop = crossing_detected & detection_valid;
-	assign LEDG[7] = zebra_crossing_stop;  // LED lights up when zebra detected
+	assign LEDG[7] = zebra_crossing_stop;
 	
 	// Show detection status on other LEDs
-	assign LEDG[6] = detection_valid;      // Detection cycle complete
-//	assign LEDG[5:0] = blob_count[5:0];    // Show blob count on LEDs
+	assign LEDG[6] = detection_valid;
 
 	// --------------- Visualise: choose thresholded or convolved on VGA ---------------
 	
