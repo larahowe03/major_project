@@ -4,7 +4,8 @@ module pattern_recognition #(
     parameter KERNEL_H   = 3,
     parameter KERNEL_W   = 3,
     parameter W          = 8,
-    parameter W_FRAC     = 0
+    parameter W_FRAC     = 0,
+    parameter MAX_EDGES  = 2048
 )(
     input  logic clk,
     input  logic rst_n,
@@ -61,82 +62,137 @@ module pattern_recognition #(
         .white_count_valid(white_count_valid)
     );
 
-    // BRAM signals
-    logic [ADDR_WIDTH-1:0] bw_addr;
-    logic [1:0] bw_data;
-    logic [ADDR_WIDTH-1:0] edge_addr;
-    logic [1:0] edge_data;
-    logic mark_visited_we;
-    logic [ADDR_WIDTH-1:0] mark_visited_addr;
-    logic capture_trigger;
+    // ========================================================================
+    // Position tracking for writing to sparse storage
+    // ========================================================================
+    logic [$clog2(IMG_WIDTH)-1:0] x_pos;
+    logic [$clog2(IMG_HEIGHT)-1:0] y_pos;
     
-    // Threshold BRAM
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            x_pos <= '0;
+            y_pos <= '0;
+        end else begin
+            if (y_valid && y_ready) begin
+                if (x_pos == IMG_WIDTH - 1) begin
+                    x_pos <= '0;
+                    if (y_pos == IMG_HEIGHT - 1) begin
+                        y_pos <= '0;
+                    end else begin
+                        y_pos <= y_pos + 1;
+                    end
+                end else begin
+                    x_pos <= x_pos + 1;
+                end
+            end
+        end
+    end
+    
+    wire frame_complete = (x_pos == IMG_WIDTH - 1) && (y_pos == IMG_HEIGHT - 1) && y_valid;
+
+    // ========================================================================
+    // Sparse Edge Storage (NEW!)
+    // ========================================================================
+    logic [$clog2(MAX_EDGES)-1:0] edge_read_idx;
+    logic [$clog2(IMG_WIDTH)-1:0] edge_x;
+    logic [$clog2(IMG_HEIGHT)-1:0] edge_y;
+    logic edge_valid;
+    logic [$clog2(MAX_EDGES)-1:0] num_edges;
+    logic capture_trigger;
+    logic buffer_overflow;
+    
+    sparse_edge_storage #(
+        .IMG_WIDTH(IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT),
+        .MAX_EDGES(MAX_EDGES)
+    ) u_sparse_edge_storage (
+        .clk(clk),
+        .rst_n(rst_n),
+        
+        // Write from edge detection
+        .write_valid(y_valid),
+        .write_data(y_data),
+        .write_x(x_pos),
+        .write_y(y_pos),
+        
+        // Capture control
+        .capture_trigger(capture_trigger),
+        .frame_complete(frame_complete),
+        .capturing(capturing),
+        .valid_to_read(valid_to_read),
+        
+        // Read for detector
+        .read_idx(edge_read_idx),
+        .edge_x(edge_x),
+        .edge_y(edge_y),
+        .edge_valid(edge_valid),
+        
+        .num_edges(num_edges),
+        .buffer_overflow(buffer_overflow)
+    );
+
+    // ========================================================================
+    // Threshold BRAM (keep for white pixel ratio check)
+    // ========================================================================
+    logic [ADDR_WIDTH-1:0] threshold_addr;
+    logic [1:0] threshold_data;
+    
     binary_bram #(
-        .IMG_WIDTH(IMG_WIDTH),    // ← ADD
-        .IMG_HEIGHT(IMG_HEIGHT)   // ← ADD
-    ) u_bw_image_bram (
+        .IMG_WIDTH(IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT)
+    ) u_threshold_bram (
         .clk(clk),
         .rst_n(rst_n),
         .x_valid(y_valid_bw),
         .x_ready(),
         .x_data(y_data_bw),
-        .read_addr(bw_addr),
-        .read_data(bw_data),
+        .read_addr(threshold_addr),
+        .read_data(threshold_data),
         .mark_visited_we(1'b0),
         .mark_visited_addr('0),
-        .capture_trigger(capture_trigger),
-        .valid_to_read(valid_to_read),
-        .capture_complete(),
-        .capturing(capturing)
-    );
-
-    // Edge BRAM
-    binary_bram #(
-        .IMG_WIDTH(IMG_WIDTH),    // ← ADD
-        .IMG_HEIGHT(IMG_HEIGHT)   // ← ADD
-    ) u_edge_image_bram (
-        .clk(clk),
-        .rst_n(rst_n),
-        .x_valid(y_valid),
-        .x_ready(),
-        .x_data(y_data),
-        .read_addr(edge_addr),
-        .read_data(edge_data),
-        .mark_visited_we(mark_visited_we),
-        .mark_visited_addr(mark_visited_addr),
         .capture_trigger(capture_trigger),
         .valid_to_read(),
         .capture_complete(),
         .capturing()
     );
 
-    // Zebra Crossing Detector - FIXED PARAMETERS
+    // ========================================================================
+    // Zebra Crossing Detector (sparse version)
+    // ========================================================================
     zebra_crossing_detector #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
-        .ADDR_WIDTH(ADDR_WIDTH),
-        .MIN_WHITE_PIXELS(15360),   // FIXED: 20% of 76,800
-        .MAX_WHITE_PIXELS(53760),   // FIXED: 70% of 76,800
-        .MIN_EDGE_PIXELS(1000),     // FIXED: Lower for 320×240
+        .MAX_EDGES(MAX_EDGES),
+        .MIN_WHITE_PIXELS(15360),
+        .MAX_WHITE_PIXELS(53760),
+        .MIN_EDGE_PIXELS(1000),
         .MIN_CONNECTED_EDGE_PIXELS(20),
         .MIN_CONNECTED_EDGE_INSTANCES(10)
     ) u_zebra_crossing_detector (
         .clk(clk),
         .rst_n(rst_n),
         .valid_to_read(valid_to_read),
-        .edge_addr(edge_addr),
-        .edge_data(edge_data),
-        .bw_addr(bw_addr),
-        .bw_data(bw_data),
+        
+        // Sparse edge interface
+        .edge_read_idx(edge_read_idx),
+        .edge_x(edge_x),
+        .edge_y(edge_y),
+        .edge_valid(edge_valid),
+        .num_edges(num_edges),
+        
+        // Threshold interface
+        .threshold_addr(threshold_addr),
+        .threshold_data(threshold_data),
+        
         .num_white_edge_pixels(num_white_edge_pixels),
         .num_white_threshold_pixels(num_white_threshold_pixels),
         .white_count_valid(white_count_valid),
+        
         .num_threshold_pixels_fulfilled(num_threshold_pixels_fulfilled),
         .num_edge_pixels_fulfilled(num_edge_pixels_fulfilled),
         .num_connected_edge_instances_fulfilled(num_connected_edge_instances_fulfilled),
-        .capture_trigger(capture_trigger),
-        .mark_visited_we(mark_visited_we),
-        .mark_visited_addr(mark_visited_addr)
+        
+        .capture_trigger(capture_trigger)
     );
 
 endmodule

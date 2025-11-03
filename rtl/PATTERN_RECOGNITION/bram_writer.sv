@@ -1,93 +1,101 @@
-module binary_bram #(
-    parameter IMG_WIDTH = 320,   // ← ADD THESE
-    parameter IMG_HEIGHT = 240   // ← ADD THESE
+module sparse_edge_storage #(
+    parameter IMG_WIDTH = 320,
+    parameter IMG_HEIGHT = 240,
+    parameter MAX_EDGES = 2048  // Adjust based on expected edge density
 )(
     input logic clk,
     input logic rst_n,
     
-    // Input stream
-    input logic x_valid,
-    output logic x_ready,
-    input logic [7:0] x_data,
+    // Write port (from edge detection stream)
+    input logic write_valid,
+    input logic [7:0] write_data,
+    input logic [$clog2(IMG_WIDTH)-1:0] write_x,
+    input logic [$clog2(IMG_HEIGHT)-1:0] write_y,
     
-    // Read port
-    input logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] read_addr,
-    output logic [1:0] read_data,
-    
-    // Mark visited
-    input logic mark_visited_we,
-    input logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] mark_visited_addr,
-    
-    // Control
+    // Capture control
     input logic capture_trigger,
+    input logic frame_complete,  // Pulse when frame done
+    output logic capturing,
     output logic valid_to_read,
-    output logic capture_complete,
-    output logic capturing
+    
+    // Read port (for detector)
+    input logic [$clog2(MAX_EDGES)-1:0] read_idx,
+    output logic [$clog2(IMG_WIDTH)-1:0] edge_x,
+    output logic [$clog2(IMG_HEIGHT)-1:0] edge_y,
+    output logic edge_valid,
+    
+    // Statistics
+    output logic [$clog2(MAX_EDGES)-1:0] num_edges,
+    output logic buffer_overflow  // Warning if too many edges
 );
 
-    localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;  // 76,800
-    localparam ADDR_WIDTH = $clog2(TOTAL_PIXELS);      // 17
-
+    typedef struct packed {
+        logic [$clog2(IMG_WIDTH)-1:0] x;
+        logic [$clog2(IMG_HEIGHT)-1:0] y;
+    } coord_t;
+    
+    // Sparse edge list - only 17 bits per edge (9 bits x + 8 bits y)
+    // 2048 edges × 17 bits = 34,816 bits (vs 153,600 bits for full image!)
+    (* ramstyle = "M9K" *) coord_t edge_list [0:MAX_EDGES-1];
+    
+    logic [$clog2(MAX_EDGES)-1:0] write_idx;
+    logic [$clog2(MAX_EDGES)-1:0] num_edges_reg;
+    
     typedef enum logic [1:0] {IDLE, CAPTURING, COMPLETE} state_t;
     state_t state;
     
-    logic [ADDR_WIDTH-1:0] write_addr;
-    
-    // ✅ FIXED: Use exact pixel count, not 2^ADDR_WIDTH
-    (* ramstyle = "M9K" *) logic [1:0] bram_array [0:TOTAL_PIXELS-1];
-    
-    logic handshake;
-    assign handshake = x_valid && x_ready;
-    
-    logic binary_pixel;
-    assign binary_pixel = (x_data == 8'd255);
-
-    logic initial_reading;
+    logic initial_capture;
     logic capture_trigger_d1;
     wire capture_trigger_edge = capture_trigger && !capture_trigger_d1;
     
+    // State machine
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE;
-            write_addr <= '0;
-            capture_complete <= 1'b0;
+            write_idx <= '0;
+            num_edges_reg <= '0;
             capturing <= 1'b0;
             valid_to_read <= 1'b0;
-            initial_reading <= 1'b1;
+            buffer_overflow <= 1'b0;
+            initial_capture <= 1'b1;
             capture_trigger_d1 <= 1'b0;
         end else begin
-            capture_complete <= 1'b0;
             capture_trigger_d1 <= capture_trigger;
             
             case (state)
                 IDLE: begin
                     capturing <= 1'b0;
-                    if (initial_reading || capture_trigger_edge) begin
+                    
+                    if (initial_capture || capture_trigger_edge) begin
                         state <= CAPTURING;
                         capturing <= 1'b1;
-                        write_addr <= '0;
+                        write_idx <= '0;
                         valid_to_read <= 1'b0;
-                        initial_reading <= 1'b0;
+                        buffer_overflow <= 1'b0;
+                        initial_capture <= 1'b0;
                     end
                 end
                 
                 CAPTURING: begin
-                    if (handshake) begin
-                        bram_array[write_addr] <= binary_pixel ? 2'b01 : 2'b00;
-                        
-                        // ✅ FIXED: Use TOTAL_PIXELS instead of 2^ADDR_WIDTH
-                        if (write_addr == TOTAL_PIXELS - 1) begin
-                            write_addr <= '0;
-                            state <= COMPLETE;
+                    // Store edge pixel coordinates
+                    if (write_valid && write_data == 8'd255) begin
+                        if (write_idx < MAX_EDGES) begin
+                            edge_list[write_idx] <= '{x: write_x, y: write_y};
+                            write_idx <= write_idx + 1;
                         end else begin
-                            write_addr <= write_addr + 1;
+                            buffer_overflow <= 1'b1;  // Too many edges!
                         end
+                    end
+                    
+                    // Wait for frame to complete
+                    if (frame_complete) begin
+                        num_edges_reg <= write_idx;
+                        state <= COMPLETE;
                     end
                 end
                 
                 COMPLETE: begin
                     capturing <= 1'b0;
-                    capture_complete <= 1'b1;
                     valid_to_read <= 1'b1;
                     state <= IDLE;
                 end
@@ -97,15 +105,19 @@ module binary_bram #(
         end
     end
     
-    assign x_ready = (state == CAPTURING);
-    
-    // Read/Write ports
+    // Read port - lookup edge coordinates by index
     always_ff @(posedge clk) begin
-        if (mark_visited_we && valid_to_read) begin
-            bram_array[mark_visited_addr] <= 2'b10;
+        if (read_idx < num_edges_reg) begin
+            edge_x <= edge_list[read_idx].x;
+            edge_y <= edge_list[read_idx].y;
+            edge_valid <= 1'b1;
+        end else begin
+            edge_x <= '0;
+            edge_y <= '0;
+            edge_valid <= 1'b0;
         end
-        
-        read_data <= bram_array[read_addr];
     end
+    
+    assign num_edges = num_edges_reg;
 
 endmodule
