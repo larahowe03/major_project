@@ -73,7 +73,7 @@ module pattern_recognition #(
         .y_data(y_data),            // Edge detection output
         .kernel(kernel),
         .num_white_pixels(num_white_pixels),
-        .frame_complete(white_count_valid)
+        .white_count_valid(white_count_valid)
     );
 
     // ========================================================================

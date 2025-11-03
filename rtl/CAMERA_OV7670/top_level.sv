@@ -2,6 +2,7 @@ module top_level (
 	// board inputs
 	input 	logic		CLOCK_50,
 	input 	logic [3:0]	KEY,
+	input 	logic [17:0]	SW,
 
 	// board outputs
 	output logic [7:0]	LEDG,
