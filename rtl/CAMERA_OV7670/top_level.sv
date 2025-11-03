@@ -105,6 +105,20 @@ module top_level (
 	wire [8:0] gray_sum = gray_r + gray_g + gray_b;
 	wire [7:0] gray_px  = gray_sum / 3;
 
+	// Add contrast enhancement before displaying
+	wire [7:0] gray_enhanced;
+
+	// Simple contrast stretch
+	wire [7:0] gray_min_val = 8'd30;   // Adjustable via switches
+	wire [7:0] gray_max_val = 8'd220;
+	wire [7:0] gray_range = gray_max_val - gray_min_val;
+
+	assign gray_enhanced = (gray_px < gray_min_val) ? 8'd0 :
+						(gray_px > gray_max_val) ? 8'd255 :
+						((gray_px - gray_min_val) * 255) / gray_range;
+
+	wire [11:0] grayscale_rgb444 = {gray_enhanced[7:4], gray_enhanced[7:4], gray_enhanced[7:4]};
+
 	// aggressive edge kernel
 	localparam KERNEL_H = 3;
 	localparam KERNEL_W = 3;
@@ -154,7 +168,7 @@ module top_level (
 		// Input pixel stream (from camera)
 		.x_valid(pix_valid),
 		.x_ready(pr_x_ready),
-		.x_data(gray_px),
+		.x_data(grayscale_rgb444),
 		
 		// Edge detection kernel
 		.kernel(AGGRESSIVE),
@@ -225,9 +239,8 @@ module top_level (
 	wire use_convolved = ~KEY[1];  // toggle with button
 	wire [11:0] convolved_rgb444 = {pr_y_data[7:4], pr_y_data[7:4], pr_y_data[7:4]};
 	wire [11:0] thresholded_rgb444 = {pr_y_data_bw[7:4], pr_y_data_bw[7:4], pr_y_data_bw[7:4]};
-	wire [11:0] raw_camera_rgb444 = video_data;  // Original RGB444 from camera
 	wire [11:0] display_pixel = use_convolved ? convolved_rgb444 : thresholded_rgb444;
-	wire [11:0] true_display_pixel = SW[0] ? display_pixel : raw_camera_rgb444;
+	wire [11:0] true_display_pixel = SW[0] ? display_pixel : grayscale_rgb444;
 
 	// Drive VGA with selected pixels
 	vga_driver u_vga_driver (
