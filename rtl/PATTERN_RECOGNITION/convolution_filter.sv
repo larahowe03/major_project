@@ -19,6 +19,7 @@ module convolution_filter #(
     output logic y_valid,
     input logic y_ready,
     output logic [W-1:0] y_data,
+    output logic [W-1:0] y_data_bw,
     
     // Impulse response
     input logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1]
@@ -175,13 +176,19 @@ module convolution_filter #(
     // NEW: BINARY THRESHOLDING (Convert to pure black or white)
     // ========================================================================
     
-    logic [W-1:0] binary_result;
+    logic [W-1:0] binary_edge_result;
+    logic [W-1:0] binary_white_result;
     
     always_comb begin
         if (truncated_result >= EDGE_THRESHOLD) begin
-            binary_result = 8'd255;  // WHITE (edge detected)
+            binary_edge_result = 8'd255;  // WHITE (edge detected)
         end else begin
-            binary_result = 8'd0;    // BLACK (no edge)
+            binary_edge_result = 8'd0;    // BLACK (no edge)
+        end
+        if (truncated_result >= WHITE_THRESHOLD) begin
+            binary_white_result = 8'd255;  // WHITE (edge detected)
+        end else begin
+            binary_white_result = 8'd0;    // BLACK (no edge)
         end
     end
     
@@ -196,11 +203,14 @@ module convolution_filter #(
     logic x_valid_d1;
     logic convolution_valid_d1;
     logic [W-1:0] x_data_d1;  // Also delay the input data for border passthrough
+
+    localparam WHITE_THRESHOLD = 150;
     
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             y_valid <= 1'b0;
             y_data <= '0;
+            y_data_bw <= '0;
             x_valid_d1 <= 1'b0;
             convolution_valid_d1 <= 1'b0;
             x_data_d1 <= '0;
@@ -214,10 +224,12 @@ module convolution_filter #(
                 // Output binary convolution result
                 // Use DELAYED convolution_valid to match the y_valid timing
                 if (convolution_valid_d1) begin
-                    y_data <= binary_result;  // CHANGED: Use binary result instead
+                    y_data <= binary_edge_result;  // CHANGED: Use binary result instead
+                    y_data_bw <= binary_white_result;
                 end else begin
                     // Border handling: pass through black
                     y_data <= 8'd0;  // CHANGED: Output black for borders
+                    y_data_bw <= 8'd0;  // CHANGED: Output black for borders
                 end
                 
                 // Set valid after 1 cycle delay (for ALL pixels, not just convolved ones)

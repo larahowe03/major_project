@@ -21,22 +21,20 @@ module pattern_recognition #(
 
     // Edge detection kernel
     input  logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1],
-    
-    // Detection outputs
-    output logic crossing_detected,
-    output logic detection_valid,
-    output logic [7:0] stripe_count,
-    
-    // Optional: edge-detected image output
+        
+    // Edge-detected image output (for VGA display)
     output logic y_valid,
     input  logic y_ready,
-    output logic [W-1:0] y_data
+    output logic [W-1:0] y_data,
+    output logic [W-1:0] y_data_bw
 );
 
     localparam ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT);
+    localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
 
     // ========================================================================
     // Step 1: Convolution filter (edge detection)
+    // Also outputs black/white thresholded image
     // ========================================================================
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
@@ -54,33 +52,28 @@ module pattern_recognition #(
         .y_valid(y_valid),
         .y_ready(y_ready),
         .y_data(y_data),
+        .y_data_bw(y_data_bw),
         .kernel(kernel)
     );
 
     // ========================================================================
-    // Step 2: Image BRAM (stores edge map)
+    // Step 2: Raw Image BRAM (b/w thresholded)
     // ========================================================================
-    logic [ADDR_WIDTH-1:0] bram_read_addr;
-    logic [1:0]            bram_read_data;
-    logic                  mark_visited_we;
-    logic [ADDR_WIDTH-1:0] mark_visited_addr;
-
+    logic [ADDR_WIDTH-1:0] raw_addr;
+    logic [1:0] raw_data;
+    
     binary_bram #(
-        .ADDR_WIDTH(ADDR_WIDTH)
-    ) u_image_bram (
+        .ADDR_WIDTH(TOTAL_PIXELS)
+    ) u_raw_image_bram (
         .clk(clk),
         .rst_n(rst_n),
-        // Write stream from convolution
-        .x_valid(y_valid),
+        .x_valid(x_valid),
         .x_ready(),
-        .x_data(y_data),
-        // Read port for detector
-        .read_addr(bram_read_addr),
-        .read_data(bram_read_data),
-        // Mark visited (not used here but left for extension)
-        .mark_visited_we(mark_visited_we),
-        .mark_visited_addr(mark_visited_addr),
-        // Control
+        .x_data(y_data_bw),
+        .read_addr(raw_addr),
+        .read_data(raw_data),
+        .mark_visited_we(1'b0),
+        .mark_visited_addr('0),
         .capture_trigger(capture_trigger),
         .valid_to_read(valid_to_read),
         .capture_complete(),
@@ -88,57 +81,29 @@ module pattern_recognition #(
     );
 
     // ========================================================================
-    // Step 3: Hough Transform (line detection)
+    // Step 3: Edge Image BRAM (2-bit: black/white/visited)
     // ========================================================================
-    logic hough_done;
-    logic [15:0] num_lines;
-    logic [15:0] line_theta [0:15];
-    logic [15:0] line_rho   [0:15];
-
-    hough_transform #(
-        .IMG_WIDTH(IMG_WIDTH),
-        .IMG_HEIGHT(IMG_HEIGHT),
-        .THETA_STEPS(180),
-        .RHO_BINS(1024),
-        .ACC_WIDTH(8)
-    ) u_hough_transform (
+    logic [ADDR_WIDTH-1:0] edge_addr;
+    logic [1:0] edge_data;
+    logic mark_visited_we;
+    logic [ADDR_WIDTH-1:0] mark_visited_addr;
+    
+    binary_bram #(
+        .ADDR_WIDTH(TOTAL_PIXELS)
+    ) u_edge_image_bram (
         .clk(clk),
         .rst_n(rst_n),
-        .start(valid_to_read),
-        .done(hough_done),
-        // BRAM interface
-        .bram_addr(bram_read_addr),
-        .bram_data(bram_read_data),
-        // Line output
-        .num_lines(num_lines),
-        .line_theta(line_theta),
-        .line_rho(line_rho)
+        .x_valid(y_valid),
+        .x_ready(),
+        .x_data(y_data),
+        .read_addr(edge_addr),
+        .read_data(edge_data),
+        .mark_visited_we(mark_visited_we),
+        .mark_visited_addr(mark_visited_addr),
+        .capture_trigger(capture_trigger),
+        .valid_to_read(),
+        .capture_complete(),
+        .capturing()
     );
-
-    // ========================================================================
-    // Step 4: Stripe Pattern Analyzer (detect zebra crossing)
-    // ========================================================================
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            detection_valid   <= 1'b0;
-            crossing_detected <= 1'b0;
-            stripe_count      <= 0;
-        end else begin
-            if (hough_done) begin
-                detection_valid <= 1'b1;
-
-                // Simplified placeholder logic:
-                // If multiple near-parallel lines found, assert crossing.
-                if (num_lines >= 3)
-                    crossing_detected <= 1'b1;
-                else
-                    crossing_detected <= 1'b0;
-
-                stripe_count <= num_lines[7:0];
-            end else begin
-                detection_valid <= 1'b0;
-            end
-        end
-    end
 
 endmodule

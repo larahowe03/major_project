@@ -121,19 +121,26 @@ module top_level (
 	logic pr_y_valid;
 	logic pr_y_ready;
 	logic [7:0] pr_y_data;
+	logic [7:0] pr_y_data_bw;
 	logic crossing_detected;
 	logic detection_valid;
 	logic [7:0] stripe_count;
 
-	// Example: Trigger capture with a button
-    assign capture_trigger = ~KEY[3];  // Press KEY[3] to capture frame
+	// Binary image output (from BRAM)
+	logic binary_valid;
+	logic binary_ready;
+	logic [7:0] binary_data;
+
+	// Trigger capture with a button
+	assign capture_trigger = ~KEY[3];  // Press KEY[3] to capture frame
 
 	logic valid_to_read, capturing;
 
 	assign LEDG[0] = capturing;
 	assign LEDG[1] = valid_to_read;
 	assign LEDG[2] = capture_trigger;
-	pattern_recognition #(
+	
+	pattern_recognition_lara #(
 		.IMG_WIDTH(IMG_WIDTH),
 		.IMG_HEIGHT(IMG_HEIGHT),
 		.KERNEL_H(KERNEL_H),
@@ -143,7 +150,7 @@ module top_level (
 	) u_pattern_recognition (
 		.clk(clk_video),
 		.rst_n(rst_n),
-		
+    
 		// Input pixel stream (from camera)
 		.x_valid(pix_valid),
 		.x_ready(pr_x_ready),
@@ -160,14 +167,17 @@ module top_level (
 		.detection_valid(detection_valid),    
 		.stripe_count(stripe_count),
 		
-		// Edge-detected image output
+		// Live edge-detected image output (continuous)
 		.y_valid(pr_y_valid),
 		.y_ready(pr_y_ready),
-		.y_data(pr_y_data)
+		.y_data(pr_y_data),
+		.y_data_bw(pr_y_data_bw),
+		
+		// Binary image output (from BRAM, after capture)
+		.binary_valid(binary_valid),
+		.binary_ready(binary_ready),
+		.binary_data(binary_data)
 	);
-
-	// Pattern recognition is always ready to output
-	assign pr_y_ready = 1'b1;
 
 	// Display stripe count on 7-segment displays
 	display u_display (
@@ -185,13 +195,27 @@ module top_level (
 	
 	// Show detection status on other LEDs
 	assign LEDG[6] = detection_valid;      // Detection cycle complete
-//	assign LEDG[5:0] = blob_count[5:0];    // Show blob count on LEDs
 
-	// --------------- Visualise: choose raw or processed on VGA ---------------
+	// --------------- Visualise: KEY[1] switches between views ---------------
 	
-	wire use_processed = ~KEY[1];  // toggle with button
-	wire [11:0] processed_rgb444 = {pr_y_data[7:4], pr_y_data[7:4], pr_y_data[7:4]};
-	wire [11:0] display_pixel = use_processed ? processed_rgb444 : video_data;
+	wire show_binary = ~KEY[1];  // Toggle with KEY[1]
+	
+	// Live convolution output (continuous stream)
+	wire [11:0] conv_rgb444 = {pr_y_data[7:4], pr_y_data[7:4], pr_y_data[7:4]};
+
+	// Live grayscale threshold output (continuous stream)
+	wire [11:0] gray_rgb444 = {pr_y_data_bw[7:4], pr_y_data_bw[7:4], pr_y_data_bw[7:4]};
+	
+	// Select which to display
+	wire [11:0] processed_pixel = show_binary ? gray_rgb444 : conv_rgb444;
+	
+	// Mux between camera raw and processed
+	wire show_processed = ~KEY[1];  // Same key, but different naming for clarity
+	wire [11:0] display_pixel = show_processed ? processed_pixel : video_data;
+	
+	// Control binary BRAM readout
+	assign binary_ready = vga_ready & show_binary;
+	assign pr_y_ready = vga_ready & !show_binary;  // Only consume conv output when showing it
 
 	// Drive VGA with selected pixels
 	vga_driver u_vga_driver (
