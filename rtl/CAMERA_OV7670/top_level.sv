@@ -155,11 +155,6 @@ module top_level (
 		.valid_to_read(valid_to_read),
 		.capturing(capturing),
 		
-		// Detection outputs
-		.crossing_detected(crossing_detected),
-		.detection_valid(detection_valid),    
-		.stripe_count(stripe_count),
-		
 		// Edge-detected image output
 		.y_valid(pr_y_valid),
 		.y_ready(pr_y_ready),
@@ -172,7 +167,7 @@ module top_level (
 	// Display stripe count on 7-segment displays
 	display u_display (
 		.clk(clk_video),
-		.value(stripe_count),
+		.value(1'b1),
 		.display0(HEX0),
 		.display1(HEX1),
 		.display2(HEX2),
