@@ -217,4 +217,32 @@ module convolution_filter #(
         end
     end
 
+    // WHITE PIXEL COUNTER - IMPROVED
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            num_white_edge_pixels <= '0;
+            num_white_threshold_pixels <= '0;
+            white_count_valid <= 1'b0;
+        end else begin
+            // Signal frame complete and hold for multiple cycles
+            if (handshake && last_pixel_d1) begin
+                white_count_valid <= 1'b1;  // Start valid pulse
+            end else if (white_count_valid && handshake && x_pos > 10) begin  // Hold for ~10 pixels
+                white_count_valid <= 1'b0;  // End valid pulse
+                // Reset counters AFTER valid pulse ends
+                num_white_edge_pixels <= '0;
+                num_white_threshold_pixels <= '0;
+            end else begin
+                // Count pixels during frame
+                if (handshake && convolution_valid_d1 && binary_result_d1 == 8'd255) begin
+                    num_white_edge_pixels <= num_white_edge_pixels + 1'b1;
+                end
+                
+                if (handshake && x_valid_d1 && x_data_d1 >= WHITE_THRESHOLD) begin
+                    num_white_threshold_pixels <= num_white_threshold_pixels + 1'b1;
+                end
+            end
+        end
+    end
+
 endmodule

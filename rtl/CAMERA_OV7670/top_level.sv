@@ -6,6 +6,7 @@ module top_level (
 
 	// board outputs
 	output logic [7:0]	LEDG,
+	output logic [17:0]	LEDR,
 	output logic [6:0]	HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
 
 	// camera inputs and outputs
@@ -171,46 +172,60 @@ module top_level (
 
 		.num_white_edge_pixels(num_white_edge_pixels),
 		.num_white_threshold_pixels(num_white_threshold_pixels),
-		.white_count_valid(white_count_valid)
+		.white_count_valid(white_count_valid),
+
+		// observable outputs
+		.num_threshold_pixels_fulfilled(LEDR[0])
 	);
+
+	// In top_level.sv - add debug LEDs
+	assign LEDR[1] = white_count_valid;  // Blinks when count updates
+	assign LEDR[2] = (num_white_threshold_pixels_show > 0);  // Shows if any white pixels
+	assign LEDR[3] = (num_white_edge_pixels_show > 0);  // Shows if any edge pixels
+
 
 	// Pattern recognition is always ready to output
 	assign pr_y_ready = 1'b1;
 
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels_show;
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels_show;
+    // ========================================================================
+	// PIXEL COUNT CAPTURE AND DISPLAY
+	// ========================================================================
 
-    always_ff @(posedge clk_video or negedge rst_n) begin
-        if (!rst_n) begin
-            num_white_edge_pixels_show <= '0;
-            num_white_threshold_pixels_show <= '0;
-        end else begin
-            if (white_count_valid && SW[0]) begin
-                num_white_edge_pixels_show <= num_white_edge_pixels;
-            end
-            if (white_count_valid && SW[0]) begin
-                num_white_threshold_pixels_show <= num_white_threshold_pixels;
-            end
-        end
-    end
+	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels_show;
+	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels_show;
 
-	// Display stripe count on 7-segment displays
+	always_ff @(posedge clk_video or negedge rst_n) begin
+		if (!rst_n) begin
+			num_white_edge_pixels_show <= '0;
+			num_white_threshold_pixels_show <= '0;
+		end else begin
+			// FIXED: Update on every white_count_valid pulse (removed SW[0] condition)
+			if (white_count_valid) begin
+				num_white_edge_pixels_show <= num_white_edge_pixels;
+				num_white_threshold_pixels_show <= num_white_threshold_pixels;
+			end
+		end
+	end
+
+	// Display on 7-segment (lower 16 bits only - displays 0-65535)
 	display u_display1 (
 		.clk(clk_video),
-		.value(num_white_edge_pixels_show),
+		.value(num_white_edge_pixels_show[15:0]),  // Show lower 16 bits
 		.display0(HEX0),
 		.display1(HEX1),
 		.display2(HEX2),
 		.display3(HEX3)
 	);
+
 	display u_display2 (
 		.clk(clk_video),
-		.value(num_white_threshold_pixels_show),
+		.value(num_white_threshold_pixels_show[15:0]),  // Show lower 16 bits
 		.display0(HEX4),
 		.display1(HEX5),
 		.display2(HEX6),
 		.display3(HEX7)
 	);
+	
 
 	// Zebra crossing detection output
 	assign zebra_crossing_stop = crossing_detected & detection_valid;
