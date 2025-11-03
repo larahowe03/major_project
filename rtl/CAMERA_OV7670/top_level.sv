@@ -6,7 +6,7 @@ module top_level (
 
 	// board outputs
 	output logic [7:0]	LEDG,
-	output logic [6:0]	HEX0, HEX1, HEX2, HEX3,
+	output logic [6:0]	HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
 
 	// camera inputs and outputs
 	input  	logic		OV7670_PCLK,
@@ -175,17 +175,18 @@ module top_level (
 	// Pattern recognition is always ready to output
 	assign pr_y_ready = 1'b1;
 
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels_show;
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels_show;
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels_show;
 
     always_ff @(posedge clk_video or negedge rst_n) begin  // FIXED: Use clk_video
         if (!rst_n) begin
             num_white_pixels_show <= '0;
         end else begin
-            if (white_count_valid && SW[0] && SW[1]) begin  // FIXED: Simple capture on valid pulse
-                num_white_pixels_show <= num_white_edge_pixels;
+            if (white_count_valid && SW[0]) begin  // FIXED: Simple capture on valid pulse
+                num_white_edge_pixels_show <= num_white_edge_pixels;
             end
-            if (white_count_valid && SW[0] && !SW[1]) begin  // FIXED: Simple capture on valid pulse
-                num_white_pixels_show <= num_white_threshold_pixels;
+            if (white_count_valid && SW[0]) begin  // FIXED: Simple capture on valid pulse
+                num_white_threshold_pixels_show <= num_white_threshold_pixels;
             end
         end
     end
@@ -193,11 +194,19 @@ module top_level (
 	// Display stripe count on 7-segment displays
 	display u_display (
 		.clk(clk_video),
-		.value(num_white_pixels_show),
+		.value(num_white_edge_pixels_show),
 		.display0(HEX0),
 		.display1(HEX1),
 		.display2(HEX2),
 		.display3(HEX3)
+	);
+	display u_display (
+		.clk(clk_video),
+		.value(num_white_threshold_pixels_show),
+		.display0(HEX4),
+		.display1(HEX5),
+		.display2(HEX6),
+		.display3(HEX7)
 	);
 
 	// Zebra crossing detection output
