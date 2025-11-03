@@ -1,21 +1,26 @@
 module binary_bram #(
-    parameter ADDR_WIDTH
+    parameter ADDR_WIDTH = 19
 )(
     input logic clk,
     input logic rst_n,
     
-    // Input stream (write edge image)
+    // Input stream (write images)
     input logic x_valid,
     output logic x_ready,
     input logic [7:0] x_data_edge,
     input logic [7:0] x_data_threshold,
     
-    // Read port for detector
+    // Read port for edge detector
     input logic [ADDR_WIDTH-1:0] read_addr_edge,
-    output logic [1:0] read_data_edge,  // 2-bit output: 0=black, 1=white, 2=visited
-
+    output logic [1:0] read_data_edge,
+    
+    // Read port for threshold detector
     input logic [ADDR_WIDTH-1:0] read_addr_threshold,
-    output logic [1:0] read_data_threshold,  // 2-bit output: 0=black, 1=white, 2=visited
+    output logic [1:0] read_data_threshold,
+    
+    // Write port for marking visited (FIXED: Added these!)
+    input logic mark_visited_we,
+    input logic [ADDR_WIDTH-1:0] mark_visited_addr,
     
     // Control signals
     input logic capture_trigger,
@@ -25,15 +30,11 @@ module binary_bram #(
 );
 
     typedef enum logic [1:0] {IDLE, CAPTURING, COMPLETE} state_t;
-
-    // [1:0] is edge data
-    // [3:2] is threshold data
     
     state_t state;
-    
     logic [ADDR_WIDTH-1:0] write_addr;
     
-    // 2-bit BRAM array: 00=black, 01=white, 10=visited
+    // 4-bit BRAM: [1:0]=edge (00=black, 01=white, 10=visited), [3:2]=threshold
     (* ramstyle = "M9K" *) logic [3:0] bram_array [0:2**ADDR_WIDTH-1];
     
     logic handshake;
@@ -46,6 +47,8 @@ module binary_bram #(
     assign binary_pixel_threshold = (x_data_threshold == 8'd255);
 
     logic initial_reading;
+    logic capture_trigger_d1;
+    wire capture_trigger_edge = capture_trigger && !capture_trigger_d1;
     
     // State machine for capture
     always_ff @(posedge clk or negedge rst_n) begin
@@ -56,14 +59,17 @@ module binary_bram #(
             capturing <= 1'b0;
             valid_to_read <= 1'b0;
             initial_reading <= 1'b1;
+            capture_trigger_d1 <= 1'b0;
         end else begin
             capture_complete <= 1'b0;
+            capture_trigger_d1 <= capture_trigger;
             
             case (state)
                 IDLE: begin
                     capturing <= 1'b0;
                     
-                    if (capture_trigger || initial_reading) begin
+                    // Start on initial read or trigger edge
+                    if (initial_reading || capture_trigger_edge) begin
                         state <= CAPTURING;
                         capturing <= 1'b1;
                         write_addr <= '0;
@@ -74,12 +80,13 @@ module binary_bram #(
                 
                 CAPTURING: begin
                     if (handshake) begin
-                        // Write 0 (black) or 1 (white edge)
-                        bram_array[write_addr][1:0] <= binary_pixel_edge ? 2'b01 : 2'b00;
-                        bram_array[write_addr][3:2] <= binary_pixel_threshold ? 2'b01 : 2'b00;
-
+                        // Write both edge and threshold data
+                        bram_array[write_addr] <= {
+                            binary_pixel_threshold ? 2'b01 : 2'b00,  // [3:2]
+                            binary_pixel_edge ? 2'b01 : 2'b00         // [1:0]
+                        };
                         
-                        if (write_addr == (1 << ADDR_WIDTH) - 1) begin
+                        if (write_addr == (2**ADDR_WIDTH - 1)) begin
                             write_addr <= '0;
                             state <= COMPLETE;
                         end else begin
@@ -106,12 +113,12 @@ module binary_bram #(
     // DUAL PORT: Read + Mark Visited
     // ========================================================================
     always_ff @(posedge clk) begin
-        // Write port: Mark as visited (set to 2'b10)
-        if (valid_to_read) begin
-            bram_array[read_addr_edge][1:0] <= 2'b10;
+        // Write port: Mark as visited ONLY when requested (FIXED!)
+        if (mark_visited_we && valid_to_read) begin
+            bram_array[mark_visited_addr][1:0] <= 2'b10;
         end
         
-        // Read port: Always reading
+        // Read ports: Always reading
         read_data_edge <= bram_array[read_addr_edge][1:0];
         read_data_threshold <= bram_array[read_addr_threshold][3:2];
     end

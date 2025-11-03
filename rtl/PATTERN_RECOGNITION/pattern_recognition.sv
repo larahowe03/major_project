@@ -65,26 +65,36 @@ module pattern_recognition #(
     );
 
     // ========================================================================
-    // BRAM
+    // BRAM - FIXED: Declare all signals!
     // ========================================================================
+    logic [ADDR_WIDTH-1:0] edge_addr;
+    logic [1:0] edge_data;
     logic [ADDR_WIDTH-1:0] bw_addr;
     logic [1:0] bw_data;
-
+    logic mark_visited_we;
+    logic [ADDR_WIDTH-1:0] mark_visited_addr;
     logic capture_trigger;
     
     binary_bram #(
         .ADDR_WIDTH(ADDR_WIDTH)
-    ) u_bw_image_bram (
+    ) u_bram (
         .clk(clk),
         .rst_n(rst_n),
-        .x_valid(y_valid_bw),
+        .x_valid(y_valid_bw),  // Use bw valid since it covers full frame
         .x_ready(),
         .x_data_edge(y_data),
         .x_data_threshold(y_data_bw),
-        .read_addr_edge(bw_addr),
-        .read_addr_threshold(edge_addr),
-        .read_data_edge(bw_data),
-        .read_data_threshold(edge_data),
+        
+        // FIXED: Correct signal names
+        .read_addr_edge(edge_addr),
+        .read_data_edge(edge_data),
+        .read_addr_threshold(bw_addr),
+        .read_data_threshold(bw_data),
+        
+        // Mark visited interface
+        .mark_visited_we(mark_visited_we),
+        .mark_visited_addr(mark_visited_addr),
+        
         .capture_trigger(capture_trigger),
         .valid_to_read(valid_to_read),
         .capture_complete(),
@@ -98,8 +108,8 @@ module pattern_recognition #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
         .ADDR_WIDTH(ADDR_WIDTH),
-        .MIN_WHITE_PIXELS(61440),    // 20% of 307200 pixels)
-        .MAX_WHITE_PIXELS(208320), // 70% of 307200 pixels
+        .MIN_WHITE_PIXELS(61440),
+        .MAX_WHITE_PIXELS(208320),
         .MIN_EDGE_PIXELS(2000),
         .MIN_CONNECTED_EDGE_PIXELS(20),
         .MIN_CONNECTED_EDGE_INSTANCES(10)
@@ -108,26 +118,21 @@ module pattern_recognition #(
         .rst_n(rst_n),
         .valid_to_read(valid_to_read),
         
-        // Edge BRAM interface
+        // FIXED: Correct signal connections
         .edge_addr(edge_addr),
         .edge_data(edge_data),
-        
-        // BW BRAM interface
         .bw_addr(bw_addr),
         .bw_data(bw_data),
         
-        // Pixel counts
         .num_white_edge_pixels(num_white_edge_pixels),
         .num_white_threshold_pixels(num_white_threshold_pixels),
         .white_count_valid(white_count_valid),
         
-        // Outputs
         .num_threshold_pixels_fulfilled(num_threshold_pixels_fulfilled),
         .num_edge_pixels_fulfilled(num_edge_pixels_fulfilled),
         .num_connected_edge_instances_fulfilled(num_connected_edge_instances_fulfilled),
+        
         .capture_trigger(capture_trigger),
-
-        // For marking visited
         .mark_visited_we(mark_visited_we),
         .mark_visited_addr(mark_visited_addr)
     );

@@ -36,8 +36,7 @@ module zebra_crossing_detector #(
 
     // visited map interface
     output logic mark_visited_we,
-    output logic [ADDR_WIDTH-1:0] mark_visited_addr,
-    output logic [1:0] mark_visited_data
+    output logic [ADDR_WIDTH-1:0] mark_visited_addr
 );
 
     // Criteria 1: need enough white regions
@@ -133,7 +132,6 @@ module zebra_crossing_detector #(
                         neighbor_index <= 0;
                         mark_visited_we <= 1'b1;
                         mark_visited_addr <= y_pos*IMG_WIDTH + x_pos;
-                        mark_visited_data <= 2'b10; // mark visited
                         state <= WAIT_NEIGHBOR;
                     end else begin
                         // Move to next pixel
@@ -176,7 +174,6 @@ module zebra_crossing_detector #(
                     if (edge_data == 2'b01 && component_size < MIN_CONNECTED_EDGE_PIXELS) begin
                         mark_visited_we <= 1'b1;
                         mark_visited_addr <= neighbor_addr;
-                        mark_visited_data <= 2'b10; // mark visited
 
                         // move to this neighbor as next current_pixel
                         current_pixel <= neighbor_pixel;
