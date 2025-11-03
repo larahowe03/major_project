@@ -98,6 +98,8 @@ module zebra_crossing_detector #(
     logic [$clog2(3)-1:0] neighbor_index; // 0..7 for 8 neighbors
 
     logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_edge_instances;
+	 
+	 logic [$clog2(MIN_CONNECTED_EDGE_PIXELS)-1:0] component_size;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin

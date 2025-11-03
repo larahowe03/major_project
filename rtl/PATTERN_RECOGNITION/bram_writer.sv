@@ -108,12 +108,12 @@ module binary_bram #(
     always_ff @(posedge clk) begin
         // Write port: Mark as visited (set to 2'b10)
         if (valid_to_read) begin
-            bram_array[read_addr][1:0] <= 2'b10;
+            bram_array[read_addr_edge][1:0] <= 2'b10;
         end
         
         // Read port: Always reading
-        read_data_edge <= bram_array[read_addr][1:0];
-        read_data_threshold <= bram_array[read_addr][3:2];
+        read_data_edge <= bram_array[read_addr_edge][1:0];
+        read_data_threshold <= bram_array[read_addr_threshold][3:2];
     end
 
 endmodule
