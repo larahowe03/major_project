@@ -25,8 +25,7 @@ module pattern_recognition #(
     // Edge-detected image output (for VGA display)
     output logic y_valid,
     input  logic y_ready,
-    output logic [W-1:0] y_data,
-    output logic [W-1:0] y_data_bw
+    output logic [W-1:0] y_data
 );
 
     localparam ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT);
@@ -52,7 +51,6 @@ module pattern_recognition #(
         .y_valid(y_valid),
         .y_ready(y_ready),
         .y_data(y_data),
-        .y_data_bw(y_data_bw),
         .kernel(kernel)
     );
 
@@ -69,7 +67,7 @@ module pattern_recognition #(
         .rst_n(rst_n),
         .x_valid(x_valid),
         .x_ready(),
-        .x_data(y_data_bw),
+        .x_data(y_data), // TODO CHANGE
         .read_addr(raw_addr),
         .read_data(raw_data),
         .mark_visited_we(1'b0),
