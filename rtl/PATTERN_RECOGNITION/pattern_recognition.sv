@@ -82,8 +82,8 @@ module pattern_recognition #(
         .x_data(y_data_bw),
         .read_addr(bw_addr),
         .read_data(bw_data),
-        .mark_visited_we(1'b0),
-        .mark_visited_addr('0),
+        .mark_visited_we(mark_visited_we),
+        .mark_visited_addr(mark_visited_addr),
         .capture_trigger(capture_trigger),
         .valid_to_read(valid_to_read),
         .capture_complete(),
@@ -150,7 +150,11 @@ module pattern_recognition #(
         .num_threshold_pixels_fulfilled(num_threshold_pixels_fulfilled),
         .num_edge_pixels_fulfilled(num_edge_pixels_fulfilled),
         .num_connected_edge_instances_fulfilled(num_connected_edge_instances_fulfilled),
-        .capture_trigger(capture_trigger)
+        .capture_trigger(capture_trigger),
+
+        // For marking visited
+        .mark_visited_we(mark_visited_we),
+        .mark_visited_addr(mark_visited_addr)
     );
 
 endmodule
