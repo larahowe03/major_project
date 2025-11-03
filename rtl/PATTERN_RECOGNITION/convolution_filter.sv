@@ -5,7 +5,7 @@ module convolution_filter #(
     parameter KERNEL_W = 3,
     parameter W = 8,          
     parameter W_FRAC = 0,
-    parameter EDGE_THRESHOLD = 8'd40,  // Changed from 150
+    parameter EDGE_THRESHOLD = 8'd150,  // Changed from 150
     parameter WHITE_THRESHOLD = 8'd120  // Changed from 150
 )(
     input logic clk,
@@ -213,7 +213,6 @@ module convolution_filter #(
             white_count_valid <= 1'b0;
         end else begin
             if (handshake && last_pixel_d1) begin
-                // DON'T reset counter here - keep it stable
                 white_count_valid <= 1'b1;  // Signal frame complete
             end else if (handshake && x_pos == 0 && y_pos == 0) begin
                 // Reset at START of next frame
@@ -223,11 +222,13 @@ module convolution_filter #(
             end else begin
                 white_count_valid <= 1'b0;
                 
-                // Count white pixels
+                // Count edge white pixels (ONLY in convolution region)
                 if (handshake && convolution_valid_d1 && binary_result_d1 == 8'd255) begin
                     num_white_edge_pixels <= num_white_edge_pixels + 1'b1;
                 end
-                if (handshake && convolution_valid_d1 && x_data_d1 > WHITE_THRESHOLD) begin
+                
+                // Count threshold white pixels (ALL pixels, not just convolution region)
+                if (handshake && x_valid_d1 && x_data_d1 >= WHITE_THRESHOLD) begin  // FIXED!
                     num_white_threshold_pixels <= num_white_threshold_pixels + 1'b1;
                 end
             end
