@@ -180,7 +180,8 @@ module top_level (
 
     always_ff @(posedge clk_video or negedge rst_n) begin  // FIXED: Use clk_video
         if (!rst_n) begin
-            num_white_pixels_show <= '0;
+            num_white_edge_pixels_show <= '0;
+            num_white_threshold_pixels_show <= '0;
         end else begin
             if (white_count_valid && SW[0]) begin  // FIXED: Simple capture on valid pulse
                 num_white_edge_pixels_show <= num_white_edge_pixels;
@@ -192,7 +193,7 @@ module top_level (
     end
 
 	// Display stripe count on 7-segment displays
-	display u_display (
+	display u_display1 (
 		.clk(clk_video),
 		.value(num_white_edge_pixels_show),
 		.display0(HEX0),
@@ -200,7 +201,7 @@ module top_level (
 		.display2(HEX2),
 		.display3(HEX3)
 	);
-	display u_display (
+	display u_display2 (
 		.clk(clk_video),
 		.value(num_white_threshold_pixels_show),
 		.display0(HEX4),
