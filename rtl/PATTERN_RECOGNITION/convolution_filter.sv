@@ -165,18 +165,19 @@ module convolution_filter #(
     
     // Output pipeline
     assign x_ready = y_ready | ~y_valid;
-    
+
     logic x_valid_d1;
     logic convolution_valid_d1;
     logic [W-1:0] x_data_d1;
     logic [W-1:0] binary_result_d1;
     logic last_pixel_d1;
-    
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             y_valid <= 1'b0;
-            y_valid_bw <= 1'b0;  // NEW: Separate valid for threshold
+            y_valid_bw <= 1'b0;
             y_data <= '0;
+            y_data_bw <= '0;
             x_valid_d1 <= 1'b0;
             convolution_valid_d1 <= 1'b0;
             x_data_d1 <= '0;
@@ -184,59 +185,34 @@ module convolution_filter #(
             last_pixel_d1 <= 1'b0;
         end else begin
             if (handshake) begin
+                // Update delayed signals
                 x_valid_d1 <= x_valid;
                 convolution_valid_d1 <= convolution_valid;
                 x_data_d1 <= x_data;
                 binary_result_d1 <= binary_result;
                 last_pixel_d1 <= last_pixel;
                 
-                // Edge detection output (only valid in convolution region)
+                // Edge detection output
                 if (convolution_valid_d1) begin
                     y_data <= binary_result_d1;
-                    y_valid <= x_valid_d1;  // Valid only when convolution valid
                 end else begin
-                    y_data <= 8'd0;
-                    y_valid <= 1'b0;  // Not valid in border region
+                    y_data <= 8'd0;  // Black border
                 end
                 
-                // Threshold output (valid for ALL pixels)
-                y_valid_bw <= x_valid_d1;  // Always valid when input was valid
-                
-            end else if (y_ready && y_valid) begin
-                y_valid <= 1'b0;
-                y_valid_bw <= 1'b0;
-            end
-        end
-    end
-
-    // Threshold output (computed for ALL pixels)
-    assign y_data_bw = (x_data_d1 >= WHITE_THRESHOLD) ? 8'd255 : 8'd0;
-
-    // WHITE PIXEL COUNTER
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            num_white_edge_pixels <= '0;
-            num_white_threshold_pixels <= '0;
-            white_count_valid <= 1'b0;
-        end else begin
-            if (handshake && last_pixel_d1) begin
-                white_count_valid <= 1'b1;
-            end else if (handshake && x_pos == 0 && y_pos == 0) begin
-                num_white_edge_pixels <= '0;
-                num_white_threshold_pixels <= '0;
-                white_count_valid <= 1'b0;
-            end else begin
-                white_count_valid <= 1'b0;
-                
-                // Count edge pixels (only in convolution region)
-                if (handshake && convolution_valid_d1 && binary_result_d1 == 8'd255) begin
-                    num_white_edge_pixels <= num_white_edge_pixels + 1'b1;
+                // Threshold output
+                if (x_data_d1 >= WHITE_THRESHOLD) begin
+                    y_data_bw <= 8'd255;
+                end else begin
+                    y_data_bw <= 8'd0;
                 end
                 
-                // Count threshold pixels (ALL pixels with valid data)
-                if (handshake && x_valid_d1 && x_data_d1 >= WHITE_THRESHOLD) begin
-                    num_white_threshold_pixels <= num_white_threshold_pixels + 1'b1;
-                end
+                // Valid signals - set OUTSIDE conditional logic
+                y_valid <= convolution_valid_d1 && x_valid_d1;  // Only valid in conv region
+                y_valid_bw <= x_valid_d1;  // Valid for all pixels
+                
+            end else if (y_ready) begin
+                if (y_valid) y_valid <= 1'b0;
+                if (y_valid_bw) y_valid_bw <= 1'b0;
             end
         end
     end
