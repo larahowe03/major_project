@@ -1,5 +1,7 @@
 module binary_bram #(
-    parameter ADDR_WIDTH = 19
+    parameter IMG_WIDTH = 640,
+    parameter IMG_HEIGHT = 480,
+    parameter ADDR_WIDTH
 )(
     input logic clk,
     input logic rst_n,
@@ -35,7 +37,10 @@ module binary_bram #(
     logic [ADDR_WIDTH-1:0] write_addr;
     
     // 4-bit BRAM: [1:0]=edge (00=black, 01=white, 10=visited), [3:2]=threshold
-    (* ramstyle = "M9K" *) logic [3:0] bram_array [0:2**ADDR_WIDTH-1];
+    localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;  // 307,200
+    
+    // FIXED: Use exact image size, not 2^ADDR_WIDTH
+    (* ramstyle = "M9K" *) logic [3:0] bram_array [0:TOTAL_PIXELS-1];
     
     logic handshake;
     assign handshake = x_valid && x_ready;
@@ -80,13 +85,13 @@ module binary_bram #(
                 
                 CAPTURING: begin
                     if (handshake) begin
-                        // Write both edge and threshold data
                         bram_array[write_addr] <= {
-                            binary_pixel_threshold ? 2'b01 : 2'b00,  // [3:2]
-                            binary_pixel_edge ? 2'b01 : 2'b00         // [1:0]
+                            binary_pixel_threshold ? 2'b01 : 2'b00,
+                            binary_pixel_edge ? 2'b01 : 2'b00
                         };
                         
-                        if (write_addr == (2**ADDR_WIDTH - 1)) begin
+                        // FIXED: Check against actual pixel count
+                        if (write_addr == TOTAL_PIXELS - 1) begin
                             write_addr <= '0;
                             state <= COMPLETE;
                         end else begin
