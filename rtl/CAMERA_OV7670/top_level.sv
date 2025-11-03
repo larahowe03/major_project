@@ -134,6 +134,8 @@ module top_level (
 	assign LEDG[1] = valid_to_read;
 	assign LEDG[2] = capture_trigger;
 
+    logic [7:0] pr_y_data_bw;
+    logic white_count_valid;
 	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels;
 	pattern_recognition #(
 		.IMG_WIDTH(IMG_WIDTH),
@@ -161,6 +163,7 @@ module top_level (
 		.y_valid(pr_y_valid),
 		.y_ready(pr_y_ready),
 		.y_data(pr_y_data),
+		.y_data_bw(pr_y_data_bw),
 
 		.num_white_pixels(num_white_pixels),
 		.white_count_valid(white_count_valid)
@@ -169,20 +172,17 @@ module top_level (
 	// Pattern recognition is always ready to output
 	assign pr_y_ready = 1'b1;
 
-	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels_show;
-	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] temp_counter;
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels_show;
 
-	always_ff @(posedge CLOCK_50 or negedge rst_n) begin
-		if (!rst_n) begin
-			num_white_pixels_show <= '0;
-			temp_counter <= '0;
-		end else begin
-			if (white_count_valid && temp_counter > 500) begin
-				num_white_pixels_show <= num_white_pixels;
-				temp_counter <= '0;
-			end
-		end
-	end
+    always_ff @(posedge clk_video or negedge rst_n) begin  // FIXED: Use clk_video
+        if (!rst_n) begin
+            num_white_pixels_show <= '0;
+        end else begin
+            if (white_count_valid && SW[0]) begin  // FIXED: Simple capture on valid pulse
+                num_white_pixels_show <= num_white_pixels;
+            end
+        end
+    end
 
 	// Display stripe count on 7-segment displays
 	display u_display (
@@ -202,11 +202,12 @@ module top_level (
 	assign LEDG[6] = detection_valid;      // Detection cycle complete
 //	assign LEDG[5:0] = blob_count[5:0];    // Show blob count on LEDs
 
-	// --------------- Visualise: choose raw or processed on VGA ---------------
+	// --------------- Visualise: choose thresholded or convolved on VGA ---------------
 	
-	wire use_processed = ~KEY[1];  // toggle with button
-	wire [11:0] processed_rgb444 = {pr_y_data[7:4], pr_y_data[7:4], pr_y_data[7:4]};
-	wire [11:0] display_pixel = use_processed ? processed_rgb444 : video_data;
+	wire use_convolved = ~KEY[1];  // toggle with button
+	wire [11:0] convolved_rgb444 = {pr_y_data[7:4], pr_y_data[7:4], pr_y_data[7:4]};
+	wire [11:0] thresholded_rgb444 = {pr_y_data_bw[7:4], pr_y_data_bw[7:4], pr_y_data_bw[7:4]};
+	wire [11:0] display_pixel = use_convolved ? convolved_rgb444 : thresholded_rgb444;
 
 	// Drive VGA with selected pixels
 	vga_driver u_vga_driver (

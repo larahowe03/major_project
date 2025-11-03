@@ -26,6 +26,7 @@ module pattern_recognition #(
     output logic y_valid,
     input  logic y_ready,
     output logic [W-1:0] y_data,
+    output logic [W-1:0] y_data_bw,
 
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels,
     output logic white_count_valid
@@ -33,10 +34,26 @@ module pattern_recognition #(
 
     localparam ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT);
     localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
+    localparam WHITE_THRESHOLD = 150;  // Define threshold
+
+    // ========================================================================
+    // Delay input by 1 cycle to match convolution filter timing
+    // ========================================================================
+    logic [W-1:0] x_data_d1;
+    
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            x_data_d1 <= '0;
+        end else if (x_valid && x_ready) begin
+            x_data_d1 <= x_data;
+        end
+    end
+    
+    // Threshold the delayed input - now aligned with y_valid timing
+    assign y_data_bw = (x_data_d1 >= WHITE_THRESHOLD) ? 8'd255 : 8'd0;
 
     // ========================================================================
     // Step 1: Convolution filter (edge detection)
-    // Also outputs black/white thresholded image
     // ========================================================================
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
@@ -51,28 +68,29 @@ module pattern_recognition #(
         .x_valid(x_valid),
         .x_ready(x_ready),
         .x_data(x_data),
-        .y_valid(y_valid),
+        .y_valid(y_valid),          // Output valid (delayed by 1 cycle)
         .y_ready(y_ready),
-        .y_data(y_data),
+        .y_data(y_data),            // Edge detection output
         .kernel(kernel),
         .num_white_pixels(num_white_pixels),
-        .white_count_valid(white_count_valid)
+        .frame_complete(white_count_valid)
     );
 
     // ========================================================================
     // Step 2: Raw Image BRAM (b/w thresholded)
+    // Uses y_valid since y_data_bw is now aligned with conv filter output
     // ========================================================================
     logic [ADDR_WIDTH-1:0] raw_addr;
     logic [1:0] raw_data;
     
     binary_bram #(
-        .ADDR_WIDTH(TOTAL_PIXELS)
+        .ADDR_WIDTH(ADDR_WIDTH)
     ) u_raw_image_bram (
         .clk(clk),
         .rst_n(rst_n),
-        .x_valid(x_valid),
+        .x_valid(y_valid),          // Use same valid as convolution output
         .x_ready(),
-        .x_data(y_data), // TODO CHANGE
+        .x_data(y_data_bw),         // Threshold output (aligned)
         .read_addr(raw_addr),
         .read_data(raw_data),
         .mark_visited_we(1'b0),
@@ -92,13 +110,13 @@ module pattern_recognition #(
     logic [ADDR_WIDTH-1:0] mark_visited_addr;
     
     binary_bram #(
-        .ADDR_WIDTH(TOTAL_PIXELS)
+        .ADDR_WIDTH(ADDR_WIDTH)
     ) u_edge_image_bram (
         .clk(clk),
         .rst_n(rst_n),
-        .x_valid(y_valid),
+        .x_valid(y_valid),          // Same valid signal
         .x_ready(),
-        .x_data(y_data),
+        .x_data(y_data),            // Edge detection output
         .read_addr(edge_addr),
         .read_data(edge_data),
         .mark_visited_we(mark_visited_we),

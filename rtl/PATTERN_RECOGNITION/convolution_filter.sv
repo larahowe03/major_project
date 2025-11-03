@@ -201,20 +201,22 @@ module convolution_filter #(
     // ========================================================================
     // WHITE PIXEL COUNTER
     // ========================================================================
-    
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             num_white_pixels <= '0;
             white_count_valid <= 1'b0;
         end else begin
-            // Reset counter at start of new frame
             if (handshake && last_pixel_d1) begin
+                // DON'T reset counter here - keep it stable
+                white_count_valid <= 1'b1;  // Signal frame complete
+            end else if (handshake && x_pos == 0 && y_pos == 0) begin
+                // Reset at START of next frame
                 num_white_pixels <= '0;
-                white_count_valid <= 1'b1;  // Pulse when frame completes
+                white_count_valid <= 1'b0;
             end else begin
                 white_count_valid <= 1'b0;
                 
-                // Count white pixels ONLY when convolution is valid
+                // Count white pixels
                 if (handshake && convolution_valid_d1 && binary_result_d1 == 8'd255) begin
                     num_white_pixels <= num_white_pixels + 1'b1;
                 end
