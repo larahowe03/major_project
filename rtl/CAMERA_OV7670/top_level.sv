@@ -137,7 +137,8 @@ module top_level (
 
     logic [7:0] pr_y_data_bw;
     logic white_count_valid;
-	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels;
+	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels;
+	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels;
 	pattern_recognition #(
 		.IMG_WIDTH(IMG_WIDTH),
 		.IMG_HEIGHT(IMG_HEIGHT),
@@ -166,7 +167,8 @@ module top_level (
 		.y_data(pr_y_data),
 		.y_data_bw(pr_y_data_bw),
 
-		.num_white_pixels(num_white_pixels),
+		.num_white_edge_pixels(num_white_edge_pixels),
+		.num_white_threshold_pixels(num_white_threshold_pixels),
 		.white_count_valid(white_count_valid)
 	);
 
@@ -179,8 +181,11 @@ module top_level (
         if (!rst_n) begin
             num_white_pixels_show <= '0;
         end else begin
-            if (white_count_valid && SW[0]) begin  // FIXED: Simple capture on valid pulse
-                num_white_pixels_show <= num_white_pixels;
+            if (white_count_valid && SW[0] && SW[1]) begin  // FIXED: Simple capture on valid pulse
+                num_white_pixels_show <= num_white_edge_pixels;
+            end
+            if (white_count_valid && SW[0] && !SW[1]) begin  // FIXED: Simple capture on valid pulse
+                num_white_pixels_show <= num_white_threshold_pixels;
             end
         end
     end

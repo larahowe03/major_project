@@ -28,29 +28,29 @@ module pattern_recognition #(
     output logic [W-1:0] y_data,
     output logic [W-1:0] y_data_bw,
 
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels,
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels,
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
     output logic white_count_valid
 );
 
     localparam ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT);
     localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
-    localparam WHITE_THRESHOLD = 150;  // Define threshold
 
     // ========================================================================
     // Delay input by 1 cycle to match convolution filter timing
     // ========================================================================
-    logic [W-1:0] x_data_d1;
+    // logic [W-1:0] x_data_d1;
     
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            x_data_d1 <= '0;
-        end else if (x_valid && x_ready) begin
-            x_data_d1 <= x_data;
-        end
-    end
+    // always_ff @(posedge clk or negedge rst_n) begin
+    //     if (!rst_n) begin
+    //         x_data_d1 <= '0;
+    //     end else if (x_valid && x_ready) begin
+    //         x_data_d1 <= x_data;
+    //     end
+    // end
     
-    // Threshold the delayed input - now aligned with y_valid timing
-    assign y_data_bw = (x_data_d1 >= WHITE_THRESHOLD) ? 8'd255 : 8'd0;
+    // // Threshold the delayed input - now aligned with y_valid timing
+    // assign y_data_bw = (x_data_d1 >= WHITE_THRESHOLD) ? 8'd255 : 8'd0;
 
     // ========================================================================
     // Step 1: Convolution filter (edge detection)
@@ -71,8 +71,9 @@ module pattern_recognition #(
         .y_valid(y_valid),          // Output valid (delayed by 1 cycle)
         .y_ready(y_ready),
         .y_data(y_data),            // Edge detection output
+        .y_data_bw(y_data_bw),            // Edge detection output
         .kernel(kernel),
-        .num_white_pixels(num_white_pixels),
+        .num_white_pixels(num_white_edge_pixels),
         .white_count_valid(white_count_valid)
     );
 

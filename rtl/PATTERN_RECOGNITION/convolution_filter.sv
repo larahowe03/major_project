@@ -5,7 +5,8 @@ module convolution_filter #(
     parameter KERNEL_W = 3,
     parameter W = 8,          
     parameter W_FRAC = 0,
-    parameter EDGE_THRESHOLD = 8'd40  // Changed from 150
+    parameter EDGE_THRESHOLD = 8'd40,  // Changed from 150
+    parameter WHITE_THRESHOLD = 8'd120  // Changed from 150
 )(
     input logic clk,
     input logic rst_n,
@@ -19,12 +20,14 @@ module convolution_filter #(
     output logic y_valid,
     input logic y_ready,
     output logic [W-1:0] y_data,
+    output logic [W-1:0] y_data_bw,
     
     // Kernel
     input logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1],
 
     // White pixel count
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels,
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels,
+    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
     output logic white_count_valid  // NEW: Signal when frame is done
 );
 
@@ -198,12 +201,15 @@ module convolution_filter #(
         end
     end
 
+    assign y_data_bw = (x_data_d1 >= WHITE_THRESHOLD) ? 8'd255 : 8'd0;
+
     // ========================================================================
     // WHITE PIXEL COUNTER
     // ========================================================================
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            num_white_pixels <= '0;
+            num_white_edge_pixels <= '0;
+            num_white_threshold_pixels <= '0;
             white_count_valid <= 1'b0;
         end else begin
             if (handshake && last_pixel_d1) begin
@@ -211,14 +217,18 @@ module convolution_filter #(
                 white_count_valid <= 1'b1;  // Signal frame complete
             end else if (handshake && x_pos == 0 && y_pos == 0) begin
                 // Reset at START of next frame
-                num_white_pixels <= '0;
+                num_white_edge_pixels <= '0;
+                num_white_threshold_pixels <= '0;
                 white_count_valid <= 1'b0;
             end else begin
                 white_count_valid <= 1'b0;
                 
                 // Count white pixels
                 if (handshake && convolution_valid_d1 && binary_result_d1 == 8'd255) begin
-                    num_white_pixels <= num_white_pixels + 1'b1;
+                    num_white_edge_pixels <= num_white_edge_pixels + 1'b1;
+                end
+                if (handshake && convolution_valid_d1 && x_data_d1 > WHITE_THRESHOLD) begin
+                    num_white_threshold_pixels <= num_white_threshold_pixels + 1'b1;
                 end
             end
         end
