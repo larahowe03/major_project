@@ -128,14 +128,11 @@ module top_level (
 	logic detection_valid;
 	logic [7:0] stripe_count;
 
-	// Example: Trigger capture with a button
-    assign capture_trigger = ~KEY[3];  // Press KEY[3] to capture frame
 
 	logic valid_to_read, capturing;
 
 	assign LEDG[0] = capturing;
 	assign LEDG[1] = valid_to_read;
-	assign LEDG[2] = capture_trigger;
 
     logic [7:0] pr_y_data_bw;
     logic white_count_valid;
@@ -159,7 +156,6 @@ module top_level (
 		
 		// Edge detection kernel
 		.kernel(AGGRESSIVE),
-		.capture_trigger(capture_trigger),
 		.valid_to_read(valid_to_read),
 		.capturing(capturing),
 		
@@ -176,7 +172,8 @@ module top_level (
 
 		// observable outputs
 		.num_threshold_pixels_fulfilled(LEDR[0]),
-		.num_edge_pixels_fulfilled(LEDR[1])
+		.num_edge_pixels_fulfilled(LEDR[1]),
+		.num_connected_edge_instances_fulfilled(LEDR[2])
 	);
 
 	// Pattern recognition is always ready to output

@@ -6,7 +6,7 @@ module convolution_filter #(
     parameter W = 8,          
     parameter W_FRAC = 0,
     parameter EDGE_THRESHOLD = 8'd150,  // Changed from 150 (try 200 idk)
-    parameter WHITE_THRESHOLD = 8'd120  // Changed from 150
+    parameter WHITE_THRESHOLD = 8'd150  // Changed from 150
 )(
     input logic clk,
     input logic rst_n,

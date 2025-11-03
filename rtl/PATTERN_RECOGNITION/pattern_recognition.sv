@@ -13,7 +13,6 @@ module pattern_recognition #(
     output logic x_ready,
     input  logic [W-1:0] x_data,
 
-    input  logic capture_trigger,
     output logic valid_to_read,
     output logic capturing,
 
@@ -31,7 +30,8 @@ module pattern_recognition #(
 
     // Detection logic outputs
     output logic num_threshold_pixels_fulfilled,
-    output logic num_edge_pixels_fulfilled
+    output logic num_edge_pixels_fulfilled,
+    output logic num_connected_edge_instances_fulfilled
 );
 
     localparam ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT);
@@ -69,6 +69,8 @@ module pattern_recognition #(
     // ========================================================================
     logic [ADDR_WIDTH-1:0] bw_addr;
     logic [1:0] bw_data;
+
+    logic capture_trigger;
     
     binary_bram #(
         .ADDR_WIDTH(ADDR_WIDTH)
@@ -121,9 +123,9 @@ module pattern_recognition #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
         .ADDR_WIDTH(ADDR_WIDTH),
-        .MIN_WHITE_PIXELS(61440),    // 20% of 307200 pixels),
+        .MIN_WHITE_PIXELS(61440),    // 20% of 307200 pixels)
         .MAX_WHITE_PIXELS(208320), // 70% of 307200 pixels
-        .MIN_EDGE_PIXELS(2000),
+        .MIN_EDGE_PIXELS(5000),
         .MIN_CONNECTED_EDGE_PIXELS(20),
         .MIN_CONNECTED_EDGE_INSTANCES(10)
     ) u_zebra_crossing_detector (
@@ -146,7 +148,9 @@ module pattern_recognition #(
         
         // Outputs
         .num_threshold_pixels_fulfilled(num_threshold_pixels_fulfilled),
-        .num_edge_pixels_fulfilled(num_edge_pixels_fulfilled)
+        .num_edge_pixels_fulfilled(num_edge_pixels_fulfilled),
+        .num_connected_edge_instances_fulfilled(num_connected_edge_instances_fulfilled),
+        .capture_trigger(capture_trigger)
     );
 
 endmodule

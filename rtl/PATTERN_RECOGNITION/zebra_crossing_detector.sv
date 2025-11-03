@@ -4,7 +4,7 @@ module zebra_crossing_detector #(
     parameter ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT),
     parameter MIN_WHITE_PIXELS = 61440,    // 20% of 307200 pixels
     parameter MAX_WHITE_PIXELS = 208320,   // 70% of 307200 pixels
-    parameter MIN_EDGE_PIXELS = 2000,   // guesstimate
+    parameter MIN_EDGE_PIXELS = 5000,   // guesstimate
     parameter MIN_CONNECTED_EDGE_PIXELS = 20,
     parameter MIN_CONNECTED_EDGE_INSTANCES = 10
 )(
@@ -28,10 +28,14 @@ module zebra_crossing_detector #(
 
     // Outputs for debugging
     output logic num_threshold_pixels_fulfilled,
-    output logic num_edge_pixels_fulfilled
+    output logic num_edge_pixels_fulfilled,
+    output logic num_connected_edge_instances_fulfilled,
+
+    // output for reading a new frame to bram
+    output logic capture_trigger
 );
 
-    // Condition 1: number of white pixels within allowable range
+    // ***Condition 1: number of white pixels within allowable range
     
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -49,7 +53,7 @@ module zebra_crossing_detector #(
         end
     end
 
-    // Condition 1: number of edge pixels within allowable range
+    // ***Condition 2: number of edge pixels within allowable range
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -66,10 +70,83 @@ module zebra_crossing_detector #(
         end
     end
 
-    // Condition 2: 10 instances of 20 connected pixels
+    // ***Condition 3: 10 instances of 20 connected pixels
     
-    // Placeholder: Set addresses to 0 for now
-    assign edge_addr = '0;
-    assign bw_addr = '0;
+    logic following_edge; // keeps track of whether an edge has been found and if it is tracking it, essentially a state machine
+    
+    // variables for position tracking
+    logic [$clog2(IMG_WIDTH)-1:0] x_pos, x_pos_tracking;
+    logic [$clog2(IMG_HEIGHT)-1:0] y_pos, y_pos_tracking;
+
+    // position tracking
+    // Add state machine
+    typedef enum logic [1:0] {
+        IDLE,
+        READING,
+        PROCESSING,
+        DONE
+    } state_t;
+
+    state_t state;
+
+    // Position tracking with BRAM read control
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            x_pos <= '0;
+            y_pos <= '0;
+            state <= IDLE;
+            num_connected_edge_instances_fulfilled <= '0;
+            following_edge <= '0;
+        end else begin
+            case (state)
+                IDLE: begin
+                    if (valid_to_read) begin  // Wait for BRAM to be ready
+                        state <= READING;
+                        x_pos <= '0;
+                        y_pos <= '0;
+                        capture_trigger <= '0;
+                    end
+                end
+                
+                READING: begin
+                    // Wait for BRAM read latency (usually 1-2 cycles)
+                    state <= PROCESSING;
+                end
+                
+                PROCESSING: begin
+                    // Process current pixel (edge_data and bw_data are now valid)
+                    
+                    // TODO: Add your edge detection logic here
+                    
+                    // Move to next pixel
+                    if (x_pos < IMG_WIDTH - 1) begin
+                        x_pos <= x_pos + 1'b1;
+                        state <= READING;  // Need to read next pixel
+                    end else begin
+                        x_pos <= '0;
+                        if (y_pos < IMG_HEIGHT - 1) begin
+                            y_pos <= y_pos + 1'b1;
+                            state <= READING;
+                        end else begin
+                            y_pos <= '0;
+                            state <= DONE;  // Finished scanning frame
+                        end
+                    end
+                end
+                
+                DONE: begin
+                    // Processing complete, wait for next capture
+                    if (!valid_to_read) begin
+                        state <= IDLE;
+                        capture_trigger <= '1;
+                    end
+                end
+            endcase
+        end
+    end
+
+    // Drive BRAM address
+    assign edge_addr = y_pos * IMG_WIDTH + x_pos;
+    assign bw_addr = y_pos * IMG_WIDTH + x_pos;
 
 endmodule
