@@ -175,14 +175,9 @@ module top_level (
 		.white_count_valid(white_count_valid),
 
 		// observable outputs
-		.num_threshold_pixels_fulfilled(LEDR[0])
+		.num_threshold_pixels_fulfilled(LEDR[0]),
+		.num_edge_pixels_fulfilled(LEDR[1])
 	);
-
-	// In top_level.sv - add debug LEDs
-	assign LEDR[1] = white_count_valid;  // Blinks when count updates
-	assign LEDR[2] = (num_white_threshold_pixels_show > 0);  // Shows if any white pixels
-	assign LEDR[3] = (num_white_edge_pixels_show > 0);  // Shows if any edge pixels
-
 
 	// Pattern recognition is always ready to output
 	assign pr_y_ready = 1'b1;

@@ -30,7 +30,8 @@ module pattern_recognition #(
     output logic white_count_valid,
 
     // Detection logic outputs
-    output logic num_threshold_pixels_fulfilled
+    output logic num_threshold_pixels_fulfilled,
+    output logic num_edge_pixels_fulfilled
 );
 
     localparam ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT);
@@ -120,8 +121,9 @@ module pattern_recognition #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
         .ADDR_WIDTH(ADDR_WIDTH),
-        .MIN_WHITE_PIXELS(89280),
-        .MAX_WHITE_PIXELS(208320),
+        .MIN_WHITE_PIXELS(61440),    // 20% of 307200 pixels),
+        .MAX_WHITE_PIXELS(208320), // 70% of 307200 pixels
+        .MIN_EDGE_PIXELS(2000),
         .MIN_CONNECTED_EDGE_PIXELS(20),
         .MIN_CONNECTED_EDGE_INSTANCES(10)
     ) u_zebra_crossing_detector (
@@ -143,7 +145,8 @@ module pattern_recognition #(
         .white_count_valid(white_count_valid),
         
         // Outputs
-        .num_threshold_pixels_fulfilled(num_threshold_pixels_fulfilled)
+        .num_threshold_pixels_fulfilled(num_threshold_pixels_fulfilled),
+        .num_edge_pixels_fulfilled(num_edge_pixels_fulfilled)
     );
 
 endmodule

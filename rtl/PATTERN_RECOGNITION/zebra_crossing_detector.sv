@@ -2,8 +2,9 @@ module zebra_crossing_detector #(
     parameter IMG_WIDTH  = 640,
     parameter IMG_HEIGHT = 480,
     parameter ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT),
-    parameter MIN_WHITE_PIXELS = 89280,    // 30% of 307200 pixels
+    parameter MIN_WHITE_PIXELS = 61440,    // 20% of 307200 pixels
     parameter MAX_WHITE_PIXELS = 208320,   // 70% of 307200 pixels
+    parameter MIN_EDGE_PIXELS = 2000,   // guesstimate
     parameter MIN_CONNECTED_EDGE_PIXELS = 20,
     parameter MIN_CONNECTED_EDGE_INSTANCES = 10
 )(
@@ -26,7 +27,8 @@ module zebra_crossing_detector #(
     input logic white_count_valid,
 
     // Outputs for debugging
-    output logic num_threshold_pixels_fulfilled
+    output logic num_threshold_pixels_fulfilled,
+    output logic num_edge_pixels_fulfilled
 );
 
     // Condition 1: number of white pixels within allowable range
@@ -47,9 +49,24 @@ module zebra_crossing_detector #(
         end
     end
 
-    // ========================================================================
-    // TODO: Add additional detection logic here
-    // ========================================================================
+    // Condition 1: number of edge pixels within allowable range
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            num_edge_pixels_fulfilled <= 1'b0;
+        end else begin
+            // Update when white count is valid
+            if (white_count_valid) begin
+                if (num_edge_pixels_fulfilled > MIN_EDGE_PIXELS) begin
+                    num_edge_pixels_fulfilled <= 1'b1;
+                end else begin
+                    num_edge_pixels_fulfilled <= 1'b0;
+                end
+            end
+        end
+    end
+
+    // Condition 2: 10 instances of 20 connected pixels
     
     // Placeholder: Set addresses to 0 for now
     assign edge_addr = '0;
