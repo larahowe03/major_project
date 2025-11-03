@@ -70,12 +70,6 @@ module zebra_crossing_detector #(
         logic [$clog2(IMG_HEIGHT)-1:0] y;
     } coord_t;
 
-    localparam STACK_SIZE = 64; // or larger depending on max stripe width
-    coord_t stack [0:STACK_SIZE-1];
-    logic [$clog2(STACK_SIZE)-1:0] sp;
-    logic [$clog2(STACK_SIZE)-1:0] component_size;
-    logic exploring;
-
     logic [$clog2(IMG_WIDTH)-1:0] x_pos;
     logic [$clog2(IMG_HEIGHT)-1:0] y_pos;
 
@@ -83,9 +77,8 @@ module zebra_crossing_detector #(
         IDLE,
         READING,
         PROCESSING,
-        EXPLORE,
         WAIT_NEIGHBOR,
-        WAIT_EDGE_READ,      // <-- new state
+        WAIT_EDGE_READ,
         PROCESS_NEIGHBOR,
         DONE
     } state_t;
@@ -112,8 +105,6 @@ module zebra_crossing_detector #(
             y_pos <= 0;
             state <= IDLE;
             num_connected_edge_instances <= 0;
-            sp <= 0;
-            exploring <= 0;
             mark_visited_we <= 0;
             capture_trigger <= 0;
         end else begin
@@ -135,15 +126,13 @@ module zebra_crossing_detector #(
                 PROCESSING: begin
                     // Start exploration if white edge and not visited
                     if (edge_data == 2'b01) begin
-                        stack[0] <= '{x_pos, y_pos};
-                        sp <= 1;
+                        current_pixel <= '{x_pos, y_pos};
                         component_size <= 1;
+                        neighbor_index <= 0;
                         mark_visited_we <= 1'b1;
                         mark_visited_addr <= y_pos*IMG_WIDTH + x_pos;
                         mark_visited_data <= 2'b10; // mark visited
-                        exploring <= 1;
-                        state <= EXPLORE;
-                        neighbor_index <= 0;
+                        state <= WAIT_NEIGHBOR;
                     end else begin
                         // Move to next pixel
                         if (x_pos < IMG_WIDTH-1) x_pos <= x_pos + 1;
@@ -155,62 +144,50 @@ module zebra_crossing_detector #(
                     end
                 end
 
-                EXPLORE: begin
-                    if (sp == 0) begin
-                        // finished component
-                        if (component_size >= MIN_CONNECTED_EDGE_PIXELS)
-                            num_connected_edge_instances <= num_connected_edge_instances + 1;
-                        exploring <= 0;
-                        state <= PROCESSING;
-                        neighbor_index <= 0;
-                    end else begin
-                        current_pixel <= stack[sp-1];
-                        sp <= sp - 1;
-                        neighbor_index <= 0;
-                        state <= WAIT_NEIGHBOR;
-                    end
-                end
-
                 WAIT_NEIGHBOR: begin
-                    if (neighbor_index < 8) begin
+                    if (neighbor_index < 8 && component_size < MIN_CONNECTED_EDGE_PIXELS) begin
                         nx = $signed(current_pixel.x) + dx[neighbor_index];
                         ny = $signed(current_pixel.y) + dy[neighbor_index];
-
 
                         if (nx >= 0 && nx < IMG_WIDTH && ny >= 0 && ny < IMG_HEIGHT) begin
                             neighbor_addr <= ny*IMG_WIDTH + nx;
                             neighbor_pixel <= '{nx[$clog2(IMG_WIDTH)-1:0], ny[$clog2(IMG_HEIGHT)-1:0]};
                             mark_visited_we <= 1'b0; // don't mark yet
-                            state <= WAIT_EDGE_READ; // <-- wait for BRAM read
+                            state <= WAIT_EDGE_READ;
                         end else begin
-                            neighbor_index <= neighbor_index + 1; // skip out-of-bounds
+                            neighbor_index <= neighbor_index + 1;
                         end
                     end else begin
-                        state <= EXPLORE; // all neighbors done
+                        // either done with neighbors or hit 20 pixels
+                        if (component_size >= MIN_CONNECTED_EDGE_PIXELS)
+                            num_connected_edge_instances <= num_connected_edge_instances + 1;
+                        state <= PROCESSING;
                     end
                 end
 
                 WAIT_EDGE_READ: begin
-                    // Edge BRAM has one-cycle latency; now edge_data is valid
+                    // BRAM read latency
                     state <= PROCESS_NEIGHBOR;
                 end
 
                 PROCESS_NEIGHBOR: begin
-                    if (edge_data == 2'b01) begin // is edge
+                    if (edge_data == 2'b01 && component_size < MIN_CONNECTED_EDGE_PIXELS) begin
                         mark_visited_we <= 1'b1;
                         mark_visited_addr <= neighbor_addr;
-                        mark_visited_data <= 2'b10; // mark as visited
+                        mark_visited_data <= 2'b10; // mark visited
 
-                        // Push onto stack
-                        if (sp < STACK_SIZE) begin
-                            stack[sp] <= neighbor_pixel;
-                            sp <= sp + 1;
-                            component_size <= component_size + 1;
-                        end
+                        // move to this neighbor as next current_pixel
+                        current_pixel <= neighbor_pixel;
+                        component_size <= component_size + 1;
+                        neighbor_index <= 0; // restart neighbors from this new pixel
+                        state <= WAIT_NEIGHBOR;
+                    end else begin
+                        neighbor_index <= neighbor_index + 1;
+                        state <= WAIT_NEIGHBOR;
                     end
-                    neighbor_index <= neighbor_index + 1;
-                    state <= WAIT_NEIGHBOR; // process next neighbor
                 end
+
+
 
 
 
@@ -223,7 +200,7 @@ module zebra_crossing_detector #(
         end
     end
 
-    assign edge_addr = y_pos * IMG_WIDTH + x_pos;
-    assign bw_addr = y_pos * IMG_WIDTH + x_pos;
+    assign edge_addr = (state == WAIT_EDGE_READ || state == PROCESS_NEIGHBOR) ? neighbor_addr : y_pos*IMG_WIDTH + x_pos;
+    assign bw_addr   = y_pos*IMG_WIDTH + x_pos;
 
 endmodule
