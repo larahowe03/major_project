@@ -37,7 +37,6 @@ module pattern_recognition #(
     // Step 1: Convolution filter (edge detection)
     // Also outputs black/white thresholded image
     // ========================================================================
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels;
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
