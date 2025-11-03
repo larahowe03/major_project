@@ -1,6 +1,6 @@
 module pattern_recognition #(
-    parameter IMG_WIDTH  = 640,
-    parameter IMG_HEIGHT = 480,
+    parameter IMG_WIDTH  = 320,
+    parameter IMG_HEIGHT = 240,
     parameter KERNEL_H   = 3,
     parameter KERNEL_W   = 3,
     parameter W          = 8,
@@ -28,7 +28,6 @@ module pattern_recognition #(
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
     output logic white_count_valid,
 
-    // Detection logic outputs
     output logic num_threshold_pixels_fulfilled,
     output logic num_edge_pixels_fulfilled,
     output logic num_connected_edge_instances_fulfilled
@@ -37,9 +36,7 @@ module pattern_recognition #(
     localparam ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT);
     localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
 
-    // ========================================================================
     // Convolution filter
-    // ========================================================================
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
@@ -64,74 +61,79 @@ module pattern_recognition #(
         .white_count_valid(white_count_valid)
     );
 
-    // ========================================================================
-    // BRAM - FIXED: Declare all signals!
-    // ========================================================================
-    logic [ADDR_WIDTH-1:0] edge_addr;
-    logic [1:0] edge_data;
+    // BRAM signals
     logic [ADDR_WIDTH-1:0] bw_addr;
     logic [1:0] bw_data;
+    logic [ADDR_WIDTH-1:0] edge_addr;
+    logic [1:0] edge_data;
     logic mark_visited_we;
     logic [ADDR_WIDTH-1:0] mark_visited_addr;
     logic capture_trigger;
     
+    // Threshold BRAM
     binary_bram #(
-        .ADDR_WIDTH(ADDR_WIDTH)
-    ) u_bram (
+        .IMG_WIDTH(IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT)
+    ) u_bw_image_bram (
         .clk(clk),
         .rst_n(rst_n),
-        .x_valid(y_valid_bw),  // Use bw valid since it covers full frame
+        .x_valid(y_valid_bw),
         .x_ready(),
-        .x_data_edge(y_data),
-        .x_data_threshold(y_data_bw),
-        
-        // FIXED: Correct signal names
-        .read_addr_edge(edge_addr),
-        .read_data_edge(edge_data),
-        .read_addr_threshold(bw_addr),
-        .read_data_threshold(bw_data),
-        
-        // Mark visited interface
-        .mark_visited_we(mark_visited_we),
-        .mark_visited_addr(mark_visited_addr),
-        
+        .x_data(y_data_bw),
+        .read_addr(bw_addr),
+        .read_data(bw_data),
+        .mark_visited_we(1'b0),
+        .mark_visited_addr('0),
         .capture_trigger(capture_trigger),
         .valid_to_read(valid_to_read),
         .capture_complete(),
         .capturing(capturing)
     );
 
-    // ========================================================================
-    // Zebra Crossing Detector
-    // ========================================================================
+    // Edge BRAM
+    binary_bram #(
+        .IMG_WIDTH(IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT)
+    ) u_edge_image_bram (
+        .clk(clk),
+        .rst_n(rst_n),
+        .x_valid(y_valid),
+        .x_ready(),
+        .x_data(y_data),
+        .read_addr(edge_addr),
+        .read_data(edge_data),
+        .mark_visited_we(mark_visited_we),
+        .mark_visited_addr(mark_visited_addr),
+        .capture_trigger(capture_trigger),
+        .valid_to_read(),
+        .capture_complete(),
+        .capturing()
+    );
+
+    // Zebra Crossing Detector - FIXED PARAMETERS
     zebra_crossing_detector #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
         .ADDR_WIDTH(ADDR_WIDTH),
-        .MIN_WHITE_PIXELS(61440),
-        .MAX_WHITE_PIXELS(208320),
-        .MIN_EDGE_PIXELS(2000),
+        .MIN_WHITE_PIXELS(15360),   // FIXED: 20% of 76,800
+        .MAX_WHITE_PIXELS(53760),   // FIXED: 70% of 76,800
+        .MIN_EDGE_PIXELS(1000),     // FIXED: Lower for 320×240
         .MIN_CONNECTED_EDGE_PIXELS(20),
         .MIN_CONNECTED_EDGE_INSTANCES(10)
     ) u_zebra_crossing_detector (
         .clk(clk),
         .rst_n(rst_n),
         .valid_to_read(valid_to_read),
-        
-        // FIXED: Correct signal connections
         .edge_addr(edge_addr),
         .edge_data(edge_data),
         .bw_addr(bw_addr),
         .bw_data(bw_data),
-        
         .num_white_edge_pixels(num_white_edge_pixels),
         .num_white_threshold_pixels(num_white_threshold_pixels),
         .white_count_valid(white_count_valid),
-        
         .num_threshold_pixels_fulfilled(num_threshold_pixels_fulfilled),
         .num_edge_pixels_fulfilled(num_edge_pixels_fulfilled),
         .num_connected_edge_instances_fulfilled(num_connected_edge_instances_fulfilled),
-        
         .capture_trigger(capture_trigger),
         .mark_visited_we(mark_visited_we),
         .mark_visited_addr(mark_visited_addr)
