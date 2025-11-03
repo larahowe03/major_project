@@ -120,6 +120,7 @@ module top_level (
 		
 	logic pr_x_ready;
 	logic pr_y_valid;
+	logic pr_y_valid_bw;
 	logic pr_y_ready;
 	logic [7:0] pr_y_data;
 	logic crossing_detected;
@@ -163,6 +164,7 @@ module top_level (
 		
 		// Edge-detected image output
 		.y_valid(pr_y_valid),
+		.y_valid_bw(pr_y_valid_bw),  // NEW: Connect separate valid
 		.y_ready(pr_y_ready),
 		.y_data(pr_y_data),
 		.y_data_bw(pr_y_data_bw),

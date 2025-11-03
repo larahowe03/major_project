@@ -9,21 +9,18 @@ module pattern_recognition #(
     input  logic clk,
     input  logic rst_n,
     
-    // Input pixel stream (from camera)
     input  logic x_valid,
     output logic x_ready,
     input  logic [W-1:0] x_data,
 
-    // BRAM capture control
     input  logic capture_trigger,
     output logic valid_to_read,
     output logic capturing,
 
-    // Edge detection kernel
     input  logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1],
         
-    // Edge-detected image output (for VGA display)
     output logic y_valid,
+    output logic y_valid_bw,  // NEW: Separate valid
     input  logic y_ready,
     output logic [W-1:0] y_data,
     output logic [W-1:0] y_data_bw,
@@ -36,25 +33,7 @@ module pattern_recognition #(
     localparam ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT);
     localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
 
-    // ========================================================================
-    // Delay input by 1 cycle to match convolution filter timing
-    // ========================================================================
-    // logic [W-1:0] x_data_d1;
-    
-    // always_ff @(posedge clk or negedge rst_n) begin
-    //     if (!rst_n) begin
-    //         x_data_d1 <= '0;
-    //     end else if (x_valid && x_ready) begin
-    //         x_data_d1 <= x_data;
-    //     end
-    // end
-    
-    // // Threshold the delayed input - now aligned with y_valid timing
-    // assign y_data_bw = (x_data_d1 >= WHITE_THRESHOLD) ? 8'd255 : 8'd0;
-
-    // ========================================================================
-    // Step 1: Convolution filter (edge detection)
-    // ========================================================================
+    // Convolution filter
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
@@ -68,20 +47,18 @@ module pattern_recognition #(
         .x_valid(x_valid),
         .x_ready(x_ready),
         .x_data(x_data),
-        .y_valid(y_valid),          // Output valid (delayed by 1 cycle)
+        .y_valid(y_valid),
+        .y_valid_bw(y_valid_bw),  // NEW: Separate valid
         .y_ready(y_ready),
-        .y_data(y_data),            // Edge detection output
-        .y_data_bw(y_data_bw),            // Edge detection output
+        .y_data(y_data),
+        .y_data_bw(y_data_bw),
         .kernel(kernel),
         .num_white_edge_pixels(num_white_edge_pixels),
         .num_white_threshold_pixels(num_white_threshold_pixels),
         .white_count_valid(white_count_valid)
     );
 
-    // ========================================================================
-    // Step 2: Raw Image BRAM (b/w thresholded)
-    // Uses y_valid since y_data_bw is now aligned with conv filter output
-    // ========================================================================
+    // Raw Image BRAM (uses separate valid signal)
     logic [ADDR_WIDTH-1:0] raw_addr;
     logic [1:0] raw_data;
     
@@ -90,9 +67,9 @@ module pattern_recognition #(
     ) u_raw_image_bram (
         .clk(clk),
         .rst_n(rst_n),
-        .x_valid(y_valid),          // Use same valid as convolution output
+        .x_valid(y_valid_bw),  // FIXED: Use separate valid signal
         .x_ready(),
-        .x_data(y_data_bw),         // Threshold output (aligned)
+        .x_data(y_data_bw),
         .read_addr(raw_addr),
         .read_data(raw_data),
         .mark_visited_we(1'b0),
@@ -103,9 +80,7 @@ module pattern_recognition #(
         .capturing(capturing)
     );
 
-    // ========================================================================
-    // Step 3: Edge Image BRAM (2-bit: black/white/visited)
-    // ========================================================================
+    // Edge Image BRAM (uses convolution valid)
     logic [ADDR_WIDTH-1:0] edge_addr;
     logic [1:0] edge_data;
     logic mark_visited_we;
@@ -116,9 +91,9 @@ module pattern_recognition #(
     ) u_edge_image_bram (
         .clk(clk),
         .rst_n(rst_n),
-        .x_valid(y_valid),          // Same valid signal
+        .x_valid(y_valid),  // Uses convolution valid
         .x_ready(),
-        .x_data(y_data),            // Edge detection output
+        .x_data(y_data),
         .read_addr(edge_addr),
         .read_data(edge_data),
         .mark_visited_we(mark_visited_we),

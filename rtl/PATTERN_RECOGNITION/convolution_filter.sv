@@ -5,7 +5,7 @@ module convolution_filter #(
     parameter KERNEL_W = 3,
     parameter W = 8,          
     parameter W_FRAC = 0,
-    parameter EDGE_THRESHOLD = 8'd150,  // Changed from 150
+    parameter EDGE_THRESHOLD = 8'd150,  // Changed from 150 (try 200 idk)
     parameter WHITE_THRESHOLD = 8'd120  // Changed from 150
 )(
     input logic clk,
@@ -17,7 +17,8 @@ module convolution_filter #(
     input logic [W-1:0] x_data,
     
     // Output stream
-    output logic y_valid,
+    output logic y_valid,          // Valid for edge detection
+    output logic y_valid_bw,       // Valid for threshold (NEW - separate!)
     input logic y_ready,
     output logic [W-1:0] y_data,
     output logic [W-1:0] y_data_bw,
@@ -28,7 +29,7 @@ module convolution_filter #(
     // White pixel count
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels,
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
-    output logic white_count_valid  // NEW: Signal when frame is done
+    output logic white_count_valid
 );
 
     // Position tracking
@@ -168,12 +169,13 @@ module convolution_filter #(
     logic x_valid_d1;
     logic convolution_valid_d1;
     logic [W-1:0] x_data_d1;
-    logic [W-1:0] binary_result_d1;  // NEW: Register binary result
-    logic last_pixel_d1;  // NEW: Delay last_pixel signal
+    logic [W-1:0] binary_result_d1;
+    logic last_pixel_d1;
     
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             y_valid <= 1'b0;
+            y_valid_bw <= 1'b0;  // NEW: Separate valid for threshold
             y_data <= '0;
             x_valid_d1 <= 1'b0;
             convolution_valid_d1 <= 1'b0;
@@ -185,27 +187,32 @@ module convolution_filter #(
                 x_valid_d1 <= x_valid;
                 convolution_valid_d1 <= convolution_valid;
                 x_data_d1 <= x_data;
-                binary_result_d1 <= binary_result;  // Register binary result
+                binary_result_d1 <= binary_result;
                 last_pixel_d1 <= last_pixel;
                 
+                // Edge detection output (only valid in convolution region)
                 if (convolution_valid_d1) begin
                     y_data <= binary_result_d1;
+                    y_valid <= x_valid_d1;  // Valid only when convolution valid
                 end else begin
                     y_data <= 8'd0;
+                    y_valid <= 1'b0;  // Not valid in border region
                 end
                 
-                y_valid <= x_valid_d1;
+                // Threshold output (valid for ALL pixels)
+                y_valid_bw <= x_valid_d1;  // Always valid when input was valid
+                
             end else if (y_ready && y_valid) begin
                 y_valid <= 1'b0;
+                y_valid_bw <= 1'b0;
             end
         end
     end
 
+    // Threshold output (computed for ALL pixels)
     assign y_data_bw = (x_data_d1 >= WHITE_THRESHOLD) ? 8'd255 : 8'd0;
 
-    // ========================================================================
     // WHITE PIXEL COUNTER
-    // ========================================================================
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             num_white_edge_pixels <= '0;
@@ -213,22 +220,21 @@ module convolution_filter #(
             white_count_valid <= 1'b0;
         end else begin
             if (handshake && last_pixel_d1) begin
-                white_count_valid <= 1'b1;  // Signal frame complete
+                white_count_valid <= 1'b1;
             end else if (handshake && x_pos == 0 && y_pos == 0) begin
-                // Reset at START of next frame
                 num_white_edge_pixels <= '0;
                 num_white_threshold_pixels <= '0;
                 white_count_valid <= 1'b0;
             end else begin
                 white_count_valid <= 1'b0;
                 
-                // Count edge white pixels (ONLY in convolution region)
+                // Count edge pixels (only in convolution region)
                 if (handshake && convolution_valid_d1 && binary_result_d1 == 8'd255) begin
                     num_white_edge_pixels <= num_white_edge_pixels + 1'b1;
                 end
                 
-                // Count threshold white pixels (ALL pixels, not just convolution region)
-                if (handshake && x_valid_d1 && x_data_d1 >= WHITE_THRESHOLD) begin  // FIXED!
+                // Count threshold pixels (ALL pixels with valid data)
+                if (handshake && x_valid_d1 && x_data_d1 >= WHITE_THRESHOLD) begin
                     num_white_threshold_pixels <= num_white_threshold_pixels + 1'b1;
                 end
             end
