@@ -172,7 +172,7 @@ module top_level (
 	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_pixels_show;
 	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] temp_counter;
 
-	always_ff @(posedge clk or negedge rst_n) begin
+	always_ff @(posedge CLOCK_50 or negedge rst_n) begin
 		if (!rst_n) begin
 			num_white_pixels_show <= '0;
 			temp_counter <= '0;
