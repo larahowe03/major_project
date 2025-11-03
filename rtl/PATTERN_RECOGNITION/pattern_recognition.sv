@@ -65,49 +65,56 @@ module pattern_recognition #(
     );
 
     // ========================================================================
-    // Combined Edge + BW BRAM
+    // BW Image BRAM
     // ========================================================================
-    logic [ADDR_WIDTH-1:0] edge_addr;
-    logic [1:0] edge_data;
     logic [ADDR_WIDTH-1:0] bw_addr;
     logic [1:0] bw_data;
-    logic mark_visited_we;
-    logic [ADDR_WIDTH-1:0] mark_visited_addr;
-    logic capture_trigger;
 
-    combined_bram #(
+    logic capture_trigger;
+    
+    binary_bram #(
         .ADDR_WIDTH(ADDR_WIDTH)
-    ) u_combined_bram (
+    ) u_bw_image_bram (
         .clk(clk),
         .rst_n(rst_n),
-
-        // Input streams from convolution filter
-        .x_valid_edge(y_valid),
-        .x_ready_edge(),
-        .x_data_edge(y_data),
-
-        .x_valid_bw(y_valid_bw),
-        .x_ready_bw(),
-        .x_data_bw(y_data_bw),
-
-        // Read ports for zebra detector
-        .edge_read_addr(edge_addr),
-        .edge_read_data(edge_data),
-
-        .bw_read_addr(bw_addr),
-        .bw_read_data(bw_data),
-
-        // Write for marking visited
+        .x_valid(y_valid_bw),
+        .x_ready(),
+        .x_data(y_data_bw),
+        .read_addr(bw_addr),
+        .read_data(bw_data),
         .mark_visited_we(mark_visited_we),
         .mark_visited_addr(mark_visited_addr),
-
-        // Control
         .capture_trigger(capture_trigger),
         .valid_to_read(valid_to_read),
         .capture_complete(),
         .capturing(capturing)
     );
 
+    // ========================================================================
+    // Edge Image BRAM
+    // ========================================================================
+    logic [ADDR_WIDTH-1:0] edge_addr;
+    logic [1:0] edge_data;
+    logic mark_visited_we;
+    logic [ADDR_WIDTH-1:0] mark_visited_addr;
+    
+    binary_bram #(
+        .ADDR_WIDTH(ADDR_WIDTH)
+    ) u_edge_image_bram (
+        .clk(clk),
+        .rst_n(rst_n),
+        .x_valid(y_valid),
+        .x_ready(),
+        .x_data(y_data),
+        .read_addr(edge_addr),
+        .read_data(edge_data),
+        .mark_visited_we(mark_visited_we),
+        .mark_visited_addr(mark_visited_addr),
+        .capture_trigger(capture_trigger),
+        .valid_to_read(),
+        .capture_complete(),
+        .capturing()
+    );
 
     // ========================================================================
     // Zebra Crossing Detector
