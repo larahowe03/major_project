@@ -197,7 +197,7 @@ module top_level (
 	// Display stripe count on 7-segment displays
 	display u_display1 (
 		.clk(clk_video),
-		.value(num_white_edge_pixels_show[15:0]),
+		.value(num_white_edge_pixels_show),
 		.display0(HEX0),
 		.display1(HEX1),
 		.display2(HEX2),
@@ -205,7 +205,7 @@ module top_level (
 	);
 	display u_display2 (
 		.clk(clk_video),
-		.value(num_white_threshold_pixels_show[15:0]),
+		.value(num_white_threshold_pixels_show),
 		.display0(HEX4),
 		.display1(HEX5),
 		.display2(HEX6),
