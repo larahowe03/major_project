@@ -125,7 +125,7 @@ module pattern_recognition #(
         .ADDR_WIDTH(ADDR_WIDTH),
         .MIN_WHITE_PIXELS(61440),    // 20% of 307200 pixels)
         .MAX_WHITE_PIXELS(208320), // 70% of 307200 pixels
-        .MIN_EDGE_PIXELS(3500),
+        .MIN_EDGE_PIXELS(2000),
         .MIN_CONNECTED_EDGE_PIXELS(20),
         .MIN_CONNECTED_EDGE_INSTANCES(10)
     ) u_zebra_crossing_detector (

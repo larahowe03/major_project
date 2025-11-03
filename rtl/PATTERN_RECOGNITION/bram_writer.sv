@@ -10,12 +10,12 @@ module binary_bram #(
     input logic [7:0] x_data,
     
     // Read port for detector
-    input logic [$clog2(ADDR_WIDTH)-1:0] read_addr,
+    input logic [ADDR_WIDTH-1:0] read_addr,
     output logic [1:0] read_data,  // 2-bit output: 0=black, 1=white, 2=visited
     
     // Write port for marking visited
     input logic mark_visited_we,
-    input logic [$clog2(ADDR_WIDTH)-1:0] mark_visited_addr,
+    input logic [ADDR_WIDTH-1:0] mark_visited_addr,
     
     // Control signals
     input logic capture_trigger,
@@ -28,7 +28,7 @@ module binary_bram #(
     
     state_t state;
     
-    logic [$clog2(ADDR_WIDTH)-1:0] write_addr;
+    logic [ADDR_WIDTH-1:0] write_addr;
     
     // 2-bit BRAM array: 00=black, 01=white, 10=visited
     (* ramstyle = "M9K" *) logic [1:0] bram_array [0:ADDR_WIDTH-1];

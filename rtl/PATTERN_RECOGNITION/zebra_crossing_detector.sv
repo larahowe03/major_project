@@ -1,10 +1,10 @@
 module zebra_crossing_detector #(
     parameter IMG_WIDTH  = 640,
     parameter IMG_HEIGHT = 480,
-    parameter ADDR_WIDTH = $clog2(IMG_WIDTH*IMG_HEIGHT),
+    parameter ADDR_WIDTH,
     parameter MIN_WHITE_PIXELS = 61440,    // 20% of 307200 pixels
     parameter MAX_WHITE_PIXELS = 208320,   // 70% of 307200 pixels
-    parameter MIN_EDGE_PIXELS = 3500,   // guesstimate
+    parameter MIN_EDGE_PIXELS = 2000,   // guesstimate
     parameter MIN_CONNECTED_EDGE_PIXELS = 20,
     parameter MIN_CONNECTED_EDGE_INSTANCES = 10
 )(
