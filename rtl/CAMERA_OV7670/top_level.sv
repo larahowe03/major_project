@@ -250,8 +250,8 @@ module top_level (
 				upper_display = {7'd0, edge_bottom_show[8:0]};
 			end
 			2'b11: begin  // Left and right edge X
-				lower_display = {6'd0, edge_left_show[9:0]};
-				upper_display = {6'd0, edge_right_show[9:0]};
+				lower_display = {6'd0, edge_left_show[9:0]};   // right edge
+				upper_display = {6'd0, edge_right_show[9:0]}; // left edge
 			end
 		endcase
 	end
