@@ -140,6 +140,8 @@ module top_level (
 	logic [$clog2(IMG_HEIGHT)-1:0] lowest_edge_y;
 	logic components_valid;
 
+    logic [$clog2(IMG_HEIGHT)-1:0] max_y;
+
 	pattern_recognition #(
 		.IMG_WIDTH(IMG_WIDTH),
 		.IMG_HEIGHT(IMG_HEIGHT),
@@ -178,7 +180,8 @@ module top_level (
 		// NEW: Connected components and lowest edge outputs
 		.num_connected_components(num_connected_components),
 		.lowest_edge_y(lowest_edge_y),
-		.components_valid(components_valid)
+		.components_valid(components_valid),
+		.max_y(max_y)
 	);
 
 	assign pr_y_ready = 1'b1;
@@ -216,11 +219,11 @@ module top_level (
 	// SW[1] = 1: Show connected components (HEX3-0) and lowest_edge_y (HEX7-4)
 	// ========================================================================
 	
-	wire [15:0] lower_display = SW[1] ? num_connected_components_show[15:0] : 
-	                                     num_white_edge_pixels_show[15:0];
+	wire [15:0] lower_display = num_connected_components_show[15:0];
+	                            //         num_white_edge_pixels_show[15:0];
 	
-	wire [15:0] upper_display = SW[1] ? {7'd0, lowest_edge_y_show[8:0]} :
-	                                     num_white_threshold_pixels_show[15:0];
+	wire [15:0] upper_display = max_y;//SW[1] ? {7'd0, lowest_edge_y_show[8:0]} :
+	                                     //num_white_threshold_pixels_show[15:0];
 
 	// ========================================================================
 	// ENHANCED DEBUGGING LEDs

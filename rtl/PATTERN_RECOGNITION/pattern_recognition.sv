@@ -37,7 +37,9 @@ module pattern_recognition #(
     // NEW: Connected components count and lowest edge position
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components,
     output logic [$clog2(IMG_HEIGHT)-1:0] lowest_edge_y,
-    output logic components_valid
+    output logic components_valid,
+
+    output logic [$clog2(IMG_HEIGHT)-1:0] max_y
 );
 
     // NEW: Internal signals from detector
@@ -181,7 +183,8 @@ module pattern_recognition #(
         // NEW: Connected components and lowest edge outputs
         .num_connected_components(num_components_internal),
         .lowest_edge_y(lowest_edge_y_internal),
-        .components_done(components_done)
+        .components_done(components_done),
+        .max_y(max_y)
     );
     
     // Register components count and lowest edge Y for stable display
