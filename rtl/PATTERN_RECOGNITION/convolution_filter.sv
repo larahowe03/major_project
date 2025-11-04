@@ -34,7 +34,8 @@ module convolution_filter #(
     output logic [$clog2(IMG_WIDTH)-1:0] edge_left,     // Minimum X (left of image)
     output logic [$clog2(IMG_WIDTH)-1:0] edge_right,    // Maximum X (right of image)
     output logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom,  // Maximum Y for THRESHOLDED pixels
-    output logic close_to_crossing,                      // HIGH when edge_bottom > 380
+    output logic close_to_crossing_edge,                      // HIGH when edge_bottom > 380
+    output logic close_to_crossing_threshold,                      // HIGH when edge_bottom > 380
     output logic white_count_valid
 );
 
@@ -245,8 +246,9 @@ module convolution_filter #(
     // Threshold for close to crossing detection (380 out of 480)
     localparam CLOSE_THRESHOLD = 380;
     
-    // Debouncing for close_to_crossing signal (must be true for 10 frames)
-    logic [3:0] close_to_crossing_counter;  // Counts up to 10
+    // Debouncing for close_to_crossing_edge signal (must be true for 10 frames)
+    logic [3:0] close_to_crossing_edge_counter;  // Counts up to 10
+    logic [3:0] close_to_crossing_threshold_counter;
     localparam DEBOUNCE_FRAMES = 10;
     
     always_ff @(posedge clk or negedge rst_n) begin
@@ -261,8 +263,10 @@ module convolution_filter #(
             edge_found <= 1'b0;
             threshold_found <= 1'b0;
             white_count_valid <= 1'b0;
-            close_to_crossing <= 1'b0;
-            close_to_crossing_counter <= '0;
+            close_to_crossing_edge <= 1'b0;
+            close_to_crossing_edge_counter <= '0;
+            close_to_crossing_threshold <= 1'b0;
+            close_to_crossing_threshold_counter <= '0;
         end else begin
             // Signal frame complete and hold for multiple cycles
             if (handshake && last_pixel_d1) begin
@@ -275,20 +279,36 @@ module convolution_filter #(
                 // Latch threshold bottom
                 threshold_bottom <= threshold_max_y;
                 
-                // Debounce close_to_crossing signal
+                // Debounce close_to_crossing_edge signal
                 if (max_y > CLOSE_THRESHOLD) begin
                     // Condition is true - increment counter
-                    if (close_to_crossing_counter < DEBOUNCE_FRAMES) begin
-                        close_to_crossing_counter <= close_to_crossing_counter + 1'b1;
+                    if (close_to_crossing_edge_counter < DEBOUNCE_FRAMES) begin
+                        close_to_crossing_edge_counter <= close_to_crossing_edge_counter + 1'b1;
                     end
                     // Set signal only after counter reaches threshold
-                    if (close_to_crossing_counter >= DEBOUNCE_FRAMES - 1) begin
-                        close_to_crossing <= 1'b1;
+                    if (close_to_crossing_edge_counter >= DEBOUNCE_FRAMES - 1) begin
+                        close_to_crossing_edge <= 1'b1;
                     end
                 end else begin
                     // Condition is false - reset counter and signal
-                    close_to_crossing_counter <= '0;
-                    close_to_crossing <= 1'b0;
+                    close_to_crossing_edge_counter <= '0;
+                    close_to_crossing_edge <= 1'b0;
+                end
+
+                // Debounce close_to_crossing_edge signal
+                if (threshold_bottom > CLOSE_THRESHOLD) begin
+                    // Condition is true - increment counter
+                    if (close_to_crossing_threshold_counter < DEBOUNCE_FRAMES) begin
+                        close_to_crossing_threshold_counter <= close_to_crossing_threshold_counter + 1'b1;
+                    end
+                    // Set signal only after counter reaches threshold
+                    if (close_to_crossing_threshold_counter >= DEBOUNCE_FRAMES - 1) begin
+                        close_to_crossing_threshold <= 1'b1;
+                    end
+                end else begin
+                    // Condition is false - reset counter and signal
+                    close_to_crossing_threshold_counter <= '0;
+                    close_to_crossing_threshold <= 1'b0;
                 end
             end else if (white_count_valid && handshake && x_pos > 10) begin
                 white_count_valid <= 1'b0;  // End valid pulse

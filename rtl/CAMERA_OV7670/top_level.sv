@@ -141,7 +141,8 @@ module top_level (
 	logic [$clog2(IMG_WIDTH)-1:0] edge_left;
 	logic [$clog2(IMG_WIDTH)-1:0] edge_right;
 	logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom;
-	logic close_to_crossing;
+	logic close_to_crossing_edge;
+	logic close_to_crossing_threshold;
 	logic components_valid;
 
 	pattern_recognition #(
@@ -185,10 +186,14 @@ module top_level (
 		.edge_left(edge_left),
 		.edge_right(edge_right),
 		.threshold_bottom(threshold_bottom),
-		.close_to_crossing(close_to_crossing),
+		.close_to_crossing_edge(close_to_crossing_edge),
+		.close_to_crossing_threshold(close_to_crossing_threshold),
 		.num_connected_components(num_connected_components),
 		.components_valid(components_valid)
 	);
+
+	assign LEDR[4] = close_to_crossing_edge_show;
+	assign LEDR[5] = close_to_crossing_threshold_show;
 
 	assign pr_y_ready = 1'b1;
 
@@ -204,7 +209,8 @@ module top_level (
 	logic [$clog2(IMG_WIDTH)-1:0] edge_left_show;
 	logic [$clog2(IMG_WIDTH)-1:0] edge_right_show;
 	logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom_show;
-	logic close_to_crossing_show;
+	logic close_to_crossing_edge_show;
+	logic close_to_crossing_threshold_show;
 
 	always_ff @(posedge clk_video or negedge rst_n) begin
 		if (!rst_n) begin
@@ -216,7 +222,8 @@ module top_level (
 			edge_left_show <= '0;
 			edge_right_show <= '0;
 			threshold_bottom_show <= '0;
-			close_to_crossing_show <= 1'b0;
+			close_to_crossing_edge_show <= 1'b0;
+			close_to_crossing_threshold_show <= 1'b0;
 		end else begin
 			if (white_count_valid) begin
 				num_white_edge_pixels_show <= num_white_edge_pixels;
@@ -226,7 +233,8 @@ module top_level (
 				edge_left_show <= edge_left;
 				edge_right_show <= edge_right;
 				threshold_bottom_show <= threshold_bottom;
-				close_to_crossing_show <= close_to_crossing;
+				close_to_crossing_edge_show <= close_to_crossing_edge;
+				close_to_crossing_threshold_show <= close_to_crossing_threshold;
 			end
 			if (components_valid) begin
 				num_connected_components_show <= num_connected_components;
@@ -275,16 +283,16 @@ module top_level (
 	assign LEDG[3] = components_valid;
 	assign LEDG[4] = (num_connected_components_show > 0);
 	assign LEDG[5] = (edge_bottom_show >= IMG_HEIGHT * 4 / 5);  // Bottom 20% (≥384)
-	assign LEDG[6] = close_to_crossing_show;                    // Close to crossing (>380)
+	assign LEDG[6] = close_to_crossing_edge_show;                    // Close to crossing (>380)
 	assign LEDG[7] = (num_white_edge_pixels_show > 2000);
 	
-	// Show bounding box validity on LEDR[17:4]
-	assign LEDR[17] = (edge_bottom_show > edge_top_show);        // Valid vertical range
-	assign LEDR[16] = (edge_right_show > edge_left_show);        // Valid horizontal range
-	assign LEDR[15:14] = SW[1:0];                                // Show display mode
-	assign LEDR[13:10] = edge_bottom_show[8:5];                  // Upper bits of bottom Y
-	assign LEDR[9:6] = edge_top_show[8:5];                       // Upper bits of top Y
-	assign LEDR[5:4] = 2'b00;
+	// // Show bounding box validity on LEDR[17:4]
+	// assign LEDR[17] = (edge_bottom_show > edge_top_show);        // Valid vertical range
+	// assign LEDR[16] = (edge_right_show > edge_left_show);        // Valid horizontal range
+	// assign LEDR[15:14] = SW[1:0];                                // Show display mode
+	// assign LEDR[13:10] = edge_bottom_show[8:5];                  // Upper bits of bottom Y
+	// assign LEDR[9:6] = edge_top_show[8:5];                       // Upper bits of top Y
+	// assign LEDR[5:4] = 2'b00;
 	// LEDR[3:0] used by criteria flags
 	
 	display u_display_lower (

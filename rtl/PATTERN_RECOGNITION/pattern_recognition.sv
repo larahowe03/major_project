@@ -40,7 +40,8 @@ module pattern_recognition #(
     output logic [$clog2(IMG_WIDTH)-1:0] edge_left,
     output logic [$clog2(IMG_WIDTH)-1:0] edge_right,
     output logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom,  // Max Y for thresholded pixels
-    output logic close_to_crossing,  // HIGH when edge_bottom > 380
+    output logic close_to_crossing_edge,  // HIGH when edge_bottom > 380
+    output logic close_to_crossing_threshold,  // HIGH when edge_bottom > 380
     
     // Connected components count
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components,
@@ -57,7 +58,8 @@ module pattern_recognition #(
     logic [$clog2(IMG_WIDTH)-1:0] edge_left_internal;
     logic [$clog2(IMG_WIDTH)-1:0] edge_right_internal;
     logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom_internal;
-    logic close_to_crossing_internal;
+    logic close_to_crossing_edge_internal;
+    logic close_to_crossing_threshold_internal;
 
     localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
 
@@ -90,7 +92,8 @@ module pattern_recognition #(
         .edge_left(edge_left_internal),
         .edge_right(edge_right_internal),
         .threshold_bottom(threshold_bottom_internal),
-        .close_to_crossing(close_to_crossing_internal),
+        .close_to_crossing_edge(close_to_crossing_edge_internal),
+        .close_to_crossing_threshold(close_to_crossing_threshold_internal),
         .white_count_valid(white_count_valid)
     );
 
@@ -213,7 +216,7 @@ module pattern_recognition #(
             edge_left <= '0;
             edge_right <= '0;
             threshold_bottom <= '0;
-            close_to_crossing <= 1'b0;
+            close_to_crossing_edge <= 1'b0;
         end else begin
             // Update connected components when detector finishes
             if (components_done) begin
@@ -223,14 +226,15 @@ module pattern_recognition #(
                 components_valid <= 1'b0;
             end
             
-            // Update bounding box and close_to_crossing flag when frame completes
+            // Update bounding box and close_to_crossing_edge flag when frame completes
             if (white_count_valid) begin
                 edge_top <= edge_top_internal;
                 edge_bottom <= edge_bottom_internal;
                 edge_left <= edge_left_internal;
                 edge_right <= edge_right_internal;
                 threshold_bottom <= threshold_bottom_internal;
-                close_to_crossing <= close_to_crossing_internal;
+                close_to_crossing_edge <= close_to_crossing_edge_internal;
+                close_to_crossing_threshold <= close_to_crossing_threshold_internal;
             end
         end
     end
