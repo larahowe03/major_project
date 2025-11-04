@@ -21,10 +21,6 @@ module zebra_crossing_detector #(
     input logic edge_valid,
     input logic [$clog2(MAX_EDGES)-1:0] num_edges,
     
-    // ❌ REMOVED: No threshold BRAM needed!
-    // output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] threshold_addr,
-    // input logic [1:0] threshold_data,
-
     // White pixel counts (already computed)
     input logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels,
     input logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
@@ -65,7 +61,7 @@ module zebra_crossing_detector #(
     // Criteria 3: need enough connected components
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) num_connected_edge_instances_fulfilled <= 1'b0;
-        else if (state == IDLE || state == DONE) begin
+        else if (state == DONE) begin
             num_connected_edge_instances_fulfilled <= (num_connected_edge_instances >= MIN_CONNECTED_EDGE_INSTANCES);
         end
     end
@@ -73,7 +69,7 @@ module zebra_crossing_detector #(
     // Criteria 4: lowest edge must be in bottom fifth of image
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) lowest_edge_position_fulfilled <= 1'b0;
-        else if (state == IDLE || state == DONE) begin
+        else if (state == DONE) begin
             lowest_edge_position_fulfilled <= (max_y >= MIN_LOWEST_EDGE_Y);
         end
     end
@@ -85,13 +81,15 @@ module zebra_crossing_detector #(
 
     typedef enum logic [3:0] {
         IDLE,
+        INIT_READ,
         SCAN_EDGES,
         WAIT_EDGE_READ,
         CHECK_VISITED,
         START_COMPONENT,
         EXPLORE_NEIGHBORS,
         WAIT_NEIGHBOR_CHECK,
-        DONE
+        DONE,
+        WAIT_DONE
     } state_t;
 
     state_t state;
@@ -114,9 +112,16 @@ module zebra_crossing_detector #(
     // Visited bitmap for edge pixels only
     logic visited [0:MAX_EDGES-1];
 
+    // Edge data latched from sparse storage
+    coord_t current_edge;
+    
     // In state machine, expose the internal counter:
     assign num_connected_components = num_connected_edge_instances;
     assign lowest_edge_y = max_y;
+
+    // Edge of valid_to_read signal
+    logic valid_to_read_d1;
+    wire valid_to_read_edge = valid_to_read && !valid_to_read_d1;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -126,25 +131,38 @@ module zebra_crossing_detector #(
             capture_trigger <= '0;
             edge_read_idx <= '0;
             max_y <= '0;
+            components_done <= 1'b0;
+            valid_to_read_d1 <= 1'b0;
             
             for (int i = 0; i < MAX_EDGES; i++) begin
                 visited[i] <= 1'b0;
             end
         end else begin
+            valid_to_read_d1 <= valid_to_read;
+            
             case(state)
                 IDLE: begin
-                    components_done <= 1'b0;  // Clear signal
-                    if (valid_to_read) begin
-                        state <= SCAN_EDGES;
+                    components_done <= 1'b0;
+                    capture_trigger <= 1'b0;
+                    
+                    // Wait for positive edge of valid_to_read
+                    if (valid_to_read_edge && num_edges > 0) begin
+                        state <= INIT_READ;
                         current_edge_idx <= '0;
-                        capture_trigger <= '0;
                         num_connected_edge_instances <= '0;
                         max_y <= '0;
                         
+                        // Clear visited array
                         for (int i = 0; i < MAX_EDGES; i++) begin
                             visited[i] <= 1'b0;
                         end
                     end
+                end
+                
+                INIT_READ: begin
+                    // Start reading first edge
+                    edge_read_idx <= '0;
+                    state <= WAIT_EDGE_READ;
                 end
 
                 SCAN_EDGES: begin
@@ -157,11 +175,15 @@ module zebra_crossing_detector #(
                 end
                 
                 WAIT_EDGE_READ: begin
+                    // Wait one cycle for BRAM read
                     state <= CHECK_VISITED;
                 end
                 
                 CHECK_VISITED: begin
                     if (edge_valid) begin
+                        // Latch edge coordinates
+                        current_edge <= '{x: edge_x, y: edge_y};
+                        
                         // Track the maximum Y coordinate
                         if (edge_y > max_y) begin
                             max_y <= edge_y;
@@ -178,6 +200,7 @@ module zebra_crossing_detector #(
                             state <= SCAN_EDGES;
                         end
                     end else begin
+                        // Invalid edge, skip it
                         current_edge_idx <= current_edge_idx + 1;
                         state <= SCAN_EDGES;
                     end
@@ -220,8 +243,13 @@ module zebra_crossing_detector #(
 
                 DONE: begin
                     components_done <= 1'b1;  // Signal that count is ready
-                    state <= IDLE;
+                    state <= WAIT_DONE;
+                end
+                
+                WAIT_DONE: begin
+                    // Hold done signal for one cycle, then trigger capture and return to idle
                     capture_trigger <= 1'b1;
+                    state <= IDLE;
                 end
 
             endcase
