@@ -150,9 +150,9 @@ module pattern_recognition #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
         .MAX_EDGES(MAX_EDGES),
-        .MIN_WHITE_PIXELS(38400),
+        .MIN_WHITE_PIXELS(61440),
         .MAX_WHITE_PIXELS(307200),
-        .MIN_EDGE_PIXELS(2000),
+        .MIN_EDGE_PIXELS(15000),
         .MIN_CONNECTED_EDGE_PIXELS(20),
         .MIN_CONNECTED_EDGE_INSTANCES(10),
         .MIN_LOWEST_EDGE_Y(IMG_HEIGHT * 4 / 5)  // Bottom fifth of image
