@@ -65,7 +65,11 @@ module convolution_filter #(
         end
     end
     
-    wire convolution_valid_now = (x_pos >= KERNEL_W - 1) && (y_pos >= KERNEL_H - 1);
+    // Add 20-pixel margin - ignore edges near borders
+    localparam MARGIN = 20;
+    wire convolution_valid_now = (x_pos >= KERNEL_W - 1) && (y_pos >= KERNEL_H - 1) &&
+                                  (x_pos >= MARGIN) && (x_pos < IMG_WIDTH - MARGIN) &&
+                                  (y_pos >= MARGIN) && (y_pos < IMG_HEIGHT - MARGIN);
     logic convolution_valid;
     
     always_ff @(posedge clk or negedge rst_n) begin
