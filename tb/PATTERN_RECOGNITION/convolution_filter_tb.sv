@@ -19,6 +19,7 @@ module convolution_filter_tb;
     localparam int VALID_CONV_HEIGHT = IMG_HEIGHT - (KERNEL_H - 1); // 478
     localparam int EXPECTED_EDGE_PIXELS = VALID_CONV_WIDTH * VALID_CONV_HEIGHT; // 305164
     localparam int EXPECTED_BW_PIXELS = IMG_WIDTH * IMG_HEIGHT;      // 307200
+    localparam int PIXEL_MARGIN = 2;  // Moved here from procedural block
     
     // ========================================================================
     // DUT Signals
@@ -142,11 +143,8 @@ module convolution_filter_tb;
         x_valid = 0;
         $display("Finished sending all input pixels");
 
-        // Define acceptable margin (2 pixels)
-        localparam int PIXEL_MARGIN = 2;
-
         // Give extra time for pipeline to flush the last pixel
-        repeat(50) @(posedge clk);  // Increased from 20
+        repeat(50) @(posedge clk);
 
         // Wait for all outputs with CORRECTED expectations
         i = 0;
@@ -157,7 +155,7 @@ module convolution_filter_tb;
         end
 
         // Extra cycles to ensure last pixel is captured
-        repeat(5) @(posedge clk);  // Increased from 5
+        repeat(5) @(posedge clk);
         $display("Final pixel_out_edge_count after extra wait: %0d (expected %0d)", pixel_out_edge_count, EXPECTED_EDGE_PIXELS);
         $display("Final pixel_out_bw_count after extra wait: %0d (expected %0d)", pixel_out_bw_count, EXPECTED_BW_PIXELS);
 
