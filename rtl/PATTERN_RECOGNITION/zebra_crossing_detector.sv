@@ -37,10 +37,8 @@ module zebra_crossing_detector #(
     // NEW: Output connected components count and lowest edge Y
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components,
     output logic [$clog2(IMG_HEIGHT)-1:0] lowest_edge_y,
-    output logic components_done,
+    output logic components_done
 
-    // Track the maximum Y coordinate (lowest point in image)
-    output logic [$clog2(IMG_HEIGHT)-1:0] max_y
 );
 
     // Criteria 1: need enough white regions
@@ -107,7 +105,10 @@ module zebra_crossing_detector #(
     
     logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_edge_instances;
     logic [$clog2(MIN_CONNECTED_EDGE_PIXELS)-1:0] component_size;
-        
+    
+    // Track the maximum Y coordinate (lowest point in image)
+    logic [$clog2(IMG_HEIGHT)-1:0] max_y;
+    
     // Visited bitmap for edge pixels only
     logic visited [0:MAX_EDGES-1];
 

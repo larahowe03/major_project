@@ -34,23 +34,31 @@ module pattern_recognition #(
     output logic num_connected_edge_instances_fulfilled,
     output logic lowest_edge_position_fulfilled,
     
-    // NEW: Connected components count and lowest edge position
+    // Edge bounding box outputs
+    output logic [$clog2(IMG_HEIGHT)-1:0] edge_top,
+    output logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom,
+    output logic [$clog2(IMG_WIDTH)-1:0] edge_left,
+    output logic [$clog2(IMG_WIDTH)-1:0] edge_right,
+    
+    // Connected components count
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components,
-    output logic [$clog2(IMG_HEIGHT)-1:0] lowest_edge_y,
-    output logic components_valid,
-
-    output logic [$clog2(IMG_HEIGHT)-1:0] max_y
+    output logic components_valid
 );
 
-    // NEW: Internal signals from detector
+    // Internal signals from detector
     logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_components_internal;
-    logic [$clog2(IMG_HEIGHT)-1:0] lowest_edge_y_internal;
     logic components_done;
+    
+    // Bounding box from convolution filter
+    logic [$clog2(IMG_HEIGHT)-1:0] edge_top_internal;
+    logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom_internal;
+    logic [$clog2(IMG_WIDTH)-1:0] edge_left_internal;
+    logic [$clog2(IMG_WIDTH)-1:0] edge_right_internal;
 
     localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
 
     // ========================================================================
-    // Convolution filter - counts pixels, no BRAM needed
+    // Convolution filter with bounding box tracking
     // ========================================================================
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
@@ -73,6 +81,10 @@ module pattern_recognition #(
         .kernel(kernel),
         .num_white_edge_pixels(num_white_edge_pixels),
         .num_white_threshold_pixels(num_white_threshold_pixels),
+        .edge_top(edge_top_internal),
+        .edge_bottom(edge_bottom_internal),
+        .edge_left(edge_left_internal),
+        .edge_right(edge_right_internal),
         .white_count_valid(white_count_valid)
     );
 
@@ -105,7 +117,7 @@ module pattern_recognition #(
     wire frame_complete = (x_pos == IMG_WIDTH - 1) && (y_pos == IMG_HEIGHT - 1) && y_valid;
 
     // ========================================================================
-    // Sparse Edge Storage - ONLY storage needed!
+    // Sparse Edge Storage
     // ========================================================================
     logic [$clog2(MAX_EDGES)-1:0] edge_read_idx;
     logic [$clog2(IMG_WIDTH)-1:0] edge_x;
@@ -146,18 +158,18 @@ module pattern_recognition #(
     );
 
     // ========================================================================
-    // Zebra Crossing Detector - no BRAM interface needed!
+    // Zebra Crossing Detector
     // ========================================================================
     zebra_crossing_detector #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
         .MAX_EDGES(MAX_EDGES),
-        .MIN_WHITE_PIXELS(61440),
+        .MIN_WHITE_PIXELS(38400),
         .MAX_WHITE_PIXELS(307200),
-        .MIN_EDGE_PIXELS(1500),
+        .MIN_EDGE_PIXELS(2000),
         .MIN_CONNECTED_EDGE_PIXELS(20),
         .MIN_CONNECTED_EDGE_INSTANCES(10),
-        .MIN_LOWEST_EDGE_Y(IMG_HEIGHT * 4 / 5)  // Bottom fifth of image
+        .MIN_LOWEST_EDGE_Y(IMG_HEIGHT * 4 / 5)
     ) u_zebra_crossing_detector (
         .clk(clk),
         .rst_n(rst_n),
@@ -180,26 +192,35 @@ module pattern_recognition #(
         
         .capture_trigger(capture_trigger),
         
-        // NEW: Connected components and lowest edge outputs
         .num_connected_components(num_components_internal),
-        .lowest_edge_y(lowest_edge_y_internal),
-        .components_done(components_done),
-        .max_y(max_y)
+        .lowest_edge_y(),  // Not used - we get it from convolution filter
+        .components_done(components_done)
     );
     
-    // Register components count and lowest edge Y for stable display
+    // Register outputs for stable display
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             num_connected_components <= '0;
-            lowest_edge_y <= '0;
             components_valid <= 1'b0;
+            edge_top <= '0;
+            edge_bottom <= '0;
+            edge_left <= '0;
+            edge_right <= '0;
         end else begin
+            // Update connected components when detector finishes
             if (components_done) begin
                 num_connected_components <= num_components_internal;
-                lowest_edge_y <= lowest_edge_y_internal;
                 components_valid <= 1'b1;
             end else begin
                 components_valid <= 1'b0;
+            end
+            
+            // Update bounding box when frame completes
+            if (white_count_valid) begin
+                edge_top <= edge_top_internal;
+                edge_bottom <= edge_bottom_internal;
+                edge_left <= edge_left_internal;
+                edge_right <= edge_right_internal;
             end
         end
     end

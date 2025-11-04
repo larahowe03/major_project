@@ -38,7 +38,7 @@ module top_level (
 
 	// Camera and VGA PLL
 	logic clk_video, send_camera_config;
-	assign send_camera_config = !KEY[2]; // camera reset
+	assign send_camera_config = !KEY[2];
 
 	logic video_pll_locked, config_finished;
 	assign OV7670_XCLK = clk_video;
@@ -98,7 +98,7 @@ module top_level (
 	wire pix_valid = vga_ready;
 
 	// ========================================================================
-	// BACK TO 640×480 - Process at full VGA resolution
+	// Parameters
 	// ========================================================================
 	
 	localparam IMG_HEIGHT = 480;
@@ -111,7 +111,6 @@ module top_level (
 	// ========================================================================
 	
 	wire [7:0] gray_px = {video_data[3:0], video_data[3:0]};
-	wire [11:0] grayscale_rgb444 = {gray_px[7:4], gray_px[7:4], gray_px[7:4]};
 
 	localparam logic signed [7:0] AGGRESSIVE [0:2][0:2] = '{
 		'{-8'sd1, -8'sd1, -8'sd1},
@@ -135,12 +134,13 @@ module top_level (
 	
 	logic valid_to_read, capturing;
 	
-	// NEW: Connected components count and lowest edge position
+	// Bounding box and components
 	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components;
-	logic [$clog2(IMG_HEIGHT)-1:0] lowest_edge_y;
+	logic [$clog2(IMG_HEIGHT)-1:0] edge_top;
+	logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom;
+	logic [$clog2(IMG_WIDTH)-1:0] edge_left;
+	logic [$clog2(IMG_WIDTH)-1:0] edge_right;
 	logic components_valid;
-
-    logic [$clog2(IMG_HEIGHT)-1:0] max_y;
 
 	pattern_recognition #(
 		.IMG_WIDTH(IMG_WIDTH),
@@ -177,65 +177,105 @@ module top_level (
 		.num_connected_edge_instances_fulfilled(LEDR[2]),
 		.lowest_edge_position_fulfilled(LEDR[3]),
 		
-		// NEW: Connected components and lowest edge outputs
+		// Bounding box and components
+		.edge_top(edge_top),
+		.edge_bottom(edge_bottom),
+		.edge_left(edge_left),
+		.edge_right(edge_right),
 		.num_connected_components(num_connected_components),
-		.lowest_edge_y(lowest_edge_y),
-		.components_valid(components_valid),
-		.max_y(max_y)
+		.components_valid(components_valid)
 	);
 
 	assign pr_y_ready = 1'b1;
 
 	// ========================================================================
-	// DISPLAY SELECTION WITH SW[1]
+	// Register values for display
 	// ========================================================================
 	
 	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels_show;
 	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels_show;
 	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components_show;
-	logic [$clog2(IMG_HEIGHT)-1:0] lowest_edge_y_show;
+	logic [$clog2(IMG_HEIGHT)-1:0] edge_top_show;
+	logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom_show;
+	logic [$clog2(IMG_WIDTH)-1:0] edge_left_show;
+	logic [$clog2(IMG_WIDTH)-1:0] edge_right_show;
 
 	always_ff @(posedge clk_video or negedge rst_n) begin
 		if (!rst_n) begin
 			num_white_edge_pixels_show <= '0;
 			num_white_threshold_pixels_show <= '0;
 			num_connected_components_show <= '0;
-			lowest_edge_y_show <= '0;
+			edge_top_show <= '0;
+			edge_bottom_show <= '0;
+			edge_left_show <= '0;
+			edge_right_show <= '0;
 		end else begin
 			if (white_count_valid) begin
 				num_white_edge_pixels_show <= num_white_edge_pixels;
 				num_white_threshold_pixels_show <= num_white_threshold_pixels;
+				edge_top_show <= edge_top;
+				edge_bottom_show <= edge_bottom;
+				edge_left_show <= edge_left;
+				edge_right_show <= edge_right;
 			end
 			if (components_valid) begin
 				num_connected_components_show <= num_connected_components;
-				lowest_edge_y_show <= lowest_edge_y;
 			end
 		end
 	end
 
 	// ========================================================================
 	// 7-SEGMENT DISPLAY SELECTION
-	// SW[1] = 0: Show edge pixels (HEX3-0) and threshold pixels (HEX7-4)
-	// SW[1] = 1: Show connected components (HEX3-0) and lowest_edge_y (HEX7-4)
+	// SW[1:0] selects display mode:
+	//   00: Edge pixels (HEX3-0) and Threshold pixels (HEX7-4)
+	//   01: Components (HEX3-0) and Bottom edge Y (HEX7-4)
+	//   10: Top edge Y (HEX3-0) and Bottom edge Y (HEX7-4)
+	//   11: Left edge X (HEX3-0) and Right edge X (HEX7-4)
 	// ========================================================================
 	
-	wire [15:0] lower_display = num_connected_components_show[15:0];
-	                            //         num_white_edge_pixels_show[15:0];
+	logic [15:0] lower_display, upper_display;
 	
-	wire [15:0] upper_display = max_y;//SW[1] ? {7'd0, lowest_edge_y_show[8:0]} :
-	                                     //num_white_threshold_pixels_show[15:0];
+	always_comb begin
+		case (SW[1:0])
+			2'b00: begin  // Default: edge and threshold counts
+				lower_display = num_white_edge_pixels_show[15:0];
+				upper_display = num_white_threshold_pixels_show[15:0];
+			end
+			2'b01: begin  // Components and bottom edge
+				lower_display = num_connected_components_show[15:0];
+				upper_display = {7'd0, edge_bottom_show[8:0]};
+			end
+			2'b10: begin  // Top and bottom edge Y
+				lower_display = {7'd0, edge_top_show[8:0]};
+				upper_display = {7'd0, edge_bottom_show[8:0]};
+			end
+			2'b11: begin  // Left and right edge X
+				lower_display = {6'd0, edge_left_show[9:0]};
+				upper_display = {6'd0, edge_right_show[9:0]};
+			end
+		endcase
+	end
 
 	// ========================================================================
-	// ENHANCED DEBUGGING LEDs
+	// LED Display
 	// ========================================================================
-	assign LEDG[0] = capturing;                              // Capturing edges
-	assign LEDG[1] = valid_to_read;                          // Data ready to read
-	assign LEDG[2] = SW[1];                                  // Display mode switch
-	assign LEDG[3] = components_valid;                       // Components count updated
-	assign LEDG[4] = (num_connected_components_show > 0);    // Non-zero components found
-	assign LEDG[5] = (lowest_edge_y_show >= IMG_HEIGHT * 4 / 5);  // Edge in bottom fifth
-	assign LEDG[6] = white_count_valid;                      // White count updated
-	assign LEDG[7] = (num_white_edge_pixels_show > 2000);    // Enough edge pixels
+	assign LEDG[0] = capturing;
+	assign LEDG[1] = valid_to_read;
+	assign LEDG[2] = SW[0];
+	assign LEDG[3] = components_valid;
+	assign LEDG[4] = (num_connected_components_show > 0);
+	assign LEDG[5] = (edge_bottom_show >= IMG_HEIGHT * 4 / 5);  // Bottom 20%
+	assign LEDG[6] = white_count_valid;
+	assign LEDG[7] = (num_white_edge_pixels_show > 2000);
+	
+	// Show bounding box validity on LEDR[17:4]
+	assign LEDR[17] = (edge_bottom_show > edge_top_show);        // Valid vertical range
+	assign LEDR[16] = (edge_right_show > edge_left_show);        // Valid horizontal range
+	assign LEDR[15:14] = SW[1:0];                                // Show display mode
+	assign LEDR[13:10] = edge_bottom_show[8:5];                  // Upper bits of bottom Y
+	assign LEDR[9:6] = edge_top_show[8:5];                       // Upper bits of top Y
+	assign LEDR[5:4] = 2'b00;
+	// LEDR[3:0] used by criteria flags
 	
 	display u_display_lower (
 		.clk(clk_video),

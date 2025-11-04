@@ -5,8 +5,8 @@ module convolution_filter #(
     parameter KERNEL_W = 3,
     parameter W = 8,          
     parameter W_FRAC = 0,
-    parameter EDGE_THRESHOLD = 8'd150,  // Changed from 150 (try 200 idk)
-    parameter WHITE_THRESHOLD = 8'd150  // Changed from 150
+    parameter EDGE_THRESHOLD = 8'd150,
+    parameter WHITE_THRESHOLD = 8'd150
 )(
     input logic clk,
     input logic rst_n,
@@ -17,8 +17,8 @@ module convolution_filter #(
     input logic [W-1:0] x_data,
     
     // Output stream
-    output logic y_valid,          // Valid for edge detection
-    output logic y_valid_bw,       // Valid for threshold (NEW - separate!)
+    output logic y_valid,
+    output logic y_valid_bw,
     input logic y_ready,
     output logic [W-1:0] y_data,
     output logic [W-1:0] y_data_bw,
@@ -26,9 +26,13 @@ module convolution_filter #(
     // Kernel
     input logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1],
 
-    // White pixel count
+    // White pixel count and edge bounding box
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels,
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
+    output logic [$clog2(IMG_HEIGHT)-1:0] edge_top,     // Minimum Y (top of image)
+    output logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom,  // Maximum Y (bottom of image)
+    output logic [$clog2(IMG_WIDTH)-1:0] edge_left,     // Minimum X (left of image)
+    output logic [$clog2(IMG_WIDTH)-1:0] edge_right,    // Maximum X (right of image)
     output logic white_count_valid
 );
 
@@ -168,6 +172,8 @@ module convolution_filter #(
 
     logic x_valid_d1;
     logic convolution_valid_d1;
+    logic [$clog2(IMG_WIDTH)-1:0] x_pos_d1;
+    logic [$clog2(IMG_HEIGHT)-1:0] y_pos_d1;
     logic [W-1:0] x_data_d1;
     logic [W-1:0] binary_result_d1;
     logic last_pixel_d1;
@@ -180,6 +186,8 @@ module convolution_filter #(
             y_data_bw <= '0;
             x_valid_d1 <= 1'b0;
             convolution_valid_d1 <= 1'b0;
+            x_pos_d1 <= '0;
+            y_pos_d1 <= '0;
             x_data_d1 <= '0;
             binary_result_d1 <= '0;
             last_pixel_d1 <= 1'b0;
@@ -188,6 +196,8 @@ module convolution_filter #(
                 // Update delayed signals
                 x_valid_d1 <= x_valid;
                 convolution_valid_d1 <= convolution_valid;
+                x_pos_d1 <= x_pos;
+                y_pos_d1 <= y_pos;
                 x_data_d1 <= x_data;
                 binary_result_d1 <= binary_result;
                 last_pixel_d1 <= last_pixel;
@@ -206,9 +216,9 @@ module convolution_filter #(
                     y_data_bw <= 8'd0;
                 end
                 
-                // Valid signals - set OUTSIDE conditional logic
-                y_valid <= convolution_valid_d1 && x_valid_d1;  // Only valid in conv region
-                y_valid_bw <= x_valid_d1;  // Valid for all pixels
+                // Valid signals
+                y_valid <= convolution_valid_d1 && x_valid_d1;
+                y_valid_bw <= x_valid_d1;
                 
             end else if (y_ready) begin
                 if (y_valid) y_valid <= 1'b0;
@@ -217,27 +227,63 @@ module convolution_filter #(
         end
     end
 
-    // WHITE PIXEL COUNTER - IMPROVED
+    // WHITE PIXEL COUNTER AND EDGE BOUNDING BOX TRACKER
+    logic [$clog2(IMG_HEIGHT)-1:0] min_y, max_y;
+    logic [$clog2(IMG_WIDTH)-1:0] min_x, max_x;
+    logic edge_found;  // Track if we've found at least one edge pixel
+    
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             num_white_edge_pixels <= '0;
             num_white_threshold_pixels <= '0;
+            min_y <= '1;  // Initialize to max value
+            max_y <= '0;  // Initialize to min value
+            min_x <= '1;  // Initialize to max value
+            max_x <= '0;  // Initialize to min value
+            edge_found <= 1'b0;
             white_count_valid <= 1'b0;
         end else begin
             // Signal frame complete and hold for multiple cycles
             if (handshake && last_pixel_d1) begin
                 white_count_valid <= 1'b1;  // Start valid pulse
-            end else if (white_count_valid && handshake && x_pos > 10) begin  // Hold for ~10 pixels
+                // Latch final bounding box values
+                edge_top <= min_y;
+                edge_bottom <= max_y;
+                edge_left <= min_x;
+                edge_right <= max_x;
+            end else if (white_count_valid && handshake && x_pos > 10) begin
                 white_count_valid <= 1'b0;  // End valid pulse
-                // Reset counters AFTER valid pulse ends
+                // Reset counters and bounding box
                 num_white_edge_pixels <= '0;
                 num_white_threshold_pixels <= '0;
+                min_y <= '1;
+                max_y <= '0;
+                min_x <= '1;
+                max_x <= '0;
+                edge_found <= 1'b0;
             end else begin
-                // Count pixels during frame
+                // Count white edge pixels and track bounding box
                 if (handshake && convolution_valid_d1 && binary_result_d1 == 8'd255) begin
                     num_white_edge_pixels <= num_white_edge_pixels + 1'b1;
+                    
+                    // Track bounding box
+                    if (!edge_found) begin
+                        // First edge pixel - initialize bounding box
+                        min_y <= y_pos_d1;
+                        max_y <= y_pos_d1;
+                        min_x <= x_pos_d1;
+                        max_x <= x_pos_d1;
+                        edge_found <= 1'b1;
+                    end else begin
+                        // Update bounding box
+                        if (y_pos_d1 < min_y) min_y <= y_pos_d1;
+                        if (y_pos_d1 > max_y) max_y <= y_pos_d1;
+                        if (x_pos_d1 < min_x) min_x <= x_pos_d1;
+                        if (x_pos_d1 > max_x) max_x <= x_pos_d1;
+                    end
                 end
                 
+                // Count white threshold pixels
                 if (handshake && x_valid_d1 && x_data_d1 >= WHITE_THRESHOLD) begin
                     num_white_threshold_pixels <= num_white_threshold_pixels + 1'b1;
                 end
