@@ -30,9 +30,10 @@ module convolution_filter #(
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels,
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
     output logic [$clog2(IMG_HEIGHT)-1:0] edge_top,     // Minimum Y (top of image)
-    output logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom,  // Maximum Y (bottom of image)
+    output logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom,  // Maximum Y (bottom of image) - EDGES
     output logic [$clog2(IMG_WIDTH)-1:0] edge_left,     // Minimum X (left of image)
     output logic [$clog2(IMG_WIDTH)-1:0] edge_right,    // Maximum X (right of image)
+    output logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom,  // Maximum Y for THRESHOLDED pixels
     output logic close_to_crossing,                      // HIGH when edge_bottom > 380
     output logic white_count_valid
 );
@@ -237,6 +238,10 @@ module convolution_filter #(
     logic [$clog2(IMG_WIDTH)-1:0] min_x, max_x;
     logic edge_found;  // Track if we've found at least one edge pixel
     
+    // Track bounding box for thresholded (white) pixels separately
+    logic [$clog2(IMG_HEIGHT)-1:0] threshold_max_y;
+    logic threshold_found;
+    
     // Threshold for close to crossing detection (380 out of 480)
     localparam CLOSE_THRESHOLD = 380;
     
@@ -252,7 +257,9 @@ module convolution_filter #(
             max_y <= '0;  // Initialize to min value
             min_x <= '1;  // Initialize to max value
             max_x <= '0;  // Initialize to min value
+            threshold_max_y <= '0;
             edge_found <= 1'b0;
+            threshold_found <= 1'b0;
             white_count_valid <= 1'b0;
             close_to_crossing <= 1'b0;
             close_to_crossing_counter <= '0;
@@ -260,11 +267,13 @@ module convolution_filter #(
             // Signal frame complete and hold for multiple cycles
             if (handshake && last_pixel_d1) begin
                 white_count_valid <= 1'b1;  // Start valid pulse
-                // Latch final bounding box values
+                // Latch final bounding box values for edges
                 edge_top <= min_y;
                 edge_bottom <= max_y;
                 edge_left <= min_x;
                 edge_right <= max_x;
+                // Latch threshold bottom
+                threshold_bottom <= threshold_max_y;
                 
                 // Debounce close_to_crossing signal
                 if (max_y > CLOSE_THRESHOLD) begin
@@ -283,14 +292,16 @@ module convolution_filter #(
                 end
             end else if (white_count_valid && handshake && x_pos > 10) begin
                 white_count_valid <= 1'b0;  // End valid pulse
-                // Reset counters and bounding box
+                // Reset counters and bounding boxes
                 num_white_edge_pixels <= '0;
                 num_white_threshold_pixels <= '0;
                 min_y <= '1;
                 max_y <= '0;
                 min_x <= '1;
                 max_x <= '0;
+                threshold_max_y <= '0;
                 edge_found <= 1'b0;
+                threshold_found <= 1'b0;
             end else begin
                 // Count white edge pixels and track bounding box
                 if (handshake && convolution_valid_d1 && binary_result_d1 == 8'd255) begin
@@ -313,9 +324,19 @@ module convolution_filter #(
                     end
                 end
                 
-                // Count white threshold pixels
+                // Count white threshold pixels and track max Y
                 if (handshake && x_valid_d1 && x_data_d1 >= WHITE_THRESHOLD) begin
                     num_white_threshold_pixels <= num_white_threshold_pixels + 1'b1;
+                    
+                    // Track maximum Y for threshold pixels
+                    if (!threshold_found) begin
+                        threshold_max_y <= y_pos_d1;
+                        threshold_found <= 1'b1;
+                    end else begin
+                        if (y_pos_d1 > threshold_max_y) begin
+                            threshold_max_y <= y_pos_d1;
+                        end
+                    end
                 end
             end
         end

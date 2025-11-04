@@ -39,6 +39,7 @@ module pattern_recognition #(
     output logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom,
     output logic [$clog2(IMG_WIDTH)-1:0] edge_left,
     output logic [$clog2(IMG_WIDTH)-1:0] edge_right,
+    output logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom,  // Max Y for thresholded pixels
     output logic close_to_crossing,  // HIGH when edge_bottom > 380
     
     // Connected components count
@@ -55,6 +56,7 @@ module pattern_recognition #(
     logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom_internal;
     logic [$clog2(IMG_WIDTH)-1:0] edge_left_internal;
     logic [$clog2(IMG_WIDTH)-1:0] edge_right_internal;
+    logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom_internal;
     logic close_to_crossing_internal;
 
     localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
@@ -87,6 +89,7 @@ module pattern_recognition #(
         .edge_bottom(edge_bottom_internal),
         .edge_left(edge_left_internal),
         .edge_right(edge_right_internal),
+        .threshold_bottom(threshold_bottom_internal),
         .close_to_crossing(close_to_crossing_internal),
         .white_count_valid(white_count_valid)
     );
@@ -209,6 +212,7 @@ module pattern_recognition #(
             edge_bottom <= '0;
             edge_left <= '0;
             edge_right <= '0;
+            threshold_bottom <= '0;
             close_to_crossing <= 1'b0;
         end else begin
             // Update connected components when detector finishes
@@ -225,6 +229,7 @@ module pattern_recognition #(
                 edge_bottom <= edge_bottom_internal;
                 edge_left <= edge_left_internal;
                 edge_right <= edge_right_internal;
+                threshold_bottom <= threshold_bottom_internal;
                 close_to_crossing <= close_to_crossing_internal;
             end
         end
