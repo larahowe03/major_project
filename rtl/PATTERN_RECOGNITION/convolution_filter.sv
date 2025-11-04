@@ -240,6 +240,10 @@ module convolution_filter #(
     // Threshold for close to crossing detection (380 out of 480)
     localparam CLOSE_THRESHOLD = 380;
     
+    // Debouncing for close_to_crossing signal (must be true for 10 frames)
+    logic [3:0] close_to_crossing_counter;  // Counts up to 10
+    localparam DEBOUNCE_FRAMES = 10;
+    
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             num_white_edge_pixels <= '0;
@@ -251,6 +255,7 @@ module convolution_filter #(
             edge_found <= 1'b0;
             white_count_valid <= 1'b0;
             close_to_crossing <= 1'b0;
+            close_to_crossing_counter <= '0;
         end else begin
             // Signal frame complete and hold for multiple cycles
             if (handshake && last_pixel_d1) begin
@@ -260,8 +265,22 @@ module convolution_filter #(
                 edge_bottom <= max_y;
                 edge_left <= min_x;
                 edge_right <= max_x;
-                // Set close_to_crossing flag if bottom edge is low enough in frame
-                close_to_crossing <= (max_y > CLOSE_THRESHOLD);
+                
+                // Debounce close_to_crossing signal
+                if (max_y > CLOSE_THRESHOLD) begin
+                    // Condition is true - increment counter
+                    if (close_to_crossing_counter < DEBOUNCE_FRAMES) begin
+                        close_to_crossing_counter <= close_to_crossing_counter + 1'b1;
+                    end
+                    // Set signal only after counter reaches threshold
+                    if (close_to_crossing_counter >= DEBOUNCE_FRAMES - 1) begin
+                        close_to_crossing <= 1'b1;
+                    end
+                end else begin
+                    // Condition is false - reset counter and signal
+                    close_to_crossing_counter <= '0;
+                    close_to_crossing <= 1'b0;
+                end
             end else if (white_count_valid && handshake && x_pos > 10) begin
                 white_count_valid <= 1'b0;  // End valid pulse
                 // Reset counters and bounding box
