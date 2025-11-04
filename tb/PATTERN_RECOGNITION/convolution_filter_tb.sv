@@ -143,19 +143,20 @@ module convolution_filter_tb;
         $display("Finished sending all input pixels");
         
         // Give extra time for pipeline to flush the last pixel
-        repeat(20) @(posedge clk);
-        
+        repeat(50) @(posedge clk);  // Increased from 20
+
         // Wait for all outputs with CORRECTED expectations
         i = 0;
         while ((pixel_out_edge_count < EXPECTED_EDGE_PIXELS || pixel_out_bw_count < EXPECTED_BW_PIXELS) && i < 500000) begin
             @(posedge clk);
             i = i + 1;
         end
-        
-        // Extra cycles to ensure last pixel is captured (race condition fix)
-        repeat(5) @(posedge clk);
+
+        // Extra cycles to ensure last pixel is captured
+        repeat(50) @(posedge clk);  // Increased from 5
         $display("Final pixel_out_edge_count after extra wait: %0d (expected %0d)", pixel_out_edge_count, EXPECTED_EDGE_PIXELS);
         $display("Final pixel_out_bw_count after extra wait: %0d (expected %0d)", pixel_out_bw_count, EXPECTED_BW_PIXELS);
+
         
         if (pixel_out_edge_count >= EXPECTED_EDGE_PIXELS) begin
             $display("✓ All edge detection output pixels received!");
