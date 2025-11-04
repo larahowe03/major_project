@@ -173,6 +173,27 @@ module convolution_filter_tb;
             $display("⚠ Threshold outputs: Received %0d/%0d pixels (missing %0d)", 
                     pixel_out_bw_count, EXPECTED_BW_PIXELS, EXPECTED_BW_PIXELS - pixel_out_bw_count);
         end
+
+        // Add this after the main loop, before waiting for white_count_valid
+        repeat(100) @(posedge clk);
+
+        // Monitor white_count_valid for a while
+        $display("\n=== Monitoring white_count_valid ===");
+        for (i = 0; i < 1000; i = i + 1) begin
+            @(posedge clk);
+            if (white_count_valid) begin
+                $display("Time: %0t - white_count_valid detected! Edge: %0d, BW: %0d", 
+                        $time, num_white_edge_pixels, num_white_threshold_pixels);
+                break;
+            end
+            if (i % 100 == 0) begin
+                $display("Cycle %0d: white_count_valid=%b", i, white_count_valid);
+            end
+        end
+
+        if (i == 1000) begin
+            $display("WARNING: white_count_valid never went high!");
+        end
         
         // Monitor white pixel counts
         wait(white_count_valid);
