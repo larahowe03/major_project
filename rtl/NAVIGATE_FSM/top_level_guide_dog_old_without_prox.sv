@@ -1,17 +1,9 @@
-module top_level_guide_dog (
+module top_level_guide_dog_old_without_prox (
   input  logic        CLOCK_50,
   input  logic [9:0]  SW,          // SW0=start, SW1=obstacle, SW2=zebra, SW3=path_clear
   input  logic [3:0]  KEY,         // KEY1=reset (active-low), KEY0=estop (active-low)
   inout  [35:0]       GPIO,        // GPIO[31] = UART TX to UGV02 RX
-  output [6:0]   HEX0,
-	output [6:0]   HEX1,
-	output [6:0]   HEX2,
-	output [6:0]   HEX3,
-	output [6:0]   HEX4,
-	output [6:0]   HEX5,
-	output [6:0]   HEX6,
-	output [6:0]   HEX7,
-	output logic [17:0]  LEDR
+  output logic [9:0]  LEDR
 );
   // =================== Reset ===================
 logic rst_n; 
@@ -23,10 +15,9 @@ logic start_lvl, start_rise;
 deb_edge u_start (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[0]),   .level(start_lvl), .rise(start_rise));
 
 // Level-only debounces (rises unused)
-//UNCOMMENT THESE ONCE MODULES ARE INTEGRATED
-//logic obstacle_lvl;        deb_edge u_obs  (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[1]),   .level(obstacle_lvl),      .rise());
+logic obstacle_lvl;        deb_edge u_obs  (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[1]),   .level(obstacle_lvl),      .rise());
 logic zebra_lvl;           deb_edge u_zeb  (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[2]),   .level(zebra_lvl),         .rise());
-//logic person_far_lvl;      deb_edge u_far  (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[3]),   .level(person_far_lvl),    .rise());
+logic person_far_lvl;      deb_edge u_far  (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[3]),   .level(person_far_lvl),    .rise());
 logic clap_lvl;            deb_edge u_clap (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[4]),   .level(clap_lvl),          .rise());
 
 // Emergency stop from KEY0 (active-low button)
@@ -42,72 +33,28 @@ tick_gen #(.CLK_HZ(50_000_000), .TICK_HZ(20)) u_tick(
 // =================== Command bus (3 bits) ===================
 logic [2:0] cmd_sel;
 
-//===================Proximity block ========================
-logic stop_front_raw;
-logic stop_back_raw;
-
-top_level_proximity u_prox (
-  .CLOCK_50   (CLOCK_50),
-  .KEY        (KEY),
-  .GPIO       (GPIO),        // shares the same header pins you used
-  .HEX0			(HEX0),
-  .HEX1			(HEX1),
-  .HEX2			(HEX2),
-	.HEX3			(HEX3),
-	.HEX4			(HEX4),
-	.HEX5			(HEX5),
-	.HEX6			(HEX6),
-	.HEX7			(HEX7),
-	.LEDR			(LEDR[17:15]), 
-	  // NEW:
-  .rst_n         (rst_n),
-  .tick_20hz     (tick_20hz),
-  
-  .stop_front_2s (stop_front_raw),
-  .stop_back_1s  (stop_back_raw)
-);
-
-
-
-
 // =================== Guide FSM (new signals) ===================
-//guide_fsm #(
-//  .CLK_HZ   (50_000_000),
-//  .TICK_HZ  (20),
-//  // Timings for S-curve & zebra (tune if needed)
-//  .BACK_MS  (2000),
-//.R1_MS(3000),   // was 400
-//.COAST_MS(1500), 
-//.L_MS (5900),  // was 900
-//.R2_MS(3400),    // was 400
-//  .ZEBRA_MS (3000)
-//) 
-
 guide_fsm #(
   .CLK_HZ   (50_000_000),
   .TICK_HZ  (20),
+  // Timings for S-curve & zebra (tune if needed)
   .BACK_MS  (2000),
-  .R1_MS    (3000),
-  .L1_MS    (800),   // small left
-  .COAST_MS (1800),  // straight
-  .L2_MS    (5000),   // continue left
-  .R2_MS    (3400),
+.R1_MS(3000),   // was 400
+.L_MS (3900),  // was 900
+.R2_MS(3000),    // was 400
   .ZEBRA_MS (3000)
 ) u_fsm (
   .clk                     (CLOCK_50),
   .rst_n                   (rst_n),
   .start_whistle           (start_rise),     // SW0 edge
-  .obstacle_stop           (stop_front_raw),   // SW1 level
+  .obstacle_stop           (obstacle_lvl),   // SW1 level
   .zebra_pattern_stop      (zebra_lvl),      // SW2 level
-  .person_far_away_stop    (stop_back_raw), // SW3 level
+  .person_far_away_stop    (person_far_lvl), // SW3 level
   .stop_command_clap       (clap_lvl),       // SW4 level
   .IR_remote_emergency_stop(ir_emerg_lvl),   // KEY0 active-low => level high here
   .tick_20hz               (tick_20hz),
   .cmd_sel                 (cmd_sel)         // 3-bit command bus
 );
-
-
-//===================below code should not be changed ===================/
 
 // =================== JSON burst + UART (unchanged except 3-bit cmd_sel) ===================
 logic       tx_valid, tx_ready;

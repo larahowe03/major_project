@@ -16,7 +16,7 @@ module json_burst #(
                          CMD_ARC_L=3'd2, CMD_ARC_R=3'd3,
                          CMD_REV =3'd4;
 
-  // ----- Messages (half speeds) -----
+//  // ----- Messages (half speeds) -----
 // STOP: {"T":1,"L":0.0,"R":0.0}\n  (24)
 localparam int LEN_STOP = 24;
 localparam logic [7:0] MSG_STOP [0:LEN_STOP-1] = '{
@@ -67,6 +67,8 @@ localparam logic [7:0] MSG_REV [0:LEN_REV-1] = '{
   8'h2D,8'h30,8'h2E,8'h30,8'h32,       // "-0.02"
   8'h7D,8'h0A
 };
+
+
 
 
   // Pick message
