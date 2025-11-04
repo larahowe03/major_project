@@ -33,6 +33,7 @@ module convolution_filter #(
     output logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom,  // Maximum Y (bottom of image)
     output logic [$clog2(IMG_WIDTH)-1:0] edge_left,     // Minimum X (left of image)
     output logic [$clog2(IMG_WIDTH)-1:0] edge_right,    // Maximum X (right of image)
+    output logic close_to_crossing,                      // HIGH when edge_bottom > 380
     output logic white_count_valid
 );
 
@@ -236,6 +237,9 @@ module convolution_filter #(
     logic [$clog2(IMG_WIDTH)-1:0] min_x, max_x;
     logic edge_found;  // Track if we've found at least one edge pixel
     
+    // Threshold for close to crossing detection (380 out of 480)
+    localparam CLOSE_THRESHOLD = 380;
+    
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             num_white_edge_pixels <= '0;
@@ -246,6 +250,7 @@ module convolution_filter #(
             max_x <= '0;  // Initialize to min value
             edge_found <= 1'b0;
             white_count_valid <= 1'b0;
+            close_to_crossing <= 1'b0;
         end else begin
             // Signal frame complete and hold for multiple cycles
             if (handshake && last_pixel_d1) begin
@@ -255,6 +260,8 @@ module convolution_filter #(
                 edge_bottom <= max_y;
                 edge_left <= min_x;
                 edge_right <= max_x;
+                // Set close_to_crossing flag if bottom edge is low enough in frame
+                close_to_crossing <= (max_y > CLOSE_THRESHOLD);
             end else if (white_count_valid && handshake && x_pos > 10) begin
                 white_count_valid <= 1'b0;  // End valid pulse
                 // Reset counters and bounding box

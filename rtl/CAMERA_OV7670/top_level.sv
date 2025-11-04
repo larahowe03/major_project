@@ -140,6 +140,7 @@ module top_level (
 	logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom;
 	logic [$clog2(IMG_WIDTH)-1:0] edge_left;
 	logic [$clog2(IMG_WIDTH)-1:0] edge_right;
+	logic close_to_crossing;
 	logic components_valid;
 
 	pattern_recognition #(
@@ -182,6 +183,7 @@ module top_level (
 		.edge_bottom(edge_bottom),
 		.edge_left(edge_left),
 		.edge_right(edge_right),
+		.close_to_crossing(close_to_crossing),
 		.num_connected_components(num_connected_components),
 		.components_valid(components_valid)
 	);
@@ -199,6 +201,7 @@ module top_level (
 	logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom_show;
 	logic [$clog2(IMG_WIDTH)-1:0] edge_left_show;
 	logic [$clog2(IMG_WIDTH)-1:0] edge_right_show;
+	logic close_to_crossing_show;
 
 	always_ff @(posedge clk_video or negedge rst_n) begin
 		if (!rst_n) begin
@@ -209,6 +212,7 @@ module top_level (
 			edge_bottom_show <= '0;
 			edge_left_show <= '0;
 			edge_right_show <= '0;
+			close_to_crossing_show <= 1'b0;
 		end else begin
 			if (white_count_valid) begin
 				num_white_edge_pixels_show <= num_white_edge_pixels;
@@ -217,6 +221,7 @@ module top_level (
 				edge_bottom_show <= edge_bottom;
 				edge_left_show <= edge_left;
 				edge_right_show <= edge_right;
+				close_to_crossing_show <= close_to_crossing;
 			end
 			if (components_valid) begin
 				num_connected_components_show <= num_connected_components;
@@ -246,12 +251,12 @@ module top_level (
 				upper_display = {7'd0, edge_bottom_show[8:0]};
 			end
 			2'b10: begin  // Top and bottom edge Y
-				lower_display = {7'd0, edge_top_show[8:0]};    //top
-				upper_display = {7'd0, edge_bottom_show[8:0]};  //bottom --- if greater than 400 stop
+				lower_display = {7'd0, edge_top_show[8:0]};
+				upper_display = {7'd0, edge_bottom_show[8:0]};
 			end
 			2'b11: begin  // Left and right edge X
-				lower_display = {6'd0, edge_left_show[9:0]};   // left edge
-				upper_display = {6'd0, edge_right_show[9:0]}; // right edge
+				lower_display = {6'd0, edge_left_show[9:0]};
+				upper_display = {6'd0, edge_right_show[9:0]};
 			end
 		endcase
 	end
@@ -264,8 +269,8 @@ module top_level (
 	assign LEDG[2] = SW[0];
 	assign LEDG[3] = components_valid;
 	assign LEDG[4] = (num_connected_components_show > 0);
-	assign LEDG[5] = (edge_bottom_show >= IMG_HEIGHT * 4 / 5);  // Bottom 20%
-	assign LEDG[6] = white_count_valid;
+	assign LEDG[5] = (edge_bottom_show >= IMG_HEIGHT * 4 / 5);  // Bottom 20% (≥384)
+	assign LEDG[6] = close_to_crossing_show;                    // Close to crossing (>380)
 	assign LEDG[7] = (num_white_edge_pixels_show > 2000);
 	
 	// Show bounding box validity on LEDR[17:4]
