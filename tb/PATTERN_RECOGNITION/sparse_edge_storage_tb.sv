@@ -113,40 +113,6 @@ module sparse_edge_storage_tb;
     
     // Task: Load image from MIF file
     task automatic load_image_from_mif();
-        int fd, x, y, pixel;
-        string line;
-        
-        $display("\n--- Loading Image from MIF File ---");
-        $display("Time: %0t - Reading from %s", $time, IMG_FILE);
-        
-        fd = $fopen(IMG_FILE, "r");
-        if (fd == 0) begin
-            $error("Cannot open file: %s", IMG_FILE);
-            $finish;
-        end
-        
-        // Simple MIF parser (format: pixel values as hex or decimal)
-        y = 0;
-        x = 0;
-        
-        while (!$feof(fd) && y < IMG_HEIGHT) begin
-            if ($fscanf(fd, "%d", pixel) == 1) begin
-                image_data[y][x] = pixel;
-                
-                x++;
-                if (x >= IMG_WIDTH) begin
-                    x = 0;
-                    y++;
-                end
-            end
-        end
-        
-        $fclose(fd);
-        $display("Time: %0t - Image loaded: %0d x %0d pixels", $time, IMG_WIDTH, IMG_HEIGHT);
-    endtask
-    
-    // Task: Process image and detect edges
-    task automatic load_image_from_mif();
         integer fd, x, y, pixel, addr, data;
         integer pixels_loaded;
         string line;
