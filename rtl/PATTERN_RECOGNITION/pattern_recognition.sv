@@ -32,14 +32,17 @@ module pattern_recognition #(
     output logic num_threshold_pixels_fulfilled,
     output logic num_edge_pixels_fulfilled,
     output logic num_connected_edge_instances_fulfilled,
+    output logic lowest_edge_position_fulfilled,
     
-    // NEW: Connected components count
+    // NEW: Connected components count and lowest edge position
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components,
+    output logic [$clog2(IMG_HEIGHT)-1:0] lowest_edge_y,
     output logic components_valid
 );
 
     // NEW: Internal signals from detector
     logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_components_internal;
+    logic [$clog2(IMG_HEIGHT)-1:0] lowest_edge_y_internal;
     logic components_done;
 
     localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
@@ -151,7 +154,8 @@ module pattern_recognition #(
         .MAX_WHITE_PIXELS(215040),
         .MIN_EDGE_PIXELS(2000),
         .MIN_CONNECTED_EDGE_PIXELS(20),
-        .MIN_CONNECTED_EDGE_INSTANCES(10)
+        .MIN_CONNECTED_EDGE_INSTANCES(10),
+        .MIN_LOWEST_EDGE_Y(IMG_HEIGHT * 4 / 5)  // Bottom fifth of image
     ) u_zebra_crossing_detector (
         .clk(clk),
         .rst_n(rst_n),
@@ -170,22 +174,26 @@ module pattern_recognition #(
         .num_threshold_pixels_fulfilled(num_threshold_pixels_fulfilled),
         .num_edge_pixels_fulfilled(num_edge_pixels_fulfilled),
         .num_connected_edge_instances_fulfilled(num_connected_edge_instances_fulfilled),
+        .lowest_edge_position_fulfilled(lowest_edge_position_fulfilled),
         
         .capture_trigger(capture_trigger),
         
-        // NEW: Connected components output
+        // NEW: Connected components and lowest edge outputs
         .num_connected_components(num_components_internal),
+        .lowest_edge_y(lowest_edge_y_internal),
         .components_done(components_done)
     );
     
-    // Register components count for stable display
+    // Register components count and lowest edge Y for stable display
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             num_connected_components <= '0;
+            lowest_edge_y <= '0;
             components_valid <= 1'b0;
         end else begin
             if (components_done) begin
                 num_connected_components <= num_components_internal;
+                lowest_edge_y <= lowest_edge_y_internal;
                 components_valid <= 1'b1;
             end else begin
                 components_valid <= 1'b0;

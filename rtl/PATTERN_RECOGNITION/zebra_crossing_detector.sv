@@ -6,7 +6,8 @@ module zebra_crossing_detector #(
     parameter MAX_WHITE_PIXELS = 53760,
     parameter MIN_EDGE_PIXELS = 1000,
     parameter MIN_CONNECTED_EDGE_PIXELS = 20,
-    parameter MIN_CONNECTED_EDGE_INSTANCES = 10
+    parameter MIN_CONNECTED_EDGE_INSTANCES = 10,
+    parameter MIN_LOWEST_EDGE_Y = IMG_HEIGHT * 4 / 5  // Bottom fifth starts at 80% of height
 )(
     input logic clk,
     input logic rst_n,
@@ -33,11 +34,13 @@ module zebra_crossing_detector #(
     output logic num_threshold_pixels_fulfilled,
     output logic num_edge_pixels_fulfilled,
     output logic num_connected_edge_instances_fulfilled,
+    output logic lowest_edge_position_fulfilled,
     
     output logic capture_trigger,
 
-    // NEW: Output connected components count
+    // NEW: Output connected components count and lowest edge Y
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components,
+    output logic [$clog2(IMG_HEIGHT)-1:0] lowest_edge_y,
     output logic components_done
 
 );
@@ -64,6 +67,14 @@ module zebra_crossing_detector #(
         if (!rst_n) num_connected_edge_instances_fulfilled <= 1'b0;
         else if (state == IDLE || state == DONE) begin
             num_connected_edge_instances_fulfilled <= (num_connected_edge_instances >= MIN_CONNECTED_EDGE_INSTANCES);
+        end
+    end
+
+    // Criteria 4: lowest edge must be in bottom fifth of image
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) lowest_edge_position_fulfilled <= 1'b0;
+        else if (state == IDLE || state == DONE) begin
+            lowest_edge_position_fulfilled <= (max_y >= MIN_LOWEST_EDGE_Y);
         end
     end
 
@@ -97,11 +108,15 @@ module zebra_crossing_detector #(
     logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_edge_instances;
     logic [$clog2(MIN_CONNECTED_EDGE_PIXELS)-1:0] component_size;
     
+    // Track the maximum Y coordinate (lowest point in image)
+    logic [$clog2(IMG_HEIGHT)-1:0] max_y;
+    
     // Visited bitmap for edge pixels only
     logic visited [0:MAX_EDGES-1];
 
     // In state machine, expose the internal counter:
     assign num_connected_components = num_connected_edge_instances;
+    assign lowest_edge_y = max_y;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -110,6 +125,7 @@ module zebra_crossing_detector #(
             num_connected_edge_instances <= '0;
             capture_trigger <= '0;
             edge_read_idx <= '0;
+            max_y <= '0;
             
             for (int i = 0; i < MAX_EDGES; i++) begin
                 visited[i] <= 1'b0;
@@ -123,6 +139,7 @@ module zebra_crossing_detector #(
                         current_edge_idx <= '0;
                         capture_trigger <= '0;
                         num_connected_edge_instances <= '0;
+                        max_y <= '0;
                         
                         for (int i = 0; i < MAX_EDGES; i++) begin
                             visited[i] <= 1'b0;
@@ -144,12 +161,22 @@ module zebra_crossing_detector #(
                 end
                 
                 CHECK_VISITED: begin
-                    if (edge_valid && !visited[current_edge_idx]) begin
-                        visited[current_edge_idx] <= 1'b1;
-                        current_pixel <= '{x: edge_x, y: edge_y};
-                        component_size <= 1;
-                        neighbor_index <= '0;
-                        state <= START_COMPONENT;
+                    if (edge_valid) begin
+                        // Track the maximum Y coordinate
+                        if (edge_y > max_y) begin
+                            max_y <= edge_y;
+                        end
+                        
+                        if (!visited[current_edge_idx]) begin
+                            visited[current_edge_idx] <= 1'b1;
+                            current_pixel <= '{x: edge_x, y: edge_y};
+                            component_size <= 1;
+                            neighbor_index <= '0;
+                            state <= START_COMPONENT;
+                        end else begin
+                            current_edge_idx <= current_edge_idx + 1;
+                            state <= SCAN_EDGES;
+                        end
                     end else begin
                         current_edge_idx <= current_edge_idx + 1;
                         state <= SCAN_EDGES;

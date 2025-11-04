@@ -172,6 +172,7 @@ module top_level (
 		.num_threshold_pixels_fulfilled(LEDR[0]),
 		.num_edge_pixels_fulfilled(LEDR[1]),
 		.num_connected_edge_instances_fulfilled(LEDR[2]),
+		.lowest_edge_position_fulfilled(LEDR[3]),
 		
 		// NEW: Connected components output
 		.num_connected_components(num_connected_components),
