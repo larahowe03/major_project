@@ -14,6 +14,12 @@ module convolution_filter_tb;
     
     parameter CLK_PERIOD = 20; // 50 MHz
     
+    // Expected output counts (accounting for border)
+    localparam int VALID_CONV_WIDTH = IMG_WIDTH - (KERNEL_W - 1);   // 638
+    localparam int VALID_CONV_HEIGHT = IMG_HEIGHT - (KERNEL_H - 1); // 478
+    localparam int EXPECTED_EDGE_PIXELS = VALID_CONV_WIDTH * VALID_CONV_HEIGHT; // 305164
+    localparam int EXPECTED_BW_PIXELS = IMG_WIDTH * IMG_HEIGHT;      // 307200
+    
     // ========================================================================
     // DUT Signals
     // ========================================================================
@@ -139,30 +145,30 @@ module convolution_filter_tb;
         // Give extra time for pipeline to flush the last pixel
         repeat(20) @(posedge clk);
         
-        // Wait for all outputs with timeout counter
+        // Wait for all outputs with CORRECTED expectations
         i = 0;
-        while ((pixel_out_edge_count < IMG_WIDTH*IMG_HEIGHT || pixel_out_bw_count < IMG_WIDTH*IMG_HEIGHT) && i < 500000) begin
+        while ((pixel_out_edge_count < EXPECTED_EDGE_PIXELS || pixel_out_bw_count < EXPECTED_BW_PIXELS) && i < 500000) begin
             @(posedge clk);
             i = i + 1;
         end
         
         // Extra cycles to ensure last pixel is captured (race condition fix)
         repeat(5) @(posedge clk);
-        $display("Final pixel_out_edge_count after extra wait: %0d", pixel_out_edge_count);
-        $display("Final pixel_out_bw_count after extra wait: %0d", pixel_out_bw_count);
+        $display("Final pixel_out_edge_count after extra wait: %0d (expected %0d)", pixel_out_edge_count, EXPECTED_EDGE_PIXELS);
+        $display("Final pixel_out_bw_count after extra wait: %0d (expected %0d)", pixel_out_bw_count, EXPECTED_BW_PIXELS);
         
-        if (pixel_out_edge_count >= IMG_WIDTH*IMG_HEIGHT) begin
-            $display("All edge detection output pixels received!");
+        if (pixel_out_edge_count >= EXPECTED_EDGE_PIXELS) begin
+            $display("✓ All edge detection output pixels received!");
         end else begin
-            $display("WARNING: Timeout waiting for edge outputs. Received %0d/%0d pixels", 
-                     pixel_out_edge_count, IMG_WIDTH*IMG_HEIGHT);
+            $display("⚠ Edge outputs: Received %0d/%0d pixels (missing %0d)", 
+                     pixel_out_edge_count, EXPECTED_EDGE_PIXELS, EXPECTED_EDGE_PIXELS - pixel_out_edge_count);
         end
         
-        if (pixel_out_bw_count >= IMG_WIDTH*IMG_HEIGHT) begin
-            $display("All threshold output pixels received!");
+        if (pixel_out_bw_count >= EXPECTED_BW_PIXELS) begin
+            $display("✓ All threshold output pixels received!");
         end else begin
-            $display("WARNING: Timeout waiting for threshold outputs. Received %0d/%0d pixels", 
-                     pixel_out_bw_count, IMG_WIDTH*IMG_HEIGHT);
+            $display("⚠ Threshold outputs: Received %0d/%0d pixels (missing %0d)", 
+                     pixel_out_bw_count, EXPECTED_BW_PIXELS, EXPECTED_BW_PIXELS - pixel_out_bw_count);
         end
         
         // Monitor white pixel counts
@@ -178,8 +184,16 @@ module convolution_filter_tb;
         
         $display("\n=== TEST COMPLETE ===");
         $display("Input pixels:           %0d", pixel_in_count);
-        $display("Output edge pixels:     %0d", pixel_out_edge_count);
-        $display("Output threshold pixels: %0d", pixel_out_bw_count);
+        $display("Output edge pixels:     %0d / %0d", pixel_out_edge_count, EXPECTED_EDGE_PIXELS);
+        $display("Output threshold pixels: %0d / %0d", pixel_out_bw_count, EXPECTED_BW_PIXELS);
+        
+        // Check for success
+        if (pixel_out_edge_count >= EXPECTED_EDGE_PIXELS && pixel_out_bw_count >= EXPECTED_BW_PIXELS) begin
+            $display("\n✓ TEST PASSED");
+        end else begin
+            $display("\n✗ TEST FAILED - Missing pixels");
+        end
+        
         $finish;
     end
     
