@@ -1,6 +1,6 @@
 module sparse_edge_storage #(
-    parameter IMG_WIDTH = 320,
-    parameter IMG_HEIGHT = 240,
+    parameter IMG_WIDTH = 640,
+    parameter IMG_HEIGHT = 480,
     parameter MAX_EDGES = 2048  // Adjust based on expected edge density
 )(
     input logic clk,

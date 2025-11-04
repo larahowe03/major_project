@@ -46,7 +46,7 @@ if __name__ == "__main__":
         output_image = sys.argv[2] if len(sys.argv) > 2 else None
     else:
         # Default example
-        input_image = "real_test_images/test_img.png"
-        output_image = "real_test_images/test_img.png"
+        input_image = "verilog_results/test_img.png"
+        output_image = "verilog_results/test_img.png"
     
-    resize_image(input_image, output_image)
+    resize_image(input_image, output_image, width=640, height=480)

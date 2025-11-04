@@ -213,6 +213,11 @@ module top_level (
 	wire [15:0] lower_display = SW[1] ? num_connected_components_show[15:0] : 
 	                                     num_white_edge_pixels_show[15:0];
 
+	// debugging
+	assign LEDG[3] = components_valid;  // Should pulse when done
+	assign LEDG[4] = (num_connected_components_show > 0);  // Should light if non-zero
+	assign LEDG[5] = valid_to_read;  // Should be high after initial capture
+	
 	display u_display_lower (
 		.clk(clk_video),
 		.value(lower_display),

@@ -25,16 +25,23 @@ module convolution_filter_tb;
     reg [W-1:0] x_data;
     
     wire y_valid;
+    wire y_valid_bw;
     reg y_ready;
     wire [W-1:0] y_data;
+    wire [W-1:0] y_data_bw;
     
     reg signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1];
+    
+    wire [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels;
+    wire [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels;
+    wire white_count_valid;
     
     // ========================================================================
     // Memory for Image Data
     // ========================================================================
     reg [W-1:0] input_image [0:IMG_WIDTH*IMG_HEIGHT-1];
-    reg [W-1:0] output_image [0:IMG_WIDTH*IMG_HEIGHT-1];
+    reg [W-1:0] output_image_edge [0:IMG_WIDTH*IMG_HEIGHT-1];
+    reg [W-1:0] output_image_bw [0:IMG_WIDTH*IMG_HEIGHT-1];
     
     // ========================================================================
     // Clock Generation
@@ -61,16 +68,22 @@ module convolution_filter_tb;
         .x_ready(x_ready),
         .x_data(x_data),
         .y_valid(y_valid),
+        .y_valid_bw(y_valid_bw),
         .y_ready(y_ready),
         .y_data(y_data),
-        .kernel(kernel)
+        .y_data_bw(y_data_bw),
+        .kernel(kernel),
+        .num_white_edge_pixels(num_white_edge_pixels),
+        .num_white_threshold_pixels(num_white_threshold_pixels),
+        .white_count_valid(white_count_valid)
     );
     
     // ========================================================================
     // Test Variables
     // ========================================================================
     integer pixel_in_count;
-    integer pixel_out_count;
+    integer pixel_out_edge_count;
+    integer pixel_out_bw_count;
     integer fd_out;
     integer i;
     
@@ -80,15 +93,17 @@ module convolution_filter_tb;
     initial begin
         // Initialize
         pixel_in_count = 0;
-        pixel_out_count = 0;
+        pixel_out_edge_count = 0;
+        pixel_out_bw_count = 0;
         rst_n = 0;
         x_valid = 0;
         x_data = 0;
         y_ready = 1; // Always ready to accept output
         
-        // Initialize output image to white
+        // Initialize output images to white
         for (i = 0; i < IMG_WIDTH*IMG_HEIGHT; i = i + 1) begin
-            output_image[i] = 8'hFF;
+            output_image_edge[i] = 8'hFF;
+            output_image_bw[i] = 8'hFF;
         end
         
         // Load input image from MIF file
@@ -126,45 +141,77 @@ module convolution_filter_tb;
         
         // Wait for all outputs with timeout counter
         i = 0;
-        while (pixel_out_count < IMG_WIDTH*IMG_HEIGHT && i < 500000) begin
+        while ((pixel_out_edge_count < IMG_WIDTH*IMG_HEIGHT || pixel_out_bw_count < IMG_WIDTH*IMG_HEIGHT) && i < 500000) begin
             @(posedge clk);
             i = i + 1;
         end
         
         // Extra cycles to ensure last pixel is captured (race condition fix)
         repeat(5) @(posedge clk);
-        $display("Final pixel_out_count after extra wait: %0d", pixel_out_count);
+        $display("Final pixel_out_edge_count after extra wait: %0d", pixel_out_edge_count);
+        $display("Final pixel_out_bw_count after extra wait: %0d", pixel_out_bw_count);
         
-        if (pixel_out_count >= IMG_WIDTH*IMG_HEIGHT) begin
-            $display("All output pixels received!");
+        if (pixel_out_edge_count >= IMG_WIDTH*IMG_HEIGHT) begin
+            $display("All edge detection output pixels received!");
         end else begin
-            $display("WARNING: Timeout waiting for outputs. Received %0d/%0d pixels", 
-                     pixel_out_count, IMG_WIDTH*IMG_HEIGHT);
+            $display("WARNING: Timeout waiting for edge outputs. Received %0d/%0d pixels", 
+                     pixel_out_edge_count, IMG_WIDTH*IMG_HEIGHT);
         end
         
-        // Save output
+        if (pixel_out_bw_count >= IMG_WIDTH*IMG_HEIGHT) begin
+            $display("All threshold output pixels received!");
+        end else begin
+            $display("WARNING: Timeout waiting for threshold outputs. Received %0d/%0d pixels", 
+                     pixel_out_bw_count, IMG_WIDTH*IMG_HEIGHT);
+        end
+        
+        // Monitor white pixel counts
+        wait(white_count_valid);
+        $display("\n=== Frame Statistics ===");
+        $display("White pixels (edge detection): %0d", num_white_edge_pixels);
+        $display("White pixels (threshold): %0d", num_white_threshold_pixels);
+        
+        // Save outputs
         repeat(100) @(posedge clk);
-        save_output_image("test_img_conv.mif");
+        save_output_image("edge_img.mif", output_image_edge);
+        save_output_image("thresholded_img.mif", output_image_bw);
         
         $display("\n=== TEST COMPLETE ===");
-        $display("Input pixels:  %0d", pixel_in_count);
-        $display("Output pixels: %0d", pixel_out_count);
+        $display("Input pixels:           %0d", pixel_in_count);
+        $display("Output edge pixels:     %0d", pixel_out_edge_count);
+        $display("Output threshold pixels: %0d", pixel_out_bw_count);
         $finish;
     end
     
     // ========================================================================
-    // Output Capture Process
+    // Output Capture Process - Edge Detection
     // ========================================================================
     always @(posedge clk) begin
         if (rst_n && y_valid && y_ready) begin
-            if (pixel_out_count < IMG_WIDTH*IMG_HEIGHT) begin
-                output_image[pixel_out_count] = y_data;
+            if (pixel_out_edge_count < IMG_WIDTH*IMG_HEIGHT) begin
+                output_image_edge[pixel_out_edge_count] = y_data;
             end
-            pixel_out_count = pixel_out_count + 1;
+            pixel_out_edge_count = pixel_out_edge_count + 1;
             
             // Print progress
-            if (pixel_out_count % 50000 == 0)
-                $display("  Received pixel %0d/%0d", pixel_out_count, IMG_WIDTH*IMG_HEIGHT);
+            if (pixel_out_edge_count % 50000 == 0)
+                $display("  Received edge pixel %0d/%0d", pixel_out_edge_count, IMG_WIDTH*IMG_HEIGHT);
+        end
+    end
+    
+    // ========================================================================
+    // Output Capture Process - Threshold/BW
+    // ========================================================================
+    always @(posedge clk) begin
+        if (rst_n && y_valid_bw && y_ready) begin
+            if (pixel_out_bw_count < IMG_WIDTH*IMG_HEIGHT) begin
+                output_image_bw[pixel_out_bw_count] = y_data_bw;
+            end
+            pixel_out_bw_count = pixel_out_bw_count + 1;
+            
+            // Print progress
+            if (pixel_out_bw_count % 50000 == 0)
+                $display("  Received threshold pixel %0d/%0d", pixel_out_bw_count, IMG_WIDTH*IMG_HEIGHT);
         end
     end
     
@@ -304,10 +351,10 @@ module convolution_filter_tb;
     endtask
 
     // ========================================================================
-    // Output Save Function
+    // Output Save Function (Generic)
     // ========================================================================
     
-    task save_output_image(input string filename);
+    task save_output_image(input string filename, input reg [W-1:0] image_data [0:IMG_WIDTH*IMG_HEIGHT-1]);
         begin
             $display("Saving output image to MIF file: %s", filename);
             fd_out = $fopen(filename, "w");
@@ -322,7 +369,7 @@ module convolution_filter_tb;
             
             // Write pixel data
             for (i = 0; i < IMG_WIDTH*IMG_HEIGHT; i = i + 1) begin
-                $fwrite(fd_out, "%h : %h;\n", i, output_image[i]);
+                $fwrite(fd_out, "%h : %h;\n", i, image_data[i]);
             end
             
             $fwrite(fd_out, "END;\n");
