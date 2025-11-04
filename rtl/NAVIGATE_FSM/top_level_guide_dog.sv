@@ -11,7 +11,14 @@ module top_level_guide_dog (
 	output [6:0]   HEX5,
 	output [6:0]   HEX6,
 	output [6:0]   HEX7,
-	output logic [17:0]  LEDR
+	output logic [17:0]  LEDR,
+	output [7:0] LEDG,
+	output  logic        I2C_SCLK,
+    inout                I2C_SDAT,
+    input                AUD_ADCDAT,
+    input                AUD_BCLK,
+    output  logic        AUD_XCK,
+    input                AUD_ADCLRCK
 );
   // =================== Reset ===================
 logic rst_n; 
@@ -19,8 +26,10 @@ assign rst_n = KEY[1];   // KEY1 held low = reset
 
 // =================== Debounced inputs ===================
 // edge + level helper
-logic start_lvl, start_rise;
-deb_edge u_start (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[0]),   .level(start_lvl), .rise(start_rise));
+//logic start_lvl, start_rise;
+//deb_edge u_start (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[0]),   .level(start_lvl), .rise(start_rise));
+
+
 
 // Level-only debounces (rises unused)
 //UNCOMMENT THESE ONCE MODULES ARE INTEGRATED
@@ -46,18 +55,24 @@ logic [2:0] cmd_sel;
 logic stop_front_raw;
 logic stop_back_raw;
 
+//==================
+
+logic whistle_detected, beep_detected;
+assign LEDG[7] = whistle_detected;
+//assign LEDG[6] = beep_detected;
+
 top_level_proximity u_prox (
   .CLOCK_50   (CLOCK_50),
   .KEY        (KEY),
   .GPIO       (GPIO),        // shares the same header pins you used
-  .HEX0			(HEX0),
-  .HEX1			(HEX1),
-  .HEX2			(HEX2),
-	.HEX3			(HEX3),
-	.HEX4			(HEX4),
-	.HEX5			(HEX5),
-	.HEX6			(HEX6),
-	.HEX7			(HEX7),
+//  .HEX0			(HEX0),
+//  .HEX1			(HEX1),
+//  .HEX2			(HEX2),
+//	.HEX3			(HEX3),
+//	.HEX4			(HEX4),
+//	.HEX5			(HEX5),
+//	.HEX6			(HEX6),
+//	.HEX7			(HEX7),
 	.LEDR			(LEDR[17:15]), 
 	  // NEW:
   .rst_n         (rst_n),
@@ -67,10 +82,82 @@ top_level_proximity u_prox (
   .stop_back_1s  (stop_back_raw)
 );
 
+//microphone_top_level  #(
+//  .DE1_SOC(0)                 // DE2-115
+//)
+// u_microphone_top_level (
+//        .CLOCK_50(CLOCK_50),
+//        .KEY(KEY),
+//        .whistle_detected(whistle_detected), // Output whistle detection to LEDG[7]
+//        .beep_detected(beep_detected),       // Output beep detection to LEDG[8]
+//        .LEDR(),
+//        .HEX0(HEX0),
+//        .HEX1(HEX1),
+//        .HEX2(HEX2),
+//        .HEX3(HEX3),
+//        .HEX4(HEX4),
+//        .HEX5(HEX5),
+//        .HEX6(HEX6),
+//        .HEX7(HEX7),
+//        .AUD_ADCDAT(AUD_ADCDAT),
+//        .AUD_BCLK(AUD_BCLK),
+//        .AUD_XCK(AUD_XCK),
+//        .AUD_ADCLRCK(AUD_ADCLRCK)
+//    );
+
+microphone_top_level #(
+  .DE1_SOC(0)                 // DE2-115
+) u_microphone_top_level (
+  // clocks & keys
+  .CLOCK_50       (CLOCK_50),
+  .KEY            (KEY),
+
+  // I2C for WM8731 (use these on DE2-115)
+  .I2C_SCLK       (I2C_SCLK),
+  .I2C_SDAT       (I2C_SDAT),
+
+  // Unused DE1-SoC I2C (leave unconnected)
+  .FPGA_I2C_SCLK  (/* unused */),
+  .FPGA_I2C_SDAT  (/* unused */),
+
+  // Audio codec I2S/clock
+  .AUD_ADCDAT     (AUD_ADCDAT),
+  .AUD_BCLK       (AUD_BCLK),
+  .AUD_XCK        (AUD_XCK),
+  .AUD_ADCLRCK    (AUD_ADCLRCK),   // <-- FIX: was incorrectly wired before
+
+  // Detection outputs
+  .whistle_detected(whistle_detected),
+  .beep_detected   (beep_detected),
+
+	.LEDR(),
+	.HEX0(HEX0),
+	.HEX1(HEX1),
+	.HEX2(HEX2),
+	.HEX3(HEX3),
+	.HEX4(HEX4),
+	.HEX5(HEX5),
+	.HEX6(HEX6),
+	.HEX7(HEX7),
+
+	);
+	 
+	 
+//// REMOVE THIS IF NEEDED////////////////////////////////////////////
+//logic whistle_lvl, whistle_rise;
+//
+//deb_edge u_whistle (
+//  .clk   (CLOCK_50),
+//  .rst_n (rst_n),
+//  .raw_in(whistle_detected),  // from microphone_top_level
+//  .level (whistle_lvl),
+//  .rise  (whistle_rise)
+//);
+////////////////////////////////////////////////////////////////////
 
 
 
-// =================== Guide FSM (new signals) ===================
+// =================== Guide FSM (new signals// old before i changed it) ===================
 //guide_fsm #(
 //  .CLK_HZ   (50_000_000),
 //  .TICK_HZ  (20),
@@ -96,7 +183,7 @@ guide_fsm #(
 ) u_fsm (
   .clk                     (CLOCK_50),
   .rst_n                   (rst_n),
-  .start_whistle           (start_rise),     // SW0 edge
+  .start_whistle           (whistle_detected),     // SW0 edge
   .obstacle_stop           (stop_front_raw),   // SW1 level
   .zebra_pattern_stop      (zebra_lvl),      // SW2 level
   .person_far_away_stop    (stop_back_raw), // SW3 level

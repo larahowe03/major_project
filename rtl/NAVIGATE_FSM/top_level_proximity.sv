@@ -2,7 +2,7 @@ module top_level_proximity(
   input          CLOCK_50,
   inout  [35:0]  GPIO,
   input  [3:0]   KEY,
-  output [6:0]   HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
+  //output [6:0]   HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
   output [17:15] LEDR, 
   // NEW:
   input  logic   rst_n,
@@ -70,11 +70,11 @@ assign GPIO[27]   = trigger_back;  // output to back sensor
     .ready(sonar_ready_back), .valid(sonar_valid_back)
   );
 
-  // 7-segment (unchanged)
-  display u_display1(.clk(CLOCK_50), .value(latched_distance_mm_front),
-                     .display0(HEX0), .display1(HEX1), .display2(HEX2), .display3(HEX3));
-  display u_display2(.clk(CLOCK_50), .value(latched_distance_mm_back),
-                     .display0(HEX4), .display1(HEX5), .display2(HEX6), .display3(HEX7));
+//  // 7-segment (unchanged)
+//  display u_display1(.clk(CLOCK_50), .value(latched_distance_mm_front),
+//                     .display0(HEX0), .display1(HEX1), .display2(HEX2), .display3(HEX3));
+//  display u_display2(.clk(CLOCK_50), .value(latched_distance_mm_back),
+//                     .display0(HEX4), .display1(HEX5), .display2(HEX6), .display3(HEX7));
 
   // ---------- Threshold detectors ----------
   logic stop_front;  // RAW front near flag (declare it!)
