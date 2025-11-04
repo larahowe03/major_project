@@ -135,8 +135,9 @@ module top_level (
 	
 	logic valid_to_read, capturing;
 	
-	// NEW: Connected components count
+	// NEW: Connected components count and lowest edge position
 	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components;
+	logic [$clog2(IMG_HEIGHT)-1:0] lowest_edge_y;
 	logic components_valid;
 
 	pattern_recognition #(
@@ -174,8 +175,9 @@ module top_level (
 		.num_connected_edge_instances_fulfilled(LEDR[2]),
 		.lowest_edge_position_fulfilled(LEDR[3]),
 		
-		// NEW: Connected components output
+		// NEW: Connected components and lowest edge outputs
 		.num_connected_components(num_connected_components),
+		.lowest_edge_y(lowest_edge_y),
 		.components_valid(components_valid)
 	);
 
@@ -188,12 +190,14 @@ module top_level (
 	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels_show;
 	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels_show;
 	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components_show;
+	logic [$clog2(IMG_HEIGHT)-1:0] lowest_edge_y_show;
 
 	always_ff @(posedge clk_video or negedge rst_n) begin
 		if (!rst_n) begin
 			num_white_edge_pixels_show <= '0;
 			num_white_threshold_pixels_show <= '0;
 			num_connected_components_show <= '0;
+			lowest_edge_y_show <= '0;
 		end else begin
 			if (white_count_valid) begin
 				num_white_edge_pixels_show <= num_white_edge_pixels;
@@ -201,6 +205,7 @@ module top_level (
 			end
 			if (components_valid) begin
 				num_connected_components_show <= num_connected_components;
+				lowest_edge_y_show <= lowest_edge_y;
 			end
 		end
 	end
@@ -208,16 +213,26 @@ module top_level (
 	// ========================================================================
 	// 7-SEGMENT DISPLAY SELECTION
 	// SW[1] = 0: Show edge pixels (HEX3-0) and threshold pixels (HEX7-4)
-	// SW[1] = 1: Show connected components (HEX3-0) and threshold pixels (HEX7-4)
+	// SW[1] = 1: Show connected components (HEX3-0) and lowest_edge_y (HEX7-4)
 	// ========================================================================
 	
 	wire [15:0] lower_display = SW[1] ? num_connected_components_show[15:0] : 
 	                                     num_white_edge_pixels_show[15:0];
+	
+	wire [15:0] upper_display = SW[1] ? {7'd0, lowest_edge_y_show[8:0]} :
+	                                     num_white_threshold_pixels_show[15:0];
 
-	// debugging
-	assign LEDG[3] = components_valid;  // Should pulse when done
-	assign LEDG[4] = (num_connected_components_show > 0);  // Should light if non-zero
-	assign LEDG[5] = valid_to_read;  // Should be high after initial capture
+	// ========================================================================
+	// ENHANCED DEBUGGING LEDs
+	// ========================================================================
+	assign LEDG[0] = capturing;                              // Capturing edges
+	assign LEDG[1] = valid_to_read;                          // Data ready to read
+	assign LEDG[2] = SW[1];                                  // Display mode switch
+	assign LEDG[3] = components_valid;                       // Components count updated
+	assign LEDG[4] = (num_connected_components_show > 0);    // Non-zero components found
+	assign LEDG[5] = (lowest_edge_y_show >= IMG_HEIGHT * 4 / 5);  // Edge in bottom fifth
+	assign LEDG[6] = white_count_valid;                      // White count updated
+	assign LEDG[7] = (num_white_edge_pixels_show > 2000);    // Enough edge pixels
 	
 	display u_display_lower (
 		.clk(clk_video),
@@ -230,16 +245,12 @@ module top_level (
 
 	display u_display_upper (
 		.clk(clk_video),
-		.value(num_white_threshold_pixels_show[15:0]),
+		.value(upper_display),
 		.display0(HEX4),
 		.display1(HEX5),
 		.display2(HEX6),
 		.display3(HEX7)
 	);
-	
-	assign LEDG[0] = capturing;
-	assign LEDG[1] = valid_to_read;
-	assign LEDG[2] = SW[1];  // Show which display mode is active
 
 	// ========================================================================
 	// VGA DISPLAY SELECTION
