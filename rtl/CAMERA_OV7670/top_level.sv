@@ -175,10 +175,10 @@ module top_level (
 		.num_white_threshold_pixels(num_white_threshold_pixels),
 		.white_count_valid(white_count_valid),
 
-		.num_threshold_pixels_fulfilled(LEDR[0]),
-		.num_edge_pixels_fulfilled(LEDR[1]),
-		.num_connected_edge_instances_fulfilled(LEDR[2]),
-		.lowest_edge_position_fulfilled(LEDR[3]),
+		.num_threshold_pixels_fulfilled(num_threshold_pixels_fulfilled),
+		.num_edge_pixels_fulfilled(num_edge_pixels_fulfilled),
+		.num_connected_edge_instances_fulfilled(num_connected_edge_instances_fulfilled),
+		.lowest_edge_position_fulfilled(lowest_edge_position_fulfilled),
 		
 		// Bounding box and components
 		.edge_top(edge_top),
@@ -191,9 +191,20 @@ module top_level (
 		.num_connected_components(num_connected_components),
 		.components_valid(components_valid)
 	);
+	
+	logic num_threshold_pixels_fulfilled;
+	logic num_edge_pixels_fulfilled;
+	logic num_connected_edge_instances_fulfilled;
+	logic lowest_edge_position_fulfilled;
 
+	assign LEDR[0] = num_threshold_pixels_fulfilled;
+	assign LEDR[1] = num_edge_pixels_fulfilled;
+	assign LEDR[2] = num_connected_edge_instances_fulfilled;
+	assign LEDR[3] = lowest_edge_position_fulfilled;
 	assign LEDR[4] = close_to_crossing_edge_show;
 	assign LEDR[5] = close_to_crossing_threshold_show;
+	
+	assign zebra_crossing_stop = num_threshold_pixels_fulfilled & num_edge_pixels_fulfilled & close_to_crossing_edge_show;
 
 	assign pr_y_ready = 1'b1;
 
@@ -350,5 +361,7 @@ module top_level (
 		.VGA_SYNC_N(VGA_SYNC_N),
 		.ready(vga_ready)
 	);
+	
+	assign zebra_crossing_stop = 
 	
 endmodule
