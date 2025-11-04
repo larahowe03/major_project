@@ -198,7 +198,7 @@ module convolution_filter_tb;
         end
         
         // Monitor white pixel counts
-        wait(white_count_valid);
+        // wait(white_count_valid);
         $display("\n=== Frame Statistics ===");
         $display("White pixels (edge detection): %0d", num_white_edge_pixels);
         $display("White pixels (threshold): %0d", num_white_threshold_pixels);
