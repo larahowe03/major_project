@@ -220,7 +220,7 @@ module zebra_crossing_detector_tb;
     task automatic load_mif_image(input string filename, output logic [7:0] image_data [0:IMG_WIDTH*IMG_HEIGHT-1]);
         integer fd, status, addr, data, i;
         integer pixels_loaded;
-        reg [200*8:1] line;
+        string line;
         
         $display("Loading MIF image from: %s", filename);
         
@@ -235,11 +235,23 @@ module zebra_crossing_detector_tb;
             image_data[i] = 8'h00;
         end
         
+        // Skip header until CONTENT
+        while (!$feof(fd)) begin
+            if ($fgets(line, fd) == 0) continue;
+            if (line.substr(0, 6) == "CONTENT") break;
+        end
+        
+        // Skip BEGIN
+        $fgets(line, fd);
+        
         pixels_loaded = 0;
         
-        // Parse MIF format: addr : data ;
+        // Parse data lines: addr : data ;
         while (!$feof(fd)) begin
-            status = $fscanf(fd, "%h : %h", addr, data);
+            if ($fgets(line, fd) == 0) continue;
+            if (line.substr(0, 2) == "END") break;
+            
+            status = $sscanf(line, "%h : %h", addr, data);
             if (status == 2 && addr < IMG_WIDTH*IMG_HEIGHT) begin
                 image_data[addr] = data[7:0];
                 pixels_loaded++;

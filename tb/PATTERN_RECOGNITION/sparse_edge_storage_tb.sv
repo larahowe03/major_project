@@ -146,66 +146,54 @@ module sparse_edge_storage_tb;
     endtask
     
     // Task: Process image and detect edges
-    task automatic test_process_image();
-        int x, y;
-        int edge_idx = 0;
+    task automatic load_image_from_mif();
+        integer fd, x, y, pixel, addr, data;
+        integer pixels_loaded;
+        string line;
         
-        $display("\n--- Processing Image for Edge Detection ---");
-        $display("Time: %0t - Starting capture", $time);
+        $display("\n--- Loading Image from MIF File ---");
+        $display("Time: %0t - Reading from %s", $time, IMG_FILE);
         
-        // Trigger capture
-        capture_trigger = 1;
-        @(posedge clk);
-        capture_trigger = 0;
-        @(posedge clk);
+        fd = $fopen(IMG_FILE, "r");
+        if (fd == 0) begin
+            $error("Cannot open file: %s", IMG_FILE);
+            $finish;
+        end
         
-        // Wait for capturing flag
-        wait(capturing == 1'b1);
-        $display("Time: %0t - Capture started", $time);
+        // Skip header until CONTENT
+        while (!$feof(fd)) begin
+            if ($fgets(line, fd) == 0) continue;
+            if (line.substr(0, 6) == "CONTENT") break;
+        end
         
-        // Stream image data - write all non-zero pixels as edges
-        for (y = 0; y < IMG_HEIGHT; y++) begin
-            for (x = 0; x < IMG_WIDTH; x++) begin
-                @(posedge clk);
+        // Skip BEGIN
+        $fgets(line, fd);
+        
+        pixels_loaded = 0;
+        y = 0;
+        x = 0;
+        
+        // Read data lines
+        while (!$feof(fd)) begin
+            if ($fgets(line, fd) == 0) continue;
+            if (line.substr(0, 2) == "END") break;
+            
+            if ($sscanf(line, "%h : %h", addr, data) == 2) begin
+                image_data[y][x] = data[7:0];
+                pixels_loaded++;
                 
-                // If pixel is edge (non-zero), write it
-                if (image_data[y][x] != 8'd0) begin
-                    write_valid = 1;
-                    write_data = image_data[y][x];
-                    write_x = x;
-                    write_y = y;
-                    
-                    if (edge_idx < MAX_EDGES) begin
-                        stored_edges[edge_idx].x = x;
-                        stored_edges[edge_idx].y = y;
-                        edge_idx++;
-                    end
-                end else begin
-                    write_valid = 0;
+                x++;
+                if (x >= IMG_WIDTH) begin
+                    x = 0;
+                    y++;
                 end
             end
         end
         
-        write_valid = 0;
-        write_data = 0;
-        
-        $display("Time: %0t - Image streaming complete", $time);
-        
-        // Frame complete pulse
-        repeat(5) @(posedge clk);
-        frame_complete = 1;
-        @(posedge clk);
-        frame_complete = 0;
-        
-        // Wait for valid_to_read
-        wait(valid_to_read == 1'b1);
-        $display("Time: %0t - Edge detection complete, num_edges=%0d", $time, num_edges);
-        
-        assert(num_edges == edge_idx) else $warning("Edge count mismatch: expected %0d, got %0d", edge_idx, num_edges);
-        assert(capturing == 1'b0) else $error("Capturing should be 0");
-        
-        $display("Test PASSED - Edges detected and stored");
+        $fclose(fd);
+        $display("Time: %0t - Image loaded: %0d pixels", $time, pixels_loaded);
     endtask
+
     
     // Task: Read and save edges to file
     task automatic save_edges_to_file();

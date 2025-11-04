@@ -216,14 +216,13 @@ module convolution_filter_tb;
     end
     
     // ========================================================================
-    // MIF File Loader (Simple C-style parsing)
+    // MIF File Loader - Updated to match standard format
     // ========================================================================
-    
+
     task load_mif_file(input string filename);
-        integer fd, status, addr, data, c;
+        integer fd, status, addr, data;
         integer entries_loaded;
-        reg [200*8:1] line;
-        integer colon_pos, i_char;
+        string line;
         begin
             fd = $fopen(filename, "r");
             if (fd == 0) begin
@@ -234,28 +233,29 @@ module convolution_filter_tb;
             $display("Parsing MIF file: %s", filename);
             entries_loaded = 0;
             
-            // Read line by line
+            // Skip header lines until we reach CONTENT
             while (!$feof(fd)) begin
-                // Read a line
+                status = $fgets(line, fd);
+                if (status == 0) continue;
+                if (line.substr(0, 6) == "CONTENT") break;
+            end
+            
+            // Skip BEGIN line
+            status = $fgets(line, fd);
+            
+            // Read data lines (addr : data;)
+            while (!$feof(fd)) begin
                 status = $fgets(line, fd);
                 if (status == 0) continue;
                 
-                // Try to parse "addr:data;" format
-                // Look for colon in the line
-                colon_pos = -1;
-                for (i_char = 1; i_char <= 200*8; i_char = i_char + 8) begin
-                    if (line[i_char+:8] == ":") begin
-                        colon_pos = i_char;
-                        i_char = 200*8 + 8; // break
-                    end
-                end
+                // Stop at END
+                if (line.substr(0, 2) == "END") break;
                 
-                if (colon_pos > 0) begin
-                    // Try to extract address and data
-                    status = $sscanf(line, "%h:%h", addr, data);
-                    if (status == 2 && addr < IMG_WIDTH*IMG_HEIGHT) begin
+                // Parse "addr : data;"
+                if ($sscanf(line, "%h : %h", addr, data) == 2) begin
+                    if (addr < IMG_WIDTH*IMG_HEIGHT) begin
                         input_image[addr] = data[W-1:0];
-                        entries_loaded = entries_loaded + 1;
+                        entries_loaded++;
                         
                         if (entries_loaded <= 5) begin
                             $display("  addr=%h data=%h", addr, data);
