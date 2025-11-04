@@ -147,7 +147,7 @@ module pattern_recognition #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
         .MAX_EDGES(MAX_EDGES),
-        .MIN_WHITE_PIXELS(153600),
+        .MIN_WHITE_PIXELS(38400),
         .MAX_WHITE_PIXELS(307200),
         .MIN_EDGE_PIXELS(2000),
         .MIN_CONNECTED_EDGE_PIXELS(20),
