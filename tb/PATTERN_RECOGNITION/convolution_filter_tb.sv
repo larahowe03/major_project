@@ -139,7 +139,9 @@ module convolution_filter_tb;
             if (pixel_in_count % 50000 == 0)
                 $display("  Sent pixel %0d/%0d", pixel_in_count, IMG_WIDTH*IMG_HEIGHT);
         end
-        
+
+        // IMPORTANT: Keep x_valid high for a few more cycles to let last_pixel_d1 propagate
+        repeat(5) @(posedge clk);
         x_valid = 0;
         $display("Finished sending all input pixels");
 
