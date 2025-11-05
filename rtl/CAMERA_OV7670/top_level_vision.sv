@@ -5,9 +5,9 @@ module top_level_vision (
 	input 	logic [17:0]	SW,
 
 	// board outputs
-	output logic [7:0]	LEDG,
+//	output logic [7:0]	LEDG,
 	output logic [17:0]	LEDR,
-	output logic [6:0]	HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
+//	output logic [6:0]	HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
 
 	// camera inputs and outputs
 	input  	logic		OV7670_PCLK,
@@ -289,14 +289,14 @@ module top_level_vision (
 	// ========================================================================
 	// LED Display
 	// ========================================================================
-	assign LEDG[0] = capturing;
-	assign LEDG[1] = valid_to_read;
-	assign LEDG[2] = SW[0];
-	assign LEDG[3] = components_valid;
-	assign LEDG[4] = (num_connected_components_show > 0);
-	assign LEDG[5] = (edge_bottom_show >= IMG_HEIGHT * 4 / 5);  // Bottom 20% (≥384)
-	assign LEDG[6] = close_to_crossing_edge_show;                    // Close to crossing (>380)
-	assign LEDG[7] = (num_white_edge_pixels_show > 2000);
+//	assign LEDG[0] = capturing;
+//	assign LEDG[1] = valid_to_read;
+//	assign LEDG[2] = SW[0];
+//	assign LEDG[3] = components_valid;
+//	assign LEDG[4] = (num_connected_components_show > 0);
+//	assign LEDG[5] = (edge_bottom_show >= IMG_HEIGHT * 4 / 5);  // Bottom 20% (≥384)
+//	assign LEDG[6] = close_to_crossing_edge_show;                    // Close to crossing (>380)
+//	assign LEDG[7] = (num_white_edge_pixels_show > 2000);
 	
 	// // Show bounding box validity on LEDR[17:4]
 	// assign LEDR[17] = (edge_bottom_show > edge_top_show);        // Valid vertical range
@@ -307,23 +307,23 @@ module top_level_vision (
 	// assign LEDR[5:4] = 2'b00;
 	// LEDR[3:0] used by criteria flags
 	
-	display u_display_lower (
-		.clk(clk_video),
-		.value(lower_display),
-		.display0(HEX0),
-		.display1(HEX1),
-		.display2(HEX2),
-		.display3(HEX3)
-	);
-
-	display u_display_upper (
-		.clk(clk_video),
-		.value(upper_display),
-		.display0(HEX4),
-		.display1(HEX5),
-		.display2(HEX6),
-		.display3(HEX7)
-	);
+//	display u_display_lower (
+//		.clk(clk_video),
+//		.value(lower_display),
+//		.display0(HEX0),
+//		.display1(HEX1),
+//		.display2(HEX2),
+//		.display3(HEX3)
+//	);
+//
+//	display u_display_upper (
+//		.clk(clk_video),
+//		.value(upper_display),
+//		.display0(HEX4),
+//		.display1(HEX5),
+//		.display2(HEX6),
+//		.display3(HEX7)
+//	);
 
 	// ========================================================================
 	// VGA DISPLAY SELECTION
@@ -362,7 +362,5 @@ module top_level_vision (
 		.VGA_SYNC_N(VGA_SYNC_N),
 		.ready(vga_ready)
 	);
-	
-	assign zebra_crossing_stop = 
-	
+		
 endmodule

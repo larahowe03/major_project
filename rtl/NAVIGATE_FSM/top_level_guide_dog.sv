@@ -59,7 +59,7 @@ assign rst_n = KEY[1];   // KEY1 held low = reset
 // Level-only debounces (rises unused)
 //UNCOMMENT THESE ONCE MODULES ARE INTEGRATED
 //logic obstacle_lvl;        deb_edge u_obs  (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[1]),   .level(obstacle_lvl),      .rise());
-logic zebra_lvl;           deb_edge u_zeb  (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[2]),   .level(zebra_lvl),         .rise());
+//logic zebra_crossing_stop;           deb_edge u_zeb  (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[2]),   .level(zebra_crossing_stop),         .rise());
 //logic person_far_lvl;      deb_edge u_far  (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[3]),   .level(person_far_lvl),    .rise());
 logic clap_lvl;            deb_edge u_clap (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[4]),   .level(clap_lvl),          .rise());
 
@@ -145,32 +145,43 @@ microphone_top_level #(
 
 	);
 	
-top_level_vision u_vision(
+logic [17:0] vision_crossing;
 
-	// camera specific
-	.OV7670_PCLK(OV7670_PCLK),
+top_level_vision u_vision (
+	// board-level signals
+	.CLOCK_50 (CLOCK_50),
+	.KEY      (KEY),
+	.SW       ({8'd0, SW}),    // SW[17:0] expected, pad upper bits with 0 if only 10 exist
+	.LEDR     (vision_crossing),
+
+	// camera connections
+	.OV7670_PCLK (OV7670_PCLK),
 	.OV7670_VSYNC(OV7670_VSYNC),
-	.OV7670_HREF(OV7670_HREF),
-	.OV7670_DATA(OV7670_DATA),
-	.OV7670_XCLK(OV7670_XCLK),
-	.OV7670_SIOC(OV7670_SIOC),
-	.OV7670_PWDN(OV7670_PWDN),
+	.OV7670_HREF (OV7670_HREF),
+	.OV7670_DATA (OV7670_DATA),
+	.OV7670_XCLK (OV7670_XCLK),
+	.OV7670_SIOC (OV7670_SIOC),
+	.OV7670_SIOD (OV7670_SIOD),
+	.OV7670_PWDN (OV7670_PWDN),
 	.OV7670_RESET(OV7670_RESET),
-	.OV7670_SIOD(OV7670_SIOD),
-	
-	// vga streaming specific
-	.VGA_HS(VGA_HS),
-	.VGA_VS(VGA_VS),
-	.VGA_R(VGA_R),
-	.VGA_G(VGA_G),
-	.VGA_B(VGA_B),
-	.VGA_BLANK_N(VGA_BLANK_N),
-	.VGA_SYNC_N(VGA_SYNC_N),
-	.VGA_CLK(VGA_CLK),
-	
-	// output to nav fsm - tell it to stop moving
+
+	// VGA outputs
+	.VGA_HS      (VGA_HS),
+	.VGA_VS      (VGA_VS),
+	.VGA_R       (VGA_R),
+	.VGA_G       (VGA_G),
+	.VGA_B       (VGA_B),
+	.VGA_BLANK_N (VGA_BLANK_N),
+	.VGA_SYNC_N  (VGA_SYNC_N),
+	.VGA_CLK     (VGA_CLK),
+
+	// output signal to FSM - tell it to stop
 	.zebra_crossing_stop(zebra_crossing_stop)
-);	
+);
+
+assign LEDR[10] = vision_crossing[10];
+
+	
 	 
 //// REMOVE THIS IF NEEDED////////////////////////////////////////////
 //logic whistle_lvl, whistle_rise;
@@ -214,7 +225,7 @@ guide_fsm #(
   .rst_n                   (rst_n),
   .start_whistle           (whistle_detected),     // SW0 edge
   .obstacle_stop           (stop_front_raw),   // SW1 level
-  .zebra_pattern_stop      (zebra_lvl),      // SW2 level
+  .zebra_pattern_stop      (zebra_crossing_stop),      // SW2 level
   .person_far_away_stop    (stop_back_raw), // SW3 level
   .stop_command_clap       (clap_lvl),       // SW4 level
   .IR_remote_emergency_stop(ir_emerg_lvl),   // KEY0 active-low => level high here
