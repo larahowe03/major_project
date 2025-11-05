@@ -104,8 +104,9 @@ module zebra_crossing_detector #(
     coord_t current_edge;
     
     logic valid_to_read_d1;
-    wire valid_to_read_edge = valid_to_read && !valid_to_read_d1;
+    logic valid_to_read_edge = valid_to_read && !valid_to_read_d1;
 
+    // travelling along edges to check the number of connected components
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE;
@@ -116,9 +117,7 @@ module zebra_crossing_detector #(
             max_y <= '0;
             components_done <= 1'b0;
             valid_to_read_d1 <= 1'b0;
-            
-            for (int i = 0; i < MAX_EDGES; i++)
-                visited[i] <= 1'b0;
+            visited <= '0;
         end else begin
             valid_to_read_d1 <= valid_to_read;
             
@@ -132,9 +131,7 @@ module zebra_crossing_detector #(
                         current_edge_idx <= '0;
                         num_connected_edge_instances <= '0;
                         max_y <= '0;
-                        
-                        for (int i = 0; i < MAX_EDGES; i++)
-                            visited[i] <= 1'b0;
+                        visited <= '0;
                     end
                 end
                 
