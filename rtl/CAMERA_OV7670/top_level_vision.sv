@@ -34,7 +34,7 @@ module top_level_vision (
 	output logic zebra_crossing_stop
 );
 	logic rst_n;
-	assign rst_n = KEY[1];
+	assign rst_n = KEY[0];
 
 	// Camera and VGA PLL
 	logic clk_video, send_camera_config;
@@ -347,7 +347,7 @@ module top_level_vision (
 	
 	wire use_convolved = ~KEY[1];
 	wire [11:0] processed_pixel = use_convolved ? convolved_rgb444 : thresholded_rgb444;
-	wire [11:0] to_show = SW[0] ? processed_pixel : video_data;
+	wire [11:0] to_show = SW[0] ? processed_pixel : (SW[1] ? gray_px : video_data);
 
 	vga_driver u_vga_driver (
 		.clk(clk_video),

@@ -47,21 +47,21 @@ assign GPIO[27]   = trigger_back;  // output to back sensor
 		if (sonar_valid_back)  latched_distance_mm_back  <= distance_mm_back;
 	end
   
-  latch_distance latch_front_distance (
-    .clk(CLOCK_50),
-    .reset(reset),
-    .valid(sonar_valid_front),
-    .distance_mm(distance_mm_front),
-    .latched_distance_mm(latched_distance_mm_front)
-  );
+  // latch_distance latch_front_distance (
+  //   .clk(CLOCK_50),
+  //   .reset(reset),
+  //   .valid(sonar_valid_front),
+  //   .distance_mm(distance_mm_front),
+  //   .latched_distance_mm(latched_distance_mm_front)
+  // );
 
-  latch_distance latch_back_distance (
-    .clk(CLOCK_50),
-    .reset(reset),
-    .valid(sonar_valid_back),
-    .distance_mm(distance_mm_back),
-    .latched_distance_mm(latched_distance_mm_back)
-  );
+  // latch_distance latch_back_distance (
+  //   .clk(CLOCK_50),
+  //   .reset(reset),
+  //   .valid(sonar_valid_back),
+  //   .distance_mm(distance_mm_back),
+  //   .latched_distance_mm(latched_distance_mm_back)
+  // );
   sonar_pll u_pll (.areset(reset), .inclk0(CLOCK_50), .c0(SONAR_CLK), .locked(locked));
 
   // Generate start_measure on SONAR_CLK

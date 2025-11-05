@@ -47,7 +47,7 @@ module top_level_guide_dog (
 );
   // =================== Reset ===================
 logic rst_n; 
-assign rst_n = KEY[1];   // KEY1 held low = reset
+assign rst_n = KEY[0];   // KEY0 held low = reset
 
 // =================== Debounced inputs ===================
 // edge + level helper
@@ -64,8 +64,6 @@ assign rst_n = KEY[1];   // KEY1 held low = reset
 logic clap_lvl;            deb_edge u_clap (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[4]),   .level(clap_lvl),          .rise());
 
 // Emergency stop from KEY0 (active-low button)
-logic ir_emerg_lvl;
-assign ir_emerg_lvl = ~KEY[0];  // no debounce needed if you don’t want it
 
 // =================== 20 Hz heartbeat ===================
 logic tick_20hz;
@@ -213,7 +211,7 @@ assign LEDR[10] = vision_crossing[10];
 guide_fsm #(
   .CLK_HZ   (50_000_000),
   .TICK_HZ  (20),
-  .BACK_MS  (2000),
+  .BACK_MS  (3200),
   .R1_MS    (3000),
   .L1_MS    (800),   // small left
   .COAST_MS (1800),  // straight
