@@ -1,9 +1,10 @@
 module top_level_guide_dog (
-  input  logic        CLOCK_50,
-  input  logic [9:0]  SW,          // SW0=start, SW1=obstacle, SW2=zebra, SW3=path_clear
-  input  logic [3:0]  KEY,         // KEY1=reset (active-low), KEY0=estop (active-low)
-  inout  [35:0]       GPIO,        // GPIO[31] = UART TX to UGV02 RX
-  output [6:0]   HEX0,
+	input  logic        CLOCK_50,
+	input  logic [9:0]  SW,          // SW0=start, SW1=obstacle, SW2=zebra, SW3=path_clear
+	input  logic [3:0]  KEY,         // KEY1=reset (active-low), KEY0=estop (active-low)
+	inout  [35:0]       GPIO,        // GPIO[31] = UART TX to UGV02 RX
+	
+	output [6:0]   HEX0,
 	output [6:0]   HEX1,
 	output [6:0]   HEX2,
 	output [6:0]   HEX3,
@@ -13,12 +14,36 @@ module top_level_guide_dog (
 	output [6:0]   HEX7,
 	output logic [17:0]  LEDR,
 	output [7:0] LEDG,
+	
 	output  logic        I2C_SCLK,
-    inout                I2C_SDAT,
-    input                AUD_ADCDAT,
-    input                AUD_BCLK,
-    output  logic        AUD_XCK,
-    input                AUD_ADCLRCK
+	inout                I2C_SDAT,
+	input                AUD_ADCDAT,
+	input                AUD_BCLK,
+	output  logic        AUD_XCK,
+	input                AUD_ADCLRCK
+
+	// camera inputs and outputs
+	input  	logic		OV7670_PCLK,
+	input 	logic		OV7670_VSYNC,
+	input  	logic		OV7670_HREF,
+	input  	logic [7:0]	OV7670_DATA,
+	output 	logic		OV7670_XCLK,
+	output 	logic		OV7670_SIOC,
+	output 	logic		OV7670_PWDN,
+	output 	logic		OV7670_RESET,
+	inout  	wire		OV7670_SIOD,
+	
+	
+	// vga inputs and outputs
+	output logic        VGA_HS,
+	output logic		VGA_VS,
+	output logic [7:0]  VGA_R,
+	output logic [7:0]  VGA_G,
+	output logic [7:0]  VGA_B,
+	output logic        VGA_BLANK_N,
+	output logic        VGA_SYNC_N,
+	output logic        VGA_CLK,
+	 
 );
   // =================== Reset ===================
 logic rst_n; 
@@ -82,28 +107,6 @@ top_level_proximity u_prox (
   .stop_back_1s  (stop_back_raw)
 );
 
-//microphone_top_level  #(
-//  .DE1_SOC(0)                 // DE2-115
-//)
-// u_microphone_top_level (
-//        .CLOCK_50(CLOCK_50),
-//        .KEY(KEY),
-//        .whistle_detected(whistle_detected), // Output whistle detection to LEDG[7]
-//        .beep_detected(beep_detected),       // Output beep detection to LEDG[8]
-//        .LEDR(),
-//        .HEX0(HEX0),
-//        .HEX1(HEX1),
-//        .HEX2(HEX2),
-//        .HEX3(HEX3),
-//        .HEX4(HEX4),
-//        .HEX5(HEX5),
-//        .HEX6(HEX6),
-//        .HEX7(HEX7),
-//        .AUD_ADCDAT(AUD_ADCDAT),
-//        .AUD_BCLK(AUD_BCLK),
-//        .AUD_XCK(AUD_XCK),
-//        .AUD_ADCLRCK(AUD_ADCLRCK)
-//    );
 
 microphone_top_level #(
   .DE1_SOC(0)                 // DE2-115
@@ -141,7 +144,33 @@ microphone_top_level #(
 	.HEX7(HEX7),
 
 	);
-	 
+	
+top_level_vision u_vision(
+
+	// camera specific
+	.OV7670_PCLK(OV7670_PCLK),
+	.OV7670_VSYNC(OV7670_VSYNC),
+	.OV7670_HREF(OV7670_HREF),
+	.OV7670_DATA(OV7670_DATA),
+	.OV7670_XCLK(OV7670_XCLK),
+	.OV7670_SIOC(OV7670_SIOC),
+	.OV7670_PWDN(OV7670_PWDN),
+	.OV7670_RESET(OV7670_RESET),
+	.OV7670_SIOD(OV7670_SIOD),
+	
+	// vga streaming specific
+	.VGA_HS(VGA_HS),
+	.VGA_VS(VGA_VS),
+	.VGA_R(VGA_R),
+	.VGA_G(VGA_G),
+	.VGA_B(VGA_B),
+	.VGA_BLANK_N(VGA_BLANK_N),
+	.VGA_SYNC_N(VGA_SYNC_N),
+	.VGA_CLK(VGA_CLK),
+	
+	// output to nav fsm - tell it to stop moving
+	.zebra_crossing_stop(zebra_crossing_stop)
+);	
 	 
 //// REMOVE THIS IF NEEDED////////////////////////////////////////////
 //logic whistle_lvl, whistle_rise;

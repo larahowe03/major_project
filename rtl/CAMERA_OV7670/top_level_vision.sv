@@ -1,4 +1,4 @@
-module top_level (
+module top_level_vision (
 	// board inputs
 	input 	logic		CLOCK_50,
 	input 	logic [3:0]	KEY,
@@ -197,15 +197,16 @@ module top_level (
 	logic num_connected_edge_instances_fulfilled;
 	logic lowest_edge_position_fulfilled;
 
-	assign LEDR[0] = num_threshold_pixels_fulfilled;
-	assign LEDR[1] = num_edge_pixels_fulfilled;
-	assign LEDR[2] = num_connected_edge_instances_fulfilled;
-	assign LEDR[3] = lowest_edge_position_fulfilled;
-	assign LEDR[4] = close_to_crossing_edge_show;
-	assign LEDR[5] = close_to_crossing_threshold_show;
+//	assign LEDR[0] = num_threshold_pixels_fulfilled;
+//	assign LEDR[1] = num_edge_pixels_fulfilled;
+//	assign LEDR[2] = num_connected_edge_instances_fulfilled;
+//	assign LEDR[3] = lowest_edge_position_fulfilled;
+//	assign LEDR[4] = close_to_crossing_edge_show;
+//	assign LEDR[5] = close_to_crossing_threshold_show;
 	
 	assign zebra_crossing_stop = num_threshold_pixels_fulfilled & num_edge_pixels_fulfilled & close_to_crossing_edge_show;
-
+	assign LEDR[10] = zebra_crossing_stop;
+	
 	assign pr_y_ready = 1'b1;
 
 	// ========================================================================
