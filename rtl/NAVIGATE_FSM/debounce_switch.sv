@@ -1,4 +1,4 @@
-module deb_edge #(parameter int STABLE_CYCLES=250_000)( // ~5 ms @ 50 MHz
+module debounce_switch #(parameter int STABLE_CYCLES=250_000)( // ~5 ms @ 50 MHz
   input  logic clk, rst_n,
   input  logic raw_in,         // 1 = asserted (pass an inverted KEY here)
   output logic level,          // debounced level

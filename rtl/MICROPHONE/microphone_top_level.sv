@@ -2,6 +2,7 @@ module microphone_top_level #(
 	parameter int DE1_SOC = 0 // !!!IMPORTANT: Set this to 1 for DE1-SoC or 0 for DE2-115
 ) (
 	input       CLOCK_50,     // 50 MHz only used as input to the PLLs.
+	input logic reset,
 
 	// DE1-SoC I2C to WM8731:
 	output	   FPGA_I2C_SCLK,
@@ -22,7 +23,6 @@ module microphone_top_level #(
 	output [6:0] HEX5,
 	output [6:0] HEX6,
 	output [6:0] HEX7,
-	output [15:0] LEDR,
 	output [7:0] LEDG,
 	input  [3:0] KEY,
 	input	 AUD_ADCDAT,
@@ -53,8 +53,6 @@ module microphone_top_level #(
 	endgenerate
 	// The above modules configure the WM8731 audio codec for microphone input. They are in set_audio_encoder.v and use the i2c_master module in i2c_master.sv.
 
-	logic reset; assign reset = ~KEY[0];
-
 	// Audio Input
 	logic [W-1:0]              audio_input_data;
 	logic                      audio_input_valid;
@@ -74,9 +72,6 @@ module microphone_top_level #(
         else
             abs_audio = audio_input_data;
 	end
-
-    // the abs_audio to show magnitude on the LEDs
-    assign LEDR[15:0] = abs_audio[15:0];
 	
 	logic [$clog2(NSamples)-1:0] pitch_output_data;
 	logic whistle_detect_pulse;

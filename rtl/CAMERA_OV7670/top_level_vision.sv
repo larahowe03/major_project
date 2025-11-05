@@ -1,13 +1,15 @@
 module top_level_vision (
 	// board inputs
-	input 	logic		CLOCK_50,
-	input 	logic [3:0]	KEY,
+	input 	logic			CLOCK_50,
+	input 	logic			rst_n,
+	input 	logic [3:0]		KEY,
 	input 	logic [17:0]	SW,
 
-	// board outputs
-//	output logic [7:0]	LEDG,
-	output logic [17:0]	LEDR,
-//	output logic [6:0]	HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
+	// determine what to send out
+	input logic 	show_original,
+	input logic 	show_grayscale,
+	input logic 	show_edge,
+	input logic 	show_threshold,
 
 	// camera inputs and outputs
 	input  	logic		OV7670_PCLK,
@@ -33,9 +35,6 @@ module top_level_vision (
 	// for state machine
 	output logic zebra_crossing_stop
 );
-	logic rst_n;
-	assign rst_n = KEY[0];
-
 	// Camera and VGA PLL
 	logic clk_video, send_camera_config;
 	assign send_camera_config = !KEY[2];
@@ -196,163 +195,27 @@ module top_level_vision (
 	logic num_edge_pixels_fulfilled;
 	logic num_connected_edge_instances_fulfilled;
 	logic lowest_edge_position_fulfilled;
-
-//	assign LEDR[0] = num_threshold_pixels_fulfilled;
-//	assign LEDR[1] = num_edge_pixels_fulfilled;
-//	assign LEDR[2] = num_connected_edge_instances_fulfilled;
-//	assign LEDR[3] = lowest_edge_position_fulfilled;
-//	assign LEDR[4] = close_to_crossing_edge_show;
-//	assign LEDR[5] = close_to_crossing_threshold_show;
 	
 	assign zebra_crossing_stop = num_threshold_pixels_fulfilled & num_edge_pixels_fulfilled & close_to_crossing_edge_show;
-	assign LEDR[10] = zebra_crossing_stop;
 	
 	assign pr_y_ready = 1'b1;
-
-	// ========================================================================
-	// Register values for display
-	// ========================================================================
 	
-	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels_show;
-	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels_show;
-	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components_show;
-	logic [$clog2(IMG_HEIGHT)-1:0] edge_top_show;
-	logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom_show;
-	logic [$clog2(IMG_WIDTH)-1:0] edge_left_show;
-	logic [$clog2(IMG_WIDTH)-1:0] edge_right_show;
-	logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom_show;
-	logic close_to_crossing_edge_show;
-	logic close_to_crossing_threshold_show;
-
-	always_ff @(posedge clk_video or negedge rst_n) begin
-		if (!rst_n) begin
-			num_white_edge_pixels_show <= '0;
-			num_white_threshold_pixels_show <= '0;
-			num_connected_components_show <= '0;
-			edge_top_show <= '0;
-			edge_bottom_show <= '0;
-			edge_left_show <= '0;
-			edge_right_show <= '0;
-			threshold_bottom_show <= '0;
-			close_to_crossing_edge_show <= 1'b0;
-			close_to_crossing_threshold_show <= 1'b0;
-		end else begin
-			if (white_count_valid) begin
-				num_white_edge_pixels_show <= num_white_edge_pixels;
-				num_white_threshold_pixels_show <= num_white_threshold_pixels;
-				edge_top_show <= edge_top;
-				edge_bottom_show <= edge_bottom;
-				edge_left_show <= edge_left;
-				edge_right_show <= edge_right;
-				threshold_bottom_show <= threshold_bottom;
-				close_to_crossing_edge_show <= close_to_crossing_edge;
-				close_to_crossing_threshold_show <= close_to_crossing_threshold;
-			end
-			if (components_valid) begin
-				num_connected_components_show <= num_connected_components;
-			end
-		end
-	end
-
-	// ========================================================================
-	// 7-SEGMENT DISPLAY SELECTION
-	// SW[1:0] selects display mode:
-	//   00: Edge pixels (HEX3-0) and Threshold pixels (HEX7-4)
-	//   01: Components (HEX3-0) and Edge Bottom Y (HEX7-4)
-	//   10: Top edge Y (HEX3-0) and Bottom edge Y (HEX7-4)
-	//   11: Threshold Bottom Y (HEX3-0) and Edge Bottom Y (HEX7-4)
-	// ========================================================================
-	
-	logic [15:0] lower_display, upper_display;
-	
-	always_comb begin
-		case (SW[1:0])
-			2'b00: begin  // Default: edge and threshold counts
-				lower_display = num_white_edge_pixels_show[15:0];
-				upper_display = num_white_threshold_pixels_show[15:0];
-			end
-			2'b01: begin  // Components and edge bottom
-				lower_display = num_connected_components_show[15:0];
-				upper_display = {7'd0, edge_bottom_show[8:0]};
-			end
-			2'b10: begin  // Top and bottom edge Y
-				lower_display = {7'd0, edge_top_show[8:0]};
-				upper_display = {7'd0, edge_bottom_show[8:0]};
-			end
-			2'b11: begin  // Threshold bottom vs Edge bottom
-				lower_display = {7'd0, threshold_bottom_show[8:0]};
-				upper_display = {7'd0, edge_bottom_show[8:0]};
-			end
-		endcase
-	end
-
-	// ========================================================================
-	// LED Display
-	// ========================================================================
-//	assign LEDG[0] = capturing;
-//	assign LEDG[1] = valid_to_read;
-//	assign LEDG[2] = SW[0];
-//	assign LEDG[3] = components_valid;
-//	assign LEDG[4] = (num_connected_components_show > 0);
-//	assign LEDG[5] = (edge_bottom_show >= IMG_HEIGHT * 4 / 5);  // Bottom 20% (≥384)
-//	assign LEDG[6] = close_to_crossing_edge_show;                    // Close to crossing (>380)
-//	assign LEDG[7] = (num_white_edge_pixels_show > 2000);
-	
-	// // Show bounding box validity on LEDR[17:4]
-	// assign LEDR[17] = (edge_bottom_show > edge_top_show);        // Valid vertical range
-	// assign LEDR[16] = (edge_right_show > edge_left_show);        // Valid horizontal range
-	// assign LEDR[15:14] = SW[1:0];                                // Show display mode
-	// assign LEDR[13:10] = edge_bottom_show[8:5];                  // Upper bits of bottom Y
-	// assign LEDR[9:6] = edge_top_show[8:5];                       // Upper bits of top Y
-	// assign LEDR[5:4] = 2'b00;
-	// LEDR[3:0] used by criteria flags
-	
-//	display u_display_lower (
-//		.clk(clk_video),
-//		.value(lower_display),
-//		.display0(HEX0),
-//		.display1(HEX1),
-//		.display2(HEX2),
-//		.display3(HEX3)
-//	);
-//
-//	display u_display_upper (
-//		.clk(clk_video),
-//		.value(upper_display),
-//		.display0(HEX4),
-//		.display1(HEX5),
-//		.display2(HEX6),
-//		.display3(HEX7)
-//	);
-
-	// ========================================================================
-	// VGA DISPLAY SELECTION
-	// ========================================================================
-	
-	logic [7:0] pr_y_data_held;
-	logic [7:0] pr_y_data_bw_held;
-	
-	always_ff @(posedge clk_video or negedge rst_n) begin
-		if (!rst_n) begin
-			pr_y_data_held <= '0;
-			pr_y_data_bw_held <= '0;
-		end else begin
-			if (pr_y_valid) pr_y_data_held <= pr_y_data;
-			if (pr_y_valid_bw) pr_y_data_bw_held <= pr_y_data_bw;
-		end
-	end
-	
-	wire [11:0] convolved_rgb444 = {pr_y_data_held[7:4], pr_y_data_held[7:4], pr_y_data_held[7:4]};
-	wire [11:0] thresholded_rgb444 = {pr_y_data_bw_held[7:4], pr_y_data_bw_held[7:4], pr_y_data_bw_held[7:4]};
+	wire [11:0] convolved_rgb444 = {pr_y_data[7:4], pr_y_data[7:4], pr_y_data[7:4]};
+	wire [11:0] thresholded_rgb444 = {pr_y_data_bw[7:4], pr_y_data_bw[7:4], pr_y_data_bw[7:4]};
 	
 	wire use_convolved = ~KEY[1];
 	wire [11:0] processed_pixel = use_convolved ? convolved_rgb444 : thresholded_rgb444;
-	wire [11:0] to_show = SW[0] ? processed_pixel : video_data;
+	wire [11:0] vga_show;
+	
+	if (show_original) assign vga_show = video_data;
+	if (show_grayscale) assign vga_show = gray_px;
+	if (show_edge) assign vga_show = convolved_rgb444;
+	if (show_threshold) assign vga_show = thresholded_rgb444;
 
 	vga_driver u_vga_driver (
 		.clk(clk_video),
 		.rst(~rst_n),
-		.pixel(to_show),
+		.pixel(vga_show),
 		.hsync(VGA_HS),
 		.vsync(VGA_VS),
 		.r(VGA_R),
