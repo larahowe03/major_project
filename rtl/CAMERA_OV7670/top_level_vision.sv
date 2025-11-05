@@ -34,7 +34,7 @@ module top_level_vision (
 	output logic zebra_crossing_stop
 );
 	logic rst_n;
-	assign rst_n = KEY[0];
+	assign rst_n = KEY[1];
 
 	// Camera and VGA PLL
 	logic clk_video, send_camera_config;
