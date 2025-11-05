@@ -1,75 +1,117 @@
-// ****************************************************************
-// This is based on the code from https://github.com/suoglu/HC-SR04
-// ****************************************************************
+// sensor_driver based on timing diagram:
+// user sends a tigger signal which lasts 10us, and expects an echo signal back to the module
+// The Echo is a distance object that is pulse width and the range in proportion.
+// You can calculate the range through the time interval between sending trigger signal and receiving echo signal
 
-module proximity_sensor #(
-    parameter TEN_US = 10'd500 // ten microseconds
-)(
-    input clk, //50 MHz
-    input rst_n,
-    input measure,
-    // output logic [1:0] state,
-    output ready,
-    //HC-SR04 signals
-    input echo, //JA1
-    output trig, //JA2
-    output logic [21:0] distanceRAW
-);
+module sensor_driver#(parameter ten_us = 10'd500)(
+  input clk,
+  input rst,
+  input measure,
+  input echo,
+  output trig,
+  output [11:0] distance);
+  
+  localparam IDLE = 3'b000,
+          TRIGGER = 3'b010,
+             WAIT = 3'b011,
+        COUNTECHO = 3'b100,
+		  DISPLAY_DISTANCE = 3'b101;
+		  
+  wire inIDLE, inTRIGGER, inWAIT, inCOUNTECHO, inDISPLAY;
+  reg [9:0] counter;
+  reg [21:0] distanceRAW = 0; // cycles in COUNTECHO
+  reg [34:0] distanceRAW_in_cm = 0;
+  wire trigcountDONE, counterDONE;
+  
+  logic [2:0] state;
+  logic ready;   
 
-    // State variables
-    enum {Idle, Trigger, Wait, CountEcho} next_state, current_state; 
+  //Ready
+  assign ready = inIDLE;
+  
+  //Decode states
+  assign inIDLE = (state == IDLE);
+  assign inTRIGGER = (state == TRIGGER);
+  assign inWAIT = (state == WAIT);
+  assign inCOUNTECHO = (state == COUNTECHO);
+  assign inDISPLAY = (state == DISPLAY_DISTANCE);
 
-    // Counter variables
-    logic [9:0] counter;
-    logic trigCountDone, counterDONE;
-
-    // Distance register variable
-    logic [21:0] distanceRAW_reg;
-
-    // Next state logic
-    always_comb begin
-        next_state = current_state;
-        case (current_state) 
-            Idle:      if (measure & ready) next_state = Trigger;
-            Trigger:   if (trigCountDone) next_state = Wait;
-            Wait:      if (echo) next_state = CountEcho;
-            CountEcho: if (!echo) next_state = Idle;
-            default:   next_state = Idle;
-        endcase
-    end
-
-    // State transitions
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            current_state <= Idle;
-            counter <= '0;
-            distanceRAW_reg <= '0;
-        end else begin
-            case (current_state)
-                Idle: begin
-                    counter <= '0;
-                end
-                Trigger: begin
-                    counter <= counter + '1;
-                end
-                Wait: begin
-                    distanceRAW_reg <= '0;
-                    counter <= counter + '1;
-                end
-                CountEcho: begin
-                    distanceRAW_reg <= distanceRAW_reg + '1;
-                    counter <= counter + '1;
-                end
-            endcase
-            current_state <= next_state;
+  //State transactions
+  always@(posedge clk or posedge rst)
+    begin
+      if(rst)
+        begin
+          state <= IDLE;
+        end
+      else
+        begin
+          case(state)
+            IDLE:
+              begin
+                state <= (measure & ready) ? TRIGGER : state;
+              end
+            TRIGGER:
+              begin
+                state <= (trigcountDONE) ? WAIT : state;
+              end
+            WAIT:
+              begin
+                state <= (echo) ? COUNTECHO : state;
+              end
+            COUNTECHO:
+              begin
+                state <= (echo) ? state : DISPLAY_DISTANCE;
+              end
+				DISPLAY_DISTANCE:
+					begin
+						state <= IDLE;
+					end
+          endcase
+          
         end
     end
-    
-    assign trigCountDone = (counter == TEN_US);
+  
+  //Trigger
+  assign trig = inTRIGGER;
+  
+  //Counter
+  always@(posedge clk)
+    begin
+      if(inIDLE)
+        begin
+          counter <= 10'd0;
+        end
+      else
+        begin
+          counter <= counter + {9'd0, (|counter | inTRIGGER)};
+        end
+    end
+  assign trigcountDONE = (counter == ten_us);
 
-    // Outputs
-    assign ready = (current_state == Idle);
-    assign trig = (current_state == Trigger);
-    assign distanceRAW = distanceRAW_reg;
+  //Get distance
+  always@(posedge clk)
+    begin
+      if(inWAIT) begin
+        distanceRAW <= 22'd0;
+      end else
+        distanceRAW <= distanceRAW + {21'd0, inCOUNTECHO};
+		  
+    end
+
+  // to calculate distance in cm
+  // range = high level time * velocity (340M/S) / 2
+  // 340m/s = 0.000034cm/ns = 0.00068cm/cycle
+  // range = 0.00068/2 = 0.00034cm/cycle
+  // using fixedpoint python library we can convert 0.000034 to fixed point binary with 8 int and 24 frac bits by writing the code below
+  // import fixedpoint
+  // print(fixedpoint.FixedPoint(0.00034, signed=True, m=8, n=24)) # Signed with 8 integer bits and 24 fractional bits
+	 
+	always @(posedge clk) begin
+		if(inDISPLAY) begin
+			distanceRAW_in_cm <= distanceRAW * 32'h1648;
+		end
+	end
+	
+	assign distance = distanceRAW_in_cm[34:24];
 
 endmodule
