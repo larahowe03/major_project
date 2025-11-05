@@ -347,7 +347,8 @@ module top_level_vision (
 	
 	wire use_convolved = ~KEY[1];
 	wire [11:0] processed_pixel = use_convolved ? convolved_rgb444 : thresholded_rgb444;
-	wire [11:0] to_show = SW[0] ? processed_pixel : (SW[1] ? gray_px : video_data);
+	wire [11:0] colored_conv444 = {4'h0, pr_y_data_bw_held[7:4], 4'h0};
+	wire [11:0] to_show = SW[0] ? processed_pixel : (SW[1] ? gray_px : (SW[2] : (zebra_crossing_stop ? coloured_conv444 : convolved_rgb444) ? video_data));
 
 	vga_driver u_vga_driver (
 		.clk(clk_video),
