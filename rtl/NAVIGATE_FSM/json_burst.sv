@@ -29,13 +29,13 @@ localparam logic [7:0] MSG_STOP [0:LEN_STOP-1] = '{
 
 
 
-// FWD: {"T":1,"L":0.10,"R":0.10}\n  (26)
+// FWD: {"T":1,"L":0.05,"R":0.05}\n  (26)
 localparam int LEN_FWD = 26;
 localparam logic [7:0] MSG_FWD [0:LEN_FWD-1] = '{
   8'h7B,8'h22,8'h54,8'h22,8'h3A,8'h31,8'h2C,8'h22,8'h4C,8'h22,8'h3A,
-  8'h30,8'h2E,8'h31,8'h30,             // "0.10"
+  8'h30,8'h2E,8'h30,8'h35,             // "0.05"
   8'h2C,8'h22,8'h52,8'h22,8'h3A,
-  8'h30,8'h2E,8'h31,8'h30,             // "0.10"
+  8'h30,8'h2E,8'h30,8'h35,             // "0.05"
   8'h7D,8'h0A
 };
 

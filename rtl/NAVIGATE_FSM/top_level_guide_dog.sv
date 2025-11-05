@@ -21,7 +21,6 @@ module top_level_guide_dog (
 	input                AUD_BCLK,
 	output  logic        AUD_XCK,
 	input                AUD_ADCLRCK,
-	input                AUD_ADCLRCK,
 
 	// camera inputs and outputs
 	input  	logic		OV7670_PCLK,
@@ -43,7 +42,6 @@ module top_level_guide_dog (
 	output logic [7:0]  VGA_B,
 	output logic        VGA_BLANK_N,
 	output logic        VGA_SYNC_N,
-	output logic        VGA_CLK
 	output logic        VGA_CLK
 	 
 );
@@ -144,13 +142,9 @@ microphone_top_level #(
 	.HEX5(HEX5),
 	.HEX6(HEX6),
 	.HEX7(HEX7)
-	.HEX7(HEX7)
-
 	);
 	
 logic [17:0] vision_crossing;
-logic zebra_crossing_stop;
-
 logic zebra_crossing_stop;
 
 top_level_vision u_vision (
@@ -233,8 +227,6 @@ guide_fsm #(
   .obstacle_stop           (stop_front_raw),   // SW1 level
   .zebra_pattern_stop      (zebra_crossing_stop),      // SW2 level
   .person_far_away_stop    (stop_back_raw), // SW3 level
-  .stop_command_clap       (clap_lvl),       // SW4 level
-  .IR_remote_emergency_stop(ir_emerg_lvl),   // KEY0 active-low => level high here
   .tick_20hz               (tick_20hz),
   .cmd_sel                 (cmd_sel)         // 3-bit command bus
 );

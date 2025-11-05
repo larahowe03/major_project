@@ -132,7 +132,7 @@ module guide_fsm #(
       S_ARC_R2:  ns = (r2_ctr    >= R2_T  ) ? S_FWD    : S_ARC_R2;
 
       S_ZEBRA:   ns = (zebra_ctr >= Z_T   ) ? S_CROSS_ZEBRA    : S_ZEBRA;
-      S_CROSS_ZEBRA:   ns = (zebra_crossing_stop == '0   ) ? S_FWD    : S_CROSS_ZEBRA;
+      S_CROSS_ZEBRA:   ns = (zebra_pattern_stop == '0   ) ? S_FWD    : S_CROSS_ZEBRA;
 
       default:   ns = S_IDLE;
     endcase
