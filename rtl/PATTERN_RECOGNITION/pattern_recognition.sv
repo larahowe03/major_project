@@ -1,11 +1,11 @@
 module pattern_recognition #(
-    parameter IMG_WIDTH  = 640,
+    parameter IMG_WIDTH = 640,
     parameter IMG_HEIGHT = 480,
-    parameter KERNEL_H   = 3,
-    parameter KERNEL_W   = 3,
-    parameter W          = 8,
-    parameter W_FRAC     = 0,
-    parameter MAX_EDGES  = 1024
+    parameter KERNEL_H = 3,
+    parameter KERNEL_W = 3,
+    parameter W = 8,
+    parameter W_FRAC = 0,
+    parameter MAX_EDGES = 1024
 )(
     input  logic clk,
     input  logic rst_n,
@@ -25,47 +25,20 @@ module pattern_recognition #(
     output logic [W-1:0] y_data,
     output logic [W-1:0] y_data_bw,
 
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels,
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
-    output logic white_count_valid,
-
     output logic num_threshold_pixels_fulfilled,
     output logic num_edge_pixels_fulfilled,
     output logic num_connected_edge_instances_fulfilled,
-    output logic lowest_edge_position_fulfilled,
-    
-    // Edge bounding box outputs
-    output logic [$clog2(IMG_HEIGHT)-1:0] edge_top,
-    output logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom,
-    output logic [$clog2(IMG_WIDTH)-1:0] edge_left,
-    output logic [$clog2(IMG_WIDTH)-1:0] edge_right,
-    output logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom,  // Max Y for thresholded pixels
-    output logic close_to_crossing_edge,  // HIGH when edge_bottom > 380
-    output logic close_to_crossing_threshold,  // HIGH when edge_bottom > 380
-    
-    // Connected components count
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components,
-    output logic components_valid
+    output logic lowest_edge_position_fulfilled
 );
 
-    // Internal signals from detector
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_components_internal;
+    // Internal signals
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels;
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels;
+    logic white_count_valid;
+    logic capture_trigger;
     logic components_done;
-    
-    // Bounding box from convolution filter
-    logic [$clog2(IMG_HEIGHT)-1:0] edge_top_internal;
-    logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom_internal;
-    logic [$clog2(IMG_WIDTH)-1:0] edge_left_internal;
-    logic [$clog2(IMG_WIDTH)-1:0] edge_right_internal;
-    logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom_internal;
-    logic close_to_crossing_edge_internal;
-    logic close_to_crossing_threshold_internal;
 
-    localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
-
-    // ========================================================================
-    // Convolution filter with bounding box tracking
-    // ========================================================================
+    // Convolution filter
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
@@ -87,19 +60,10 @@ module pattern_recognition #(
         .kernel(kernel),
         .num_white_edge_pixels(num_white_edge_pixels),
         .num_white_threshold_pixels(num_white_threshold_pixels),
-        .edge_top(edge_top_internal),
-        .edge_bottom(edge_bottom_internal),
-        .edge_left(edge_left_internal),
-        .edge_right(edge_right_internal),
-        .threshold_bottom(threshold_bottom_internal),
-        .close_to_crossing_edge(close_to_crossing_edge_internal),
-        .close_to_crossing_threshold(close_to_crossing_threshold_internal),
         .white_count_valid(white_count_valid)
     );
 
-    // ========================================================================
-    // Position tracking for sparse storage writes
-    // ========================================================================
+    // Position tracking
     logic [$clog2(IMG_WIDTH)-1:0] x_pos;
     logic [$clog2(IMG_HEIGHT)-1:0] y_pos;
     
@@ -107,34 +71,27 @@ module pattern_recognition #(
         if (!rst_n) begin
             x_pos <= '0;
             y_pos <= '0;
-        end else begin
-            if (y_valid && y_ready) begin
-                if (x_pos == IMG_WIDTH - 1) begin
-                    x_pos <= '0;
-                    if (y_pos == IMG_HEIGHT - 1) begin
-                        y_pos <= '0;
-                    end else begin
-                        y_pos <= y_pos + 1;
-                    end
-                end else begin
-                    x_pos <= x_pos + 1;
-                end
+        end else if (y_valid && y_ready) begin
+            if (x_pos == IMG_WIDTH - 1) begin
+                x_pos <= '0;
+                if (y_pos == IMG_HEIGHT - 1)
+                    y_pos <= '0;
+                else
+                    y_pos <= y_pos + 1;
+            end else begin
+                x_pos <= x_pos + 1;
             end
         end
     end
     
-    wire frame_complete = (x_pos == IMG_WIDTH - 1) && (y_pos == IMG_HEIGHT - 1) && y_valid;
+    logic frame_complete = (x_pos == IMG_WIDTH - 1) && (y_pos == IMG_HEIGHT - 1) && y_valid;
 
-    // ========================================================================
     // Sparse Edge Storage
-    // ========================================================================
     logic [$clog2(MAX_EDGES)-1:0] edge_read_idx;
     logic [$clog2(IMG_WIDTH)-1:0] edge_x;
     logic [$clog2(IMG_HEIGHT)-1:0] edge_y;
     logic edge_valid;
     logic [$clog2(MAX_EDGES)-1:0] num_edges;
-    logic capture_trigger;
-    logic buffer_overflow;
     
     sparse_edge_storage #(
         .IMG_WIDTH(IMG_WIDTH),
@@ -143,32 +100,22 @@ module pattern_recognition #(
     ) u_sparse_edge_storage (
         .clk(clk),
         .rst_n(rst_n),
-        
-        // Write from edge detection
         .write_valid(y_valid),
         .write_data(y_data),
         .write_x(x_pos),
         .write_y(y_pos),
-        
-        // Capture control
         .capture_trigger(capture_trigger),
         .frame_complete(frame_complete),
         .capturing(capturing),
         .valid_to_read(valid_to_read),
-        
-        // Read for detector
         .read_idx(edge_read_idx),
         .edge_x(edge_x),
         .edge_y(edge_y),
         .edge_valid(edge_valid),
-        
-        .num_edges(num_edges),
-        .buffer_overflow(buffer_overflow)
+        .num_edges(num_edges)
     );
 
-    // ========================================================================
     // Zebra Crossing Detector
-    // ========================================================================
     zebra_crossing_detector #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
@@ -183,58 +130,20 @@ module pattern_recognition #(
         .clk(clk),
         .rst_n(rst_n),
         .valid_to_read(valid_to_read),
-        
         .edge_read_idx(edge_read_idx),
         .edge_x(edge_x),
         .edge_y(edge_y),
         .edge_valid(edge_valid),
         .num_edges(num_edges),
-        
         .num_white_edge_pixels(num_white_edge_pixels),
         .num_white_threshold_pixels(num_white_threshold_pixels),
         .white_count_valid(white_count_valid),
-        
         .num_threshold_pixels_fulfilled(num_threshold_pixels_fulfilled),
         .num_edge_pixels_fulfilled(num_edge_pixels_fulfilled),
         .num_connected_edge_instances_fulfilled(num_connected_edge_instances_fulfilled),
         .lowest_edge_position_fulfilled(lowest_edge_position_fulfilled),
-        
         .capture_trigger(capture_trigger),
-        
         .components_done(components_done)
     );
-    
-    // Register outputs for stable display
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            num_connected_components <= '0;
-            components_valid <= 1'b0;
-            edge_top <= '0;
-            edge_bottom <= '0;
-            edge_left <= '0;
-            edge_right <= '0;
-            threshold_bottom <= '0;
-            close_to_crossing_edge <= 1'b0;
-        end else begin
-            // Update connected components when detector finishes
-            if (components_done) begin
-                num_connected_components <= num_components_internal;
-                components_valid <= 1'b1;
-            end else begin
-                components_valid <= 1'b0;
-            end
-            
-            // Update bounding box and close_to_crossing_edge flag when frame completes
-            if (white_count_valid) begin
-                edge_top <= edge_top_internal;
-                edge_bottom <= edge_bottom_internal;
-                edge_left <= edge_left_internal;
-                edge_right <= edge_right_internal;
-                threshold_bottom <= threshold_bottom_internal;
-                close_to_crossing_edge <= close_to_crossing_edge_internal;
-                close_to_crossing_threshold <= close_to_crossing_threshold_internal;
-            end
-        end
-    end
 
 endmodule

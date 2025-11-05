@@ -127,22 +127,13 @@ module top_level_vision (
 	logic pr_y_ready;
 	logic [7:0] pr_y_data;
 	logic [7:0] pr_y_data_bw;
-	logic white_count_valid;
-	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels;
-	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels;
 	
 	logic valid_to_read, capturing;
 	
-	// Bounding box and components
-	logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components;
-	logic [$clog2(IMG_HEIGHT)-1:0] edge_top;
-	logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom;
-	logic [$clog2(IMG_WIDTH)-1:0] edge_left;
-	logic [$clog2(IMG_WIDTH)-1:0] edge_right;
-	logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom;
-	logic close_to_crossing_edge;
-	logic close_to_crossing_threshold;
-	logic components_valid;
+	// Only keep the signals needed for zebra crossing detection
+	logic num_threshold_pixels_fulfilled;
+	logic num_edge_pixels_fulfilled;
+	logic lowest_edge_position_fulfilled;
 
 	pattern_recognition #(
 		.IMG_WIDTH(IMG_WIDTH),
@@ -170,36 +161,17 @@ module top_level_vision (
 		.y_data(pr_y_data),
 		.y_data_bw(pr_y_data_bw),
 
-		.num_white_edge_pixels(num_white_edge_pixels),
-		.num_white_threshold_pixels(num_white_threshold_pixels),
-		.white_count_valid(white_count_valid),
-
 		.num_threshold_pixels_fulfilled(num_threshold_pixels_fulfilled),
 		.num_edge_pixels_fulfilled(num_edge_pixels_fulfilled),
-		.num_connected_edge_instances_fulfilled(num_connected_edge_instances_fulfilled),
-		.lowest_edge_position_fulfilled(lowest_edge_position_fulfilled),
-		
-		// Bounding box and components
-		.edge_top(edge_top),
-		.edge_bottom(edge_bottom),
-		.edge_left(edge_left),
-		.edge_right(edge_right),
-		.threshold_bottom(threshold_bottom),
-		.close_to_crossing_edge(close_to_crossing_edge),
-		.close_to_crossing_threshold(close_to_crossing_threshold),
-		.num_connected_components(num_connected_components),
-		.components_valid(components_valid)
+		.lowest_edge_position_fulfilled(lowest_edge_position_fulfilled)
 	);
 	
-	logic num_threshold_pixels_fulfilled;
-	logic num_edge_pixels_fulfilled;
-	logic num_connected_edge_instances_fulfilled;
-	logic lowest_edge_position_fulfilled;
-	
+	// Final output: zebra crossing detected if all criteria met
 	assign zebra_crossing_stop = num_threshold_pixels_fulfilled & num_edge_pixels_fulfilled & lowest_edge_position_fulfilled;
 	
 	assign pr_y_ready = 1'b1;
 	
+	// Display signals (kept for VGA output if needed)
 	wire [11:0] convolved_rgb444 = {pr_y_data[7:4], pr_y_data[7:4], pr_y_data[7:4]};
 	wire [11:0] thresholded_rgb444 = {pr_y_data_bw[7:4], pr_y_data_bw[7:4], pr_y_data_bw[7:4]};
 	
