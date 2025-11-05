@@ -21,6 +21,7 @@ module top_level_guide_dog (
 	input                AUD_BCLK,
 	output  logic        AUD_XCK,
 	input                AUD_ADCLRCK,
+	input                AUD_ADCLRCK,
 
 	// camera inputs and outputs
 	input  	logic		OV7670_PCLK,
@@ -42,6 +43,7 @@ module top_level_guide_dog (
 	output logic [7:0]  VGA_B,
 	output logic        VGA_BLANK_N,
 	output logic        VGA_SYNC_N,
+	output logic        VGA_CLK
 	output logic        VGA_CLK
 	 
 );
@@ -142,12 +144,14 @@ microphone_top_level #(
 	.HEX5(HEX5),
 	.HEX6(HEX6),
 	.HEX7(HEX7)
+	.HEX7(HEX7)
 
 	);
 	
 logic [17:0] vision_crossing;
 logic zebra_crossing_stop;
 
+logic zebra_crossing_stop;
 
 top_level_vision u_vision (
 	// board-level signals
