@@ -196,21 +196,21 @@ module top_level_vision (
 	logic num_connected_edge_instances_fulfilled;
 	logic lowest_edge_position_fulfilled;
 	
-	assign zebra_crossing_stop = num_threshold_pixels_fulfilled & num_edge_pixels_fulfilled & close_to_crossing_edge_show;
+	assign zebra_crossing_stop = num_threshold_pixels_fulfilled & num_edge_pixels_fulfilled & lowest_edge_position_fulfilled;
 	
 	assign pr_y_ready = 1'b1;
 	
 	wire [11:0] convolved_rgb444 = {pr_y_data[7:4], pr_y_data[7:4], pr_y_data[7:4]};
 	wire [11:0] thresholded_rgb444 = {pr_y_data_bw[7:4], pr_y_data_bw[7:4], pr_y_data_bw[7:4]};
 	
-	wire use_convolved = ~KEY[1];
-	wire [11:0] processed_pixel = use_convolved ? convolved_rgb444 : thresholded_rgb444;
 	wire [11:0] vga_show;
 	
-	if (show_original) assign vga_show = video_data;
-	if (show_grayscale) assign vga_show = gray_px;
-	if (show_edge) assign vga_show = convolved_rgb444;
-	if (show_threshold) assign vga_show = thresholded_rgb444;
+	always_comb begin
+		if (show_original) vga_show = video_data;
+		if (show_grayscale) vga_show = gray_px;
+		if (show_edge) vga_show = convolved_rgb444;
+		if (show_threshold) vga_show = thresholded_rgb444;
+	end
 
 	vga_driver u_vga_driver (
 		.clk(clk_video),

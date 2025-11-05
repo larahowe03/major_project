@@ -166,8 +166,6 @@ module top_level (
         .obstacle_stop(stop_front_raw),   
         .zebra_pattern_stop(zebra_crossing_stop),    
         .person_far_away_stop(stop_back_raw), 
-        .stop_command_clap(stop_command_clap),     
-        .IR_remote_emergency_stop(ir_emerg_lvl),  
         .tick_20hz(tick_20hz),
         .cmd_sel(cmd_sel)         // 3-bit command bus
     );
