@@ -50,15 +50,22 @@ assign GPIO[30] = trigger_back;
 //-------------------------------------------
 // Set Sensor Clock
 //-------------------------------------------
+latch_distance latch_front_distance (
+	.clk(CLOCK_50),
+	.reset(reset),
+	.valid(sonar_valid_front),
+	.distance_mm(distance_mm_front),
+	.latched_distance_mm(latched_distance_mm_front)
+)
 
-always_ff @(posedge CLOCK_50) begin
-	if (sonar_valid_front) begin
-		latched_distance_mm_front <= distance_mm_front; 
-	end
-	if (sonar_valid_back) begin
-		latched_distance_mm_back <= distance_mm_back; 
-	end
-end
+latch_distance latch_back_distance (
+	.clk(CLOCK_50),
+	.reset(reset),
+	.valid(sonar_valid_back),
+	.distance_mm(distance_mm_back),
+	.latched_distance_mm(latched_distance_mm_back)
+)
+
 
 sonar_pll sonar_pll (
 	.areset(reset),
