@@ -67,8 +67,8 @@ module top_level (
     );
 
     logic whistle_detected, beep_detected;
-    assign LEDG[7] = whistle_detected;
-    assign LEDG[8] = beep_detected;
+    assign LEDG[6] = whistle_detected;
+    assign LEDG[7] = beep_detected;
 
     microphone_top_level u_microphone_top_level (
         .CLOCK_50(CLOCK_50),
@@ -87,7 +87,7 @@ module top_level (
         .AUD_ADCDAT(AUD_ADCDAT),
         .AUD_BCLK(AUD_BCLK),
         .AUD_XCK(AUD_XCK),
-        .AUD_ADCLRCK(AUD_ADCDAT)
+        .AUD_ADCLRCK(AUD_ADCLRCK)
     );
     
     // Show raw value differently

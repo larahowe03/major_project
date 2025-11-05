@@ -176,8 +176,6 @@ module microphone_top_level #(
 	end
 
 	assign LEDG[0] = whistle_detected;
-	assign LEDG[1] = beep_detected;
+//	assign LEDG[1] = beep_detected;
 
 endmodule
-
-
