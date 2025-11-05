@@ -178,11 +178,18 @@ module top_level_vision (
 	wire [11:0] vga_show;
 	
 	always_comb begin
-		if (show_original) vga_show = video_data;
-		if (show_grayscale) vga_show = gray_px;
-		if (show_edge) vga_show = convolved_rgb444;
-		if (show_threshold) vga_show = thresholded_rgb444;
+		if (show_original) 
+			vga_show = video_data;
+		else if (show_grayscale) 
+			vga_show = gray_px;
+		else if (show_edge) 
+			vga_show = convolved_rgb444;
+		else if (show_threshold) 
+			vga_show = thresholded_rgb444;
+		else 
+			vga_show = 12'b0;
 	end
+
 
 	vga_driver u_vga_driver (
 		.clk(clk_video),
