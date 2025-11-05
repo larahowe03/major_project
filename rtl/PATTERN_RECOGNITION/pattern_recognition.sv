@@ -201,8 +201,6 @@ module pattern_recognition #(
         
         .capture_trigger(capture_trigger),
         
-        .num_connected_components(num_components_internal),
-        .lowest_edge_y(),  // Not used - we get it from convolution filter
         .components_done(components_done)
     );
     
