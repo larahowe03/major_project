@@ -1,4 +1,4 @@
-module top_level_guide_dog (
+module top_level (
 	input  logic        CLOCK_50,
 	input  logic [9:0]  SW,          // SW0=start, SW1=obstacle, SW2=zebra, SW3=path_clear
 	input  logic [3:0]  KEY,         // KEY1=reset (active-low), KEY0=estop (active-low)
@@ -53,16 +53,6 @@ assign rst_n = KEY[0];   // KEY0 held low = reset
 // edge + level helper
 //logic start_lvl, start_rise;
 //deb_edge u_start (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[0]),   .level(start_lvl), .rise(start_rise));
-
-
-
-// Level-only debounces (rises unused)
-//UNCOMMENT THESE ONCE MODULES ARE INTEGRATED
-//logic obstacle_lvl;        deb_edge u_obs  (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[1]),   .level(obstacle_lvl),      .rise());
-//logic zebra_crossing_stop;           deb_edge u_zeb  (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[2]),   .level(zebra_crossing_stop),         .rise());
-//logic person_far_lvl;      deb_edge u_far  (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[3]),   .level(person_far_lvl),    .rise());
-logic clap_lvl;            deb_edge u_clap (.clk(CLOCK_50), .rst_n(rst_n), .raw_in(SW[4]),   .level(clap_lvl),          .rise());
-
 // Emergency stop from KEY0 (active-low button)
 
 // =================== 20 Hz heartbeat ===================
