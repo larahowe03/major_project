@@ -206,8 +206,8 @@ module convolution_filter_tb;
         
         // Save outputs
         repeat(100) @(posedge clk);
-        save_output_image("edge_image.mif", output_image_edge);
-        save_output_image("thresholded_image.mif", output_image_bw);
+        save_output_image("edge_image_result.mif", output_image_edge);
+        save_output_image("thresholded_image_result.mif", output_image_bw);
         
         $display("\n=== TEST COMPLETE ===");
         $display("Input pixels:           %0d", pixel_in_count);
