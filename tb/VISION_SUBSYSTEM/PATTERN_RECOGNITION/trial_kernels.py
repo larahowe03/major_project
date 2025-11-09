@@ -9,11 +9,11 @@ def apply_kernel(image, kernel, name):
     img_float = image.astype(float)
     
     # Apply convolution
-    result = convolve(img_float, np.array([[1, 1, 1],
-                              [1, 1, 1],
-                              [1, 1, 1]]) / 15.0, mode='constant', cval=0.0)
+    # result = convolve(img_float, np.array([[1, 1, 1],
+    #                           [1, 1, 1],
+    #                           [1, 1, 1]]) / 15.0, mode='constant', cval=0.0)
 
-    result = convolve(result, kernel, mode='constant', cval=0.0)
+    result = convolve(img_float, kernel, mode='constant', cval=0.0)
 
     # result = convolve(result, np.array([[-1, -2, -1],
     #                                     [ 0,  0,  0],
@@ -39,7 +39,7 @@ def test_all_kernels(image_path):
         
         'Box Blur': np.array([[1, 1, 1],
                               [1, 1, 1],
-                              [1, 1, 1]]) / 9.0,
+                              [1, 1, 1]]) / 15.0,
         
         'Sharpen': np.array([[ 0, -1,  0],
                              [-1,  5, -1],
@@ -116,7 +116,7 @@ def test_single_kernel(image_path, kernel_name):
     kernels = {
         'blur': np.array([[1, 1, 1],
                          [1, 1, 1],
-                         [1, 1, 1]]) / 9.0,
+                         [1, 1, 1]]) / 15.0,
         
         'sharpen': np.array([[ 0, -1,  0],
                             [-1,  5, -1],
@@ -144,7 +144,12 @@ def test_single_kernel(image_path, kernel_name):
         print(f"Available: {list(kernels.keys())}")
         return
     
-    result = apply_kernel(img_array, kernels[kernel_name], kernel_name)
+    result = apply_kernel(img_array, kernels['blur'], kernel_name)
+    result = apply_kernel(result, kernels[kernel_name], kernel_name)
+
+    plt.imsave(f"{kernel_name}_result_only.png", result, cmap='gray')
+    print(f"Saved: {kernel_name}_result_only.png")
+
     
     # Display
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
@@ -154,7 +159,7 @@ def test_single_kernel(image_path, kernel_name):
     ax1.axis('off')
     
     ax2.imshow(result, cmap='gray')
-    ax2.set_title(f'{kernel_name}')
+    ax2.set_title(f'edge_aggressive + blur')
     ax2.axis('off')
     
     plt.tight_layout()
@@ -164,3 +169,4 @@ def test_single_kernel(image_path, kernel_name):
 
 if __name__ == "__main__":
     test_all_kernels("real_test_images/test_image.png")
+    test_single_kernel("real_test_images/test_image.png", 'edge_aggressive')
