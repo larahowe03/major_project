@@ -212,7 +212,7 @@ module convolution_filter #(
                 end
                 
                 // Valid signals
-                y_valid <= convolution_valid_d1;
+                y_valid <= x_valid_d1;
                 y_valid_bw <= x_valid_d1;
                 
             end else if (y_ready) begin
