@@ -29,19 +29,7 @@ module pattern_recognition #(
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
     output logic white_count_valid,
 
-    output logic num_threshold_pixels_fulfilled,
-    output logic num_edge_pixels_fulfilled,
-    output logic num_connected_edge_instances_fulfilled,
-    output logic lowest_edge_position_fulfilled,
-    
-    // Edge bounding box outputs
-    output logic [$clog2(IMG_HEIGHT)-1:0] edge_top,
-    output logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom,
-    output logic [$clog2(IMG_WIDTH)-1:0] edge_left,
-    output logic [$clog2(IMG_WIDTH)-1:0] edge_right,
-    output logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom,  // Max Y for thresholded pixels
-    output logic close_to_crossing_edge,  // HIGH when edge_bottom > 380
-    output logic close_to_crossing_threshold,  // HIGH when edge_bottom > 380
+    output logic zebra_crossing_stop,
     
     // Connected components count
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components,
@@ -51,20 +39,9 @@ module pattern_recognition #(
     // Internal signals from detector
     logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_components_internal;
     logic components_done;
-    
-    // Bounding box from convolution filter
-    logic [$clog2(IMG_HEIGHT)-1:0] edge_top_internal;
-    logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom_internal;
-    logic [$clog2(IMG_WIDTH)-1:0] edge_left_internal;
-    logic [$clog2(IMG_WIDTH)-1:0] edge_right_internal;
-    logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom_internal;
-    logic close_to_crossing_edge_internal;
-    logic close_to_crossing_threshold_internal;
-
-    localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
 
     // ========================================================================
-    // Convolution filter with bounding box tracking
+    // Convolution filter
     // ========================================================================
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
@@ -87,13 +64,6 @@ module pattern_recognition #(
         .kernel(kernel),
         .num_white_edge_pixels(num_white_edge_pixels),
         .num_white_threshold_pixels(num_white_threshold_pixels),
-        .edge_top(edge_top_internal),
-        .edge_bottom(edge_bottom_internal),
-        .edge_left(edge_left_internal),
-        .edge_right(edge_right_internal),
-        .threshold_bottom(threshold_bottom_internal),
-        .close_to_crossing_edge(close_to_crossing_edge_internal),
-        .close_to_crossing_threshold(close_to_crossing_threshold_internal),
         .white_count_valid(white_count_valid)
     );
 
@@ -169,14 +139,21 @@ module pattern_recognition #(
     // ========================================================================
     // Zebra Crossing Detector
     // ========================================================================
+
+    // criteria
+    logic num_threshold_pixels_fulfilled;
+    logic num_edge_pixels_fulfilled;
+    logic num_connected_edge_instances_fulfilled;
+    logic lowest_edge_position_fulfilled;
+
     zebra_crossing_detector #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
         .MAX_EDGES(MAX_EDGES),
-        .MIN_WHITE_PIXELS(38400),
+        .MIN_WHITE_PIXELS(76800),
         .MAX_WHITE_PIXELS(307200),
         .MIN_EDGE_PIXELS(2000),
-        .MIN_CONNECTED_EDGE_PIXELS(20),
+        .MIN_CONNECTED_EDGE_PIXELS(100),
         .MIN_CONNECTED_EDGE_INSTANCES(10),
         .MIN_LOWEST_EDGE_Y(IMG_HEIGHT * 4 / 5)
     ) u_zebra_crossing_detector (
@@ -202,7 +179,6 @@ module pattern_recognition #(
         .capture_trigger(capture_trigger),
         
         .num_connected_components(num_components_internal),
-        .lowest_edge_y(),  // Not used - we get it from convolution filter
         .components_done(components_done)
     );
     
@@ -211,12 +187,6 @@ module pattern_recognition #(
         if (!rst_n) begin
             num_connected_components <= '0;
             components_valid <= 1'b0;
-            edge_top <= '0;
-            edge_bottom <= '0;
-            edge_left <= '0;
-            edge_right <= '0;
-            threshold_bottom <= '0;
-            close_to_crossing_edge <= 1'b0;
         end else begin
             // Update connected components when detector finishes
             if (components_done) begin
@@ -225,18 +195,9 @@ module pattern_recognition #(
             end else begin
                 components_valid <= 1'b0;
             end
-            
-            // Update bounding box and close_to_crossing_edge flag when frame completes
-            if (white_count_valid) begin
-                edge_top <= edge_top_internal;
-                edge_bottom <= edge_bottom_internal;
-                edge_left <= edge_left_internal;
-                edge_right <= edge_right_internal;
-                threshold_bottom <= threshold_bottom_internal;
-                close_to_crossing_edge <= close_to_crossing_edge_internal;
-                close_to_crossing_threshold <= close_to_crossing_threshold_internal;
-            end
         end
     end
+
+    assign zebra_crossing_stop = num_threshold_pixels_fulfilled & num_edge_pixels_fulfilled & num_connected_edge_instances_fulfilled & lowest_edge_position_fulfilled;
 
 endmodule

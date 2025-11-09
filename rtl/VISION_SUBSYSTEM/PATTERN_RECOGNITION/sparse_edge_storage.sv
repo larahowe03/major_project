@@ -129,6 +129,7 @@ module sparse_edge_storage #(
                         state <= CAPTURING;
                         capturing <= 1'b1;
                         write_idx <= '0;
+                        copy_idx <= '0;
                         valid_to_read <= 1'b0;
                         buffer_overflow <= 1'b0;
                     end

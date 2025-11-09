@@ -7,7 +7,7 @@ module zebra_crossing_detector #(
     parameter MIN_EDGE_PIXELS = 1000,
     parameter MIN_CONNECTED_EDGE_PIXELS = 20,
     parameter MIN_CONNECTED_EDGE_INSTANCES = 10,
-    parameter MIN_LOWEST_EDGE_Y = IMG_HEIGHT * 4 / 5  // Bottom fifth starts at 80% of height
+    parameter MIN_LOWEST_EDGE_Y = IMG_HEIGHT * 4 / 5
 )(
     input logic clk,
     input logic rst_n,
@@ -34,11 +34,9 @@ module zebra_crossing_detector #(
     
     output logic capture_trigger,
 
-    // NEW: Output connected components count and lowest edge Y
+    // Connected components count
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components,
-    output logic [$clog2(IMG_HEIGHT)-1:0] lowest_edge_y,
     output logic components_done
-
 );
 
     // Criteria 1: need enough white regions
@@ -86,8 +84,8 @@ module zebra_crossing_detector #(
         WAIT_EDGE_READ,
         CHECK_VISITED,
         START_COMPONENT,
-        EXPLORE_NEIGHBORS,
-        WAIT_NEIGHBOR_CHECK,
+        EXPLORE_NEIGHBOURS,
+        WAIT_NEIGHBOUR_CHECK,
         DONE,
         WAIT_DONE
     } state_t;
@@ -101,7 +99,7 @@ module zebra_crossing_detector #(
     
     coord_t current_pixel;
     logic [$clog2(MAX_EDGES)-1:0] current_edge_idx;
-    logic [$clog2(3)-1:0] neighbor_index;
+    logic [$clog2(3)-1:0] neighbour_idx;
     
     logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_edge_instances;
     logic [$clog2(MIN_CONNECTED_EDGE_PIXELS)-1:0] component_size;
@@ -115,9 +113,8 @@ module zebra_crossing_detector #(
     // Edge data latched from sparse storage
     coord_t current_edge;
     
-    // In state machine, expose the internal counter:
+    // Expose the internal counter
     assign num_connected_components = num_connected_edge_instances;
-    assign lowest_edge_y = max_y;
 
     // Edge of valid_to_read signal
     logic valid_to_read_d1;
@@ -193,7 +190,7 @@ module zebra_crossing_detector #(
                             visited[current_edge_idx] <= 1'b1;
                             current_pixel <= '{x: edge_x, y: edge_y};
                             component_size <= 1;
-                            neighbor_index <= '0;
+                            neighbour_idx <= '0;
                             state <= START_COMPONENT;
                         end else begin
                             current_edge_idx <= current_edge_idx + 1;
@@ -212,19 +209,19 @@ module zebra_crossing_detector #(
                         current_edge_idx <= current_edge_idx + 1;
                         state <= SCAN_EDGES;
                     end else begin
-                        state <= EXPLORE_NEIGHBORS;
+                        state <= EXPLORE_NEIGHBOURS;
                     end
                 end
                 
-                EXPLORE_NEIGHBORS: begin
-                    if (neighbor_index < 8) begin
-                        nx = $signed({1'b0, current_pixel.x}) + dx[neighbor_index];
-                        ny = $signed({1'b0, current_pixel.y}) + dy[neighbor_index];
+                EXPLORE_NEIGHBOURS: begin
+                    if (neighbour_idx < 8) begin
+                        nx = $signed({1'b0, current_pixel.x}) + dx[neighbour_idx];
+                        ny = $signed({1'b0, current_pixel.y}) + dy[neighbour_idx];
                         
                         if (nx >= 0 && nx < IMG_WIDTH && ny >= 0 && ny < IMG_HEIGHT) begin
-                            state <= WAIT_NEIGHBOR_CHECK;
+                            state <= WAIT_NEIGHBOUR_CHECK;
                         end else begin
-                            neighbor_index <= neighbor_index + 1;
+                            neighbour_idx <= neighbour_idx + 1;
                         end
                     end else begin
                         if (component_size >= MIN_CONNECTED_EDGE_PIXELS) begin
@@ -235,10 +232,9 @@ module zebra_crossing_detector #(
                     end
                 end
                 
-                WAIT_NEIGHBOR_CHECK: begin
-                    // Simplified: just increment
-                    neighbor_index <= neighbor_index + 1;
-                    state <= EXPLORE_NEIGHBORS;
+                WAIT_NEIGHBOUR_CHECK: begin
+                    neighbour_idx <= neighbour_idx + 1;
+                    state <= EXPLORE_NEIGHBOURS;
                 end
 
                 DONE: begin
