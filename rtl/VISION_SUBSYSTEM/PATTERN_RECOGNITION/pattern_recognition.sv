@@ -29,7 +29,7 @@ module pattern_recognition #(
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
     output logic white_count_valid,
 
-    output logic zebra_crossing_stop,
+    output logic zebra_crossing_stop
 );
 
     // ========================================================================

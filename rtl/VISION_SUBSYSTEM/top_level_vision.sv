@@ -61,7 +61,8 @@ module top_level_vision (
 		.sioc(OV7670_SIOC),
 		.siod(OV7670_SIOD),
 		.reset(OV7670_RESET),
-		.pwdn(OV7670_PWDN)
+		.pwdn(OV7670_PWDN),
+		.xclk(OV7670_XCLK)
 	);
 	
 	ov7670_pixel_capture u_ov7670_pixel_capture (
@@ -166,11 +167,8 @@ module top_level_vision (
 		.num_white_threshold_pixels(num_white_threshold_pixels),
         .white_count_valid(white_count_valid),
 
-		.zebra_crossing_stop(zebra_crossing_stop),
+		.zebra_crossing_stop(zebra_crossing_stop)
 		
-		// Connected components
-		.num_connected_components(num_connected_components),
-		.components_valid(components_valid)
 	);
 
 	assign LEDR[10] = zebra_crossing_stop;

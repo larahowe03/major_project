@@ -9,22 +9,22 @@ module zebra_crossing_detector #(
     parameter MIN_CONNECTED_EDGE_INSTANCES = 10,
     parameter MIN_LOWEST_EDGE_Y = IMG_HEIGHT * 4 / 5
 )(
-    input logic clk,
-    input logic rst_n,
+    input  logic clk,
+    input  logic rst_n,
 
-    input logic valid_to_read,
+    input  logic valid_to_read,
 
     // Edge list interface (sparse storage)
     output logic [$clog2(MAX_EDGES)-1:0] edge_read_idx,
-    input logic [$clog2(IMG_WIDTH)-1:0] edge_x,
-    input logic [$clog2(IMG_HEIGHT)-1:0] edge_y,
-    input logic edge_valid,
-    input logic [$clog2(MAX_EDGES)-1:0] num_edges,
+    input  logic [$clog2(IMG_WIDTH)-1:0]  edge_x,
+    input  logic [$clog2(IMG_HEIGHT)-1:0] edge_y,
+    input  logic edge_valid,
+    input  logic [$clog2(MAX_EDGES)-1:0] num_edges,
     
     // White pixel counts (already computed)
-    input logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels,
-    input logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
-    input logic white_count_valid,
+    input  logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels,
+    input  logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
+    input  logic white_count_valid,
 
     // Outputs
     output logic num_threshold_pixels_fulfilled,
@@ -34,6 +34,56 @@ module zebra_crossing_detector #(
     
     output logic capture_trigger
 );
+
+	 typedef struct packed {
+        logic [$clog2(IMG_WIDTH)-1:0]  x;
+        logic [$clog2(IMG_HEIGHT)-1:0] y;
+    } coord_t;
+
+    typedef enum logic [3:0] {
+        IDLE,
+        INIT_READ,
+        SCAN_EDGES,
+        WAIT_EDGE_READ,
+        CHECK_VISITED,
+        START_COMPONENT,
+        EXPLORE_NEIGHBOURS,
+        WAIT_NEIGHBOUR_CHECK,
+        DONE,
+        WAIT_DONE
+    } state_t;
+
+    state_t state;
+
+    logic signed [1:0] dx [0:7] = '{-1, 0, 1, -1, 1, -1, 0, 1};
+    logic signed [1:0] dy [0:7] = '{-1, -1, -1, 0, 0, 1, 1, 1};
+
+    logic signed [10:0] nx, ny;
+    
+    coord_t current_pixel;
+	 
+	 // Edge data latched from sparse storage
+    coord_t current_edge;
+	 
+    logic [$clog2(MAX_EDGES)-1:0] current_edge_idx;
+    logic [$clog2(3)-1:0] neighbour_idx;
+
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_edge_instances;
+    logic [$clog2(MIN_CONNECTED_EDGE_PIXELS)-1:0] component_size;
+
+    // Track the maximum Y coordinate (lowest point in image)
+    logic [$clog2(IMG_HEIGHT)-1:0] max_y;
+    
+    // Visited bitmap for edge pixels only
+    logic visited [0:MAX_EDGES-1];
+
+    // Edge of valid_to_read signal
+    logic valid_to_read_d1;
+    wire valid_to_read_edge = valid_to_read && !valid_to_read_d1;;
+
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components;
+    assign num_connected_components = num_connected_edge_instances;
+	 
 
     // Criteria 1: need enough white regions
     always_ff @(posedge clk or negedge rst_n) begin
@@ -68,56 +118,8 @@ module zebra_crossing_detector #(
         end
     end
 
-    typedef struct packed {
-        logic [$clog2(IMG_WIDTH)-1:0] x;
-        logic [$clog2(IMG_HEIGHT)-1:0] y;
-    } coord_t;
-
-    typedef enum logic [3:0] {
-        IDLE,
-        INIT_READ,
-        SCAN_EDGES,
-        WAIT_EDGE_READ,
-        CHECK_VISITED,
-        START_COMPONENT,
-        EXPLORE_NEIGHBOURS,
-        WAIT_NEIGHBOUR_CHECK,
-        DONE,
-        WAIT_DONE
-    } state_t;
-
-    state_t state;
-
-    logic signed [1:0] dx [0:7] = '{-1, 0, 1, -1, 1, -1, 0, 1};
-    logic signed [1:0] dy [0:7] = '{-1, -1, -1, 0, 0, 1, 1, 1};
-
-    logic signed [10:0] nx, ny;
-    
-    coord_t current_pixel;
-    logic [$clog2(MAX_EDGES)-1:0] current_edge_idx;
-    logic [$clog2(3)-1:0] neighbour_idx;
-    
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_edge_instances;
-    logic [$clog2(MIN_CONNECTED_EDGE_PIXELS)-1:0] component_size;
-    
-    // Track the maximum Y coordinate (lowest point in image)
-    logic [$clog2(IMG_HEIGHT)-1:0] max_y;
-    
-    // Visited bitmap for edge pixels only
-    logic visited [0:MAX_EDGES-1];
-
-    // Edge data latched from sparse storage
-    coord_t current_edge;
-    
-    // Expose the internal counter
-    assign num_connected_components = num_connected_edge_instances;
-
-    // Edge of valid_to_read signal
-    logic valid_to_read_d1;
-    wire valid_to_read_edge = valid_to_read && !valid_to_read_d1;
-
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components;
-
+	 
+    // Main FSM
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE;

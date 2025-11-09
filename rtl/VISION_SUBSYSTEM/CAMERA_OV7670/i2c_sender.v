@@ -24,32 +24,62 @@
 // over an I2C-like interface
 // no timescale needed
 
-module i2c_sender(
-input wire clk,
-inout reg siod,
-output reg sioc,
-output reg taken,
-input wire send,
-input wire [7:0] id,
-input wire [7:0] reg_,
-input wire [7:0] value
+//module i2c_sender(
+//input wire clk,
+//inout reg siod,
+//output reg sioc,
+//output reg taken,
+//input wire send,
+//input wire [7:0] id,
+//input wire [7:0] reg_,
+//input wire [7:0] value
+//);
+//
+//
+//
+//
+//reg [7:0] divider = 8'b00000001;  // this value gives a 254 cycle pause before the initial frame is sent
+//reg [31:0] busy_sr = 1'b0;
+//reg [31:0] data_sr = 1'b1;
+//
+//  always @(busy_sr, data_sr[31]) begin
+//    if(busy_sr[11:10] == 2'b10 || busy_sr[20:19] == 2'b10 || busy_sr[29:28] == 2'b10) begin
+//      siod <= 1'bZ;
+//    end
+//    else begin
+//      siod <= data_sr[31];
+//    end
+//  end
+  
+ module i2c_sender(
+  input  wire clk,
+  inout  wire siod,
+  output reg  sioc,
+  output reg  taken,
+  input  wire send,
+  input  wire [7:0] id,
+  input  wire [7:0] reg_,
+  input  wire [7:0] value
 );
 
+  reg [7:0]  divider = 8'b00000001;
+  reg [31:0] busy_sr = 1'b0;
+  reg [31:0] data_sr = 1'b1;
 
+  reg siod_out_en;
+  reg siod_out_val;
+  assign siod = siod_out_en ? siod_out_val : 1'bz;
 
-
-reg [7:0] divider = 8'b00000001;  // this value gives a 254 cycle pause before the initial frame is sent
-reg [31:0] busy_sr = 1'b0;
-reg [31:0] data_sr = 1'b1;
-
-  always @(busy_sr, data_sr[31]) begin
+  always @(*) begin
     if(busy_sr[11:10] == 2'b10 || busy_sr[20:19] == 2'b10 || busy_sr[29:28] == 2'b10) begin
-      siod <= 1'bZ;
-    end
-    else begin
-      siod <= data_sr[31];
+      siod_out_en  = 1'b0;
+      siod_out_val = 1'b1;
+    end else begin
+      siod_out_en  = 1'b1;
+      siod_out_val = data_sr[31];
     end
   end
+
 
   always @(posedge clk) begin
     taken <= 1'b0;
