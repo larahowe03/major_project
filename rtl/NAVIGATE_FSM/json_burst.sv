@@ -6,7 +6,7 @@ module json_burst #(
 )(
   input  logic        clk, rst_n,
   input  logic        tick_20hz,
-  input  logic [2:0]  cmd_sel,        // <-- widened to 3 bits
+  input  logic [2:0]  cmd_sel,       
   output logic        tx_valid,
   input  logic        tx_ready,
   output logic [7:0]  byte_to_send
@@ -16,7 +16,7 @@ module json_burst #(
                          CMD_ARC_L=3'd2, CMD_ARC_R=3'd3,
                          CMD_REV =3'd4;
 
-//  // ----- Messages (half speeds) -----
+//  // ----- Messages -----
 // STOP: {"T":1,"L":0.0,"R":0.0}\n  (24)
 localparam int LEN_STOP = 24;
 localparam logic [7:0] MSG_STOP [0:LEN_STOP-1] = '{
@@ -61,25 +61,6 @@ localparam logic [7:0] MSG_ARC_R [0:LEN_ARC_R-1] = '{
 };
 
 
-//// ARC_LEFT: {"T":1,"L":0.01,"R":0.08}\n  (26)
-//localparam int LEN_ARC_L = 26;
-//localparam logic [7:0] MSG_ARC_L [0:LEN_ARC_L-1] = '{
-//  8'h7B,8'h22,8'h54,8'h22,8'h3A,8'h31,8'h2C,8'h22,8'h4C,8'h22,8'h3A,
-//  8'h30,8'h2E,8'h30,8'h31,       // "0.01"
-//  8'h2C,8'h22,8'h52,8'h22,8'h3A,
-//  8'h30,8'h2E,8'h30,8'h38,       // "0.08"
-//  8'h7D,8'h0A
-//};
-//
-//// ARC_RIGHT: {"T":1,"L":0.08,"R":0.01}\n  (26)
-//localparam int LEN_ARC_R = 26;
-//localparam logic [7:0] MSG_ARC_R [0:LEN_ARC_R-1] = '{
-//  8'h7B,8'h22,8'h54,8'h22,8'h3A,8'h31,8'h2C,8'h22,8'h4C,8'h22,8'h3A,
-//  8'h30,8'h2E,8'h30,8'h38,       // "0.08"
-//  8'h2C,8'h22,8'h52,8'h22,8'h3A,
-//  8'h30,8'h2E,8'h30,8'h31,       // "0.01"
-//  8'h7D,8'h0A
-//};
 
 // REV: {"T":1,"L":-0.02,"R":-0.02}\n  (28)
 localparam int LEN_REV = 28;
@@ -107,7 +88,7 @@ localparam logic [7:0] MSG_REV [0:LEN_REV-1] = '{
     endcase
   end
 
-  // ARM→PULSE per byte
+  // ARM to PULSE per byte
   typedef enum logic [1:0] {IDLE, ARM, PULSE} st_t;
   st_t st;
   always_ff @(posedge clk or negedge rst_n) begin
@@ -127,5 +108,4 @@ localparam logic [7:0] MSG_REV [0:LEN_REV-1] = '{
     end
   end
 endmodule
-
 
