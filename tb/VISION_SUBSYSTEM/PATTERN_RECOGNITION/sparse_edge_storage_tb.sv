@@ -104,10 +104,20 @@ module sparse_edge_storage_tb;
         // Test: Process image and store edges
         test_process_image();
         
+        // Wait for valid_to_read signal
+        wait_for_valid_to_read();
+        
+        // Verify statistics
+        verify_statistics();
+        
         // Save detected edges to file
         save_edges_to_file();
         
-        $display("Time: %0t - All tests completed", $time);
+        // Test: Multiple capture cycles
+        test_multiple_captures();
+        
+        $display("\n=== Test Summary ===");
+        $display("Time: %0t - All tests completed successfully!", $time);
         $finish;
     end
     
@@ -160,6 +170,113 @@ module sparse_edge_storage_tb;
         $display("Time: %0t - Image loaded: %0d pixels", $time, pixels_loaded);
     endtask
 
+    // Task: Process image and stream to DUT
+    task automatic test_process_image();
+        int x, y;
+        int edge_pixel_count;
+        
+        $display("\n--- Processing Image and Storing Edges ---");
+        $display("Time: %0t - Starting edge capture", $time);
+        
+        edge_pixel_count = 0;
+        
+        // Assert capture trigger to start capturing
+        @(posedge clk);
+        capture_trigger = 1;
+        @(posedge clk);
+        capture_trigger = 0;
+        
+        // Wait for capturing signal to go high
+        wait(capturing == 1'b1);
+        $display("Time: %0t - Capture started (capturing signal high)", $time);
+        
+        // Stream all pixels from the loaded image
+        for (y = 0; y < IMG_HEIGHT; y++) begin
+            for (x = 0; x < IMG_WIDTH; x++) begin
+                write_valid = 1;
+                write_data = image_data[y][x];
+                write_x = x;
+                write_y = y;
+                
+                // Count edge pixels for verification
+                if (write_data == 8'd255) begin
+                    edge_pixel_count++;
+                    if (edge_pixel_count <= 10) begin
+                        $display("Time: %0t - Edge pixel detected at (%0d, %0d)", $time, x, y);
+                    end
+                end
+                
+                @(posedge clk);
+            end
+        end
+        
+        // Deassert write_valid
+        write_valid = 0;
+        write_data = 0;
+        @(posedge clk);
+        
+        $display("Time: %0t - All pixels streamed (%0d edge pixels detected)", $time, edge_pixel_count);
+        
+        // Assert frame_complete to signal end of frame
+        frame_complete = 1;
+        @(posedge clk);
+        frame_complete = 0;
+        @(posedge clk);
+        
+        $display("Time: %0t - Frame complete signal sent", $time);
+        
+        // Store edge count for later verification
+        edge_count = edge_pixel_count;
+    endtask
+
+    // Task: Wait for valid_to_read signal
+    task automatic wait_for_valid_to_read();
+        int timeout_cycles;
+        
+        $display("\n--- Waiting for Buffer Copy ---");
+        $display("Time: %0t - Waiting for valid_to_read signal", $time);
+        
+        timeout_cycles = 0;
+        while (valid_to_read != 1'b1 && timeout_cycles < 10000) begin
+            @(posedge clk);
+            timeout_cycles++;
+        end
+        
+        if (valid_to_read) begin
+            $display("Time: %0t - Valid to read signal asserted (after %0d cycles)", $time, timeout_cycles);
+        end else begin
+            $error("Time: %0t - Timeout waiting for valid_to_read signal", $time);
+            $finish;
+        end
+    endtask
+
+    // Task: Verify statistics
+    task automatic verify_statistics();
+        $display("\n--- Verifying Statistics ---");
+        $display("Time: %0t - Number of edges stored: %0d", $time, num_edges);
+        $display("Time: %0t - Buffer overflow flag: %0b", $time, buffer_overflow);
+        
+        if (buffer_overflow) begin
+            $warning("Buffer overflow occurred - image has more than %0d edges", MAX_EDGES);
+        end
+        
+        // Check if edge count matches (accounting for overflow)
+        if (edge_count <= MAX_EDGES) begin
+            if (num_edges == edge_count) begin
+                $display("Time: %0t - ✓ Edge count matches expected value", $time);
+            end else begin
+                $warning("Time: %0t - Edge count mismatch: expected %0d, got %0d", 
+                         $time, edge_count, num_edges);
+            end
+        end else begin
+            if (num_edges == MAX_EDGES) begin
+                $display("Time: %0t - ✓ Edge count saturated at MAX_EDGES as expected", $time);
+            end else begin
+                $warning("Time: %0t - Expected saturation at %0d, got %0d", 
+                         $time, MAX_EDGES, num_edges);
+            end
+        end
+    endtask
     
     // Task: Read and save edges to file
     task automatic save_edges_to_file();
@@ -178,16 +295,22 @@ module sparse_edge_storage_tb;
         $fwrite(fd, "# Detected Edges\n");
         $fwrite(fd, "# Format: x y\n");
         $fwrite(fd, "# Total edges: %0d\n", num_edges);
+        $fwrite(fd, "# Buffer overflow: %0b\n", buffer_overflow);
         $fwrite(fd, "\n");
         
         // Read back all edges from DUT and save
         for (i = 0; i < num_edges; i++) begin
             read_idx = i;
             @(posedge clk);
+            @(posedge clk); // Extra cycle for read latency
             
             if (edge_valid) begin
                 $fwrite(fd, "%0d %0d\n", edge_x, edge_y);
-                $display("Time: %0t - Edge %0d saved: (%0d, %0d)", $time, i, edge_x, edge_y);
+                if (i < 10 || i >= num_edges - 5) begin
+                    $display("Time: %0t - Edge %0d: (%0d, %0d)", $time, i, edge_x, edge_y);
+                end else if (i == 10) begin
+                    $display("Time: %0t - ... (showing first 10 and last 5 edges)", $time);
+                end
             end else begin
                 $warning("Edge %0d: invalid read", i);
             end
@@ -195,6 +318,66 @@ module sparse_edge_storage_tb;
         
         $fclose(fd);
         $display("Time: %0t - All edges saved to %s", $time, OUTPUT_FILE);
+    endtask
+    
+    // Task: Test multiple capture cycles
+    task automatic test_multiple_captures();
+        int x, y, test_edges;
+        
+        $display("\n--- Testing Multiple Capture Cycles ---");
+        $display("Time: %0t - Starting second capture cycle", $time);
+        
+        // Trigger second capture
+        @(posedge clk);
+        capture_trigger = 1;
+        @(posedge clk);
+        capture_trigger = 0;
+        
+        // Wait for capturing signal
+        wait(capturing == 1'b1);
+        $display("Time: %0t - Second capture started", $time);
+        
+        // Stream a simple test pattern (vertical line)
+        test_edges = 0;
+        for (y = 0; y < IMG_HEIGHT; y++) begin
+            for (x = 0; x < IMG_WIDTH; x++) begin
+                write_valid = 1;
+                // Create a vertical line at x=320
+                if (x == 320) begin
+                    write_data = 8'd255;
+                    test_edges++;
+                end else begin
+                    write_data = 8'd0;
+                end
+                write_x = x;
+                write_y = y;
+                @(posedge clk);
+            end
+        end
+        
+        write_valid = 0;
+        @(posedge clk);
+        
+        // Signal frame complete
+        frame_complete = 1;
+        @(posedge clk);
+        frame_complete = 0;
+        @(posedge clk);
+        
+        // Wait for valid_to_read
+        while (valid_to_read != 1'b1) begin
+            @(posedge clk);
+        end
+        
+        $display("Time: %0t - Second capture complete", $time);
+        $display("Time: %0t - Expected edges: %0d, Stored edges: %0d", 
+                 $time, test_edges, num_edges);
+        
+        if (num_edges == test_edges) begin
+            $display("Time: %0t - ✓ Second capture successful", $time);
+        end else begin
+            $warning("Time: %0t - Second capture edge count mismatch", $time);
+        end
     endtask
     
     // Dump waveforms

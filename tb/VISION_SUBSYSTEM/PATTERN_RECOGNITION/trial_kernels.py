@@ -76,7 +76,7 @@ def test_all_kernels(image_path):
     
     # Calculate grid size
     n_kernels = len(kernels)
-    n_cols = 3
+    n_cols = 4
     n_rows = (n_kernels + n_cols - 1) // n_cols
     
     # Create figure
@@ -167,5 +167,5 @@ def test_single_kernel(image_path, kernel_name):
     plt.show()
 
 if __name__ == "__main__":
-    # test_all_kernels("real_test_images/test_image.png")
+    test_all_kernels("real_test_images/test_image.png")
     test_single_kernel("real_test_images/test_image.png", 'blur')
