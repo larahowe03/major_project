@@ -332,6 +332,8 @@ module zebra_crossing_detector_tb;
     
     // Task: Test zebra crossing detection
     task automatic test_zebra_detection();
+        int timeout_counter;
+        
         $display("\n==========================================================");
         $display("TEST 1: Zebra Crossing Detection with Real Images");
         $display("==========================================================");
@@ -363,19 +365,24 @@ module zebra_crossing_detector_tb;
         $display("\nTime: %0t - Starting edge connectivity analysis", $time);
         $display("  Total edges to process: %0d", total_edges);
         
-        // Wait for processing to complete (monitor for capture_trigger)
-        fork
-            begin
-                wait(capture_trigger == 1'b1);
-                $display("\nTime: %0t - Detection complete!", $time);
+        // Wait for processing to complete with timeout
+        timeout_counter = 0;
+        while (capture_trigger != 1'b1 && timeout_counter < 500000) begin
+            @(posedge clk);
+            timeout_counter++;
+            
+            // Show progress every 50k cycles
+            if (timeout_counter % 50000 == 0) begin
+                $display("  Processing... (cycle %0d)", timeout_counter);
             end
-            begin
-                repeat(500000) @(posedge clk);  // Timeout
-                $error("Timeout waiting for detection to complete");
-                $finish;
-            end
-        join_any
-        disable fork;
+        end
+        
+        if (timeout_counter >= 500000) begin
+            $error("Timeout waiting for detection to complete");
+            $finish;
+        end else begin
+            $display("\nTime: %0t - Detection complete! (took %0d cycles)", $time, timeout_counter);
+        end
         
         // Read final results
         @(posedge clk);
@@ -438,6 +445,7 @@ module zebra_crossing_detector_tb;
     // Task: Test with edges in wrong position
     task automatic test_wrong_position();
         int modified_edge_count;
+        int timeout_counter;
         
         $display("\n==========================================================");
         $display("TEST 3: Edges in Wrong Position (Top of Image)");
@@ -470,8 +478,18 @@ module zebra_crossing_detector_tb;
         @(posedge clk);
         valid_to_read = 1;
         
-        // Wait for completion
-        wait(capture_trigger == 1'b1);
+        // Wait for completion with timeout
+        timeout_counter = 0;
+        while (capture_trigger != 1'b1 && timeout_counter < 500000) begin
+            @(posedge clk);
+            timeout_counter++;
+        end
+        
+        if (timeout_counter >= 500000) begin
+            $error("Timeout waiting for detection to complete");
+            $finish;
+        end
+        
         @(posedge clk);
         @(posedge clk);
         
