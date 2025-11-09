@@ -2,9 +2,7 @@
 
 module convolution_filter_tb;
 
-    // ========================================================================
     // Parameters
-    // ========================================================================
     parameter IMG_WIDTH = 640;
     parameter IMG_HEIGHT = 480;
     parameter KERNEL_H = 3;
@@ -22,9 +20,7 @@ module convolution_filter_tb;
     localparam int EXPECTED_BW_PIXELS = IMG_WIDTH * IMG_HEIGHT;      // 307200
     localparam int PIXEL_MARGIN = 2;  // Moved here from procedural block
     
-    // ========================================================================
     // DUT Signals
-    // ========================================================================
     reg clk;
     reg rst_n;
     
@@ -44,24 +40,18 @@ module convolution_filter_tb;
     wire [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels;
     wire white_count_valid;
     
-    // ========================================================================
     // Memory for Image Data
-    // ========================================================================
     reg [W-1:0] input_image [0:IMG_WIDTH*IMG_HEIGHT-1];
     reg [W-1:0] output_image_edge [0:IMG_WIDTH*IMG_HEIGHT-1];
     reg [W-1:0] output_image_bw [0:IMG_WIDTH*IMG_HEIGHT-1];
     
-    // ========================================================================
     // Clock Generation
-    // ========================================================================
     initial begin
         clk = 0;
         forever #(CLK_PERIOD/2) clk = ~clk;
     end
     
-    // ========================================================================
     // DUT Instantiation
-    // ========================================================================
     convolution_filter #(
         .IMG_WIDTH(IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT),
@@ -225,9 +215,7 @@ module convolution_filter_tb;
         $finish;
     end
     
-    // ========================================================================
     // Output Capture Process - Edge Detection
-    // ========================================================================
     always @(posedge clk) begin
         if (rst_n && y_valid && y_ready) begin
             if (pixel_out_edge_count < IMG_WIDTH*IMG_HEIGHT) begin
@@ -241,9 +229,7 @@ module convolution_filter_tb;
         end
     end
     
-    // ========================================================================
     // Output Capture Process - Threshold/BW
-    // ========================================================================
     always @(posedge clk) begin
         if (rst_n && y_valid_bw && y_ready) begin
             if (pixel_out_bw_count < IMG_WIDTH*IMG_HEIGHT) begin
@@ -257,10 +243,7 @@ module convolution_filter_tb;
         end
     end
     
-    // ========================================================================
-    // MIF File Loader - Updated to match standard format
-    // ========================================================================
-
+    // MIF File Loader
     task load_mif_file(input string filename);
         integer fd, status, addr, data;
         integer entries_loaded;
@@ -316,10 +299,7 @@ module convolution_filter_tb;
         end
     endtask
     
-    // ========================================================================
     // Kernel Loading Functions
-    // ========================================================================
-    
     task load_blur_kernel;
         begin
             $display("Loading 3x3 Box Blur kernel");
@@ -420,17 +400,13 @@ module convolution_filter_tb;
         end
     endtask
     
-    // ========================================================================
-    // Optional: Waveform Dump
-    // ========================================================================
+    // Waveform Dump
     initial begin
         $dumpfile("convolution_filter_tb.vcd");
         $dumpvars(0, convolution_filter_tb);
     end
     
-    // ========================================================================
     // Timeout Watchdog
-    // ========================================================================
     initial begin
         #(CLK_PERIOD * 1000000); // 1M cycles timeout
         $display("ERROR: Testbench timeout!");
