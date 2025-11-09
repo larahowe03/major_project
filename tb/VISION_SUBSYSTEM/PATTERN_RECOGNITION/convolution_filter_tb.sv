@@ -11,6 +11,7 @@ module convolution_filter_tb;
     parameter KERNEL_W = 3;
     parameter W = 8;
     parameter W_FRAC = 0;
+	 parameter MARGIN = 20;
     
     parameter CLK_PERIOD = 20; // 50 MHz
     
@@ -205,8 +206,8 @@ module convolution_filter_tb;
         
         // Save outputs
         repeat(100) @(posedge clk);
-        save_output_image("edge_img.mif", output_image_edge);
-        save_output_image("thresholded_img.mif", output_image_bw);
+        save_output_image("edge_image.mif", output_image_edge);
+        save_output_image("thresholded_image.mif", output_image_bw);
         
         $display("\n=== TEST COMPLETE ===");
         $display("Input pixels:           %0d", pixel_in_count);
