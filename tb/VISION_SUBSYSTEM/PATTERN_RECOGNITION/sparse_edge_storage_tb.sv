@@ -6,7 +6,7 @@ module sparse_edge_storage_tb;
     localparam IMG_WIDTH = 640;
     localparam IMG_HEIGHT = 480;
     localparam MAX_EDGES = 2048;
-    localparam string IMG_FILE = "edge_img.mif";
+    localparam string IMG_FILE = "blur_edge_image.mif";
     localparam string OUTPUT_FILE = "detected_edges.txt";
     
     // Clock and reset
