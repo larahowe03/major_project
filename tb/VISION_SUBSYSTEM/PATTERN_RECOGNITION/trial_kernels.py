@@ -144,8 +144,7 @@ def test_single_kernel(image_path, kernel_name):
         print(f"Available: {list(kernels.keys())}")
         return
     
-    result = apply_kernel(img_array, kernels['blur'], kernel_name)
-    result = apply_kernel(result, kernels[kernel_name], kernel_name)
+    result = apply_kernel(img_array, kernels[kernel_name], kernel_name)
 
     plt.imsave(f"{kernel_name}_result_only.png", result, cmap='gray')
     print(f"Saved: {kernel_name}_result_only.png")
@@ -168,5 +167,5 @@ def test_single_kernel(image_path, kernel_name):
     plt.show()
 
 if __name__ == "__main__":
-    test_all_kernels("real_test_images/test_image.png")
-    test_single_kernel("real_test_images/test_image.png", 'edge_aggressive')
+    # test_all_kernels("real_test_images/test_image.png")
+    test_single_kernel("real_test_images/test_image.png", 'blur')

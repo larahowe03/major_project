@@ -3,16 +3,6 @@ from PIL import Image
 import os
 
 def image_to_grayscale_mif(image_file_name, pixel_bits = 8, channel = 'blue'):
-    """
-    Converts a png to grayscale (using specified channel) then saves as .mif file
-    
-    Args:
-        image_file_name - Name of the image file located within the local path
-        pixel_bits      - Number of bits in the pixel 
-        resolution      - 2-element list: resize the input image to (width, height) shape in pixels. Use None to instead use the input image shape.
-        channel         - Color channel to use: 'red', 'green', 'blue', or 'grayscale' (default weighted)
-    """
-
     img = Image.open(image_file_name)
     img_rgb = np.array(img.convert("RGB"))
     image_height, image_width, _ = img_rgb.shape
