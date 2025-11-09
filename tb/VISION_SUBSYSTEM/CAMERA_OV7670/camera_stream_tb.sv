@@ -10,7 +10,7 @@ module camera_stream_tb;
 	logic [7:0] image [0:N_COLS*2-1];
 
 	initial begin
-	  $readmemh("colorbars.hex", image);
+	  $readmemh("rainbow.hex", image);
 	end
   logic        pclk;
   logic        href;
