@@ -9,7 +9,7 @@ module convolution_filter_tb;
     parameter KERNEL_W = 3;
     parameter W = 8;
     parameter W_FRAC = 0;
-	 parameter MARGIN = 20;
+    parameter MARGIN = 20;
     
     parameter CLK_PERIOD = 20; // 50 MHz
     
@@ -76,18 +76,14 @@ module convolution_filter_tb;
         .white_count_valid(white_count_valid)
     );
     
-    // ========================================================================
     // Test Variables
-    // ========================================================================
     integer pixel_in_count;
     integer pixel_out_edge_count;
     integer pixel_out_bw_count;
     integer fd_out;
     integer i;
     
-    // ========================================================================
     // Input Stimulus Process
-    // ========================================================================
     initial begin
         // Initialize
         pixel_in_count = 0;
@@ -372,9 +368,7 @@ module convolution_filter_tb;
         end
     endtask
 
-    // ========================================================================
-    // Output Save Function (Generic)
-    // ========================================================================
+    // Output Save Function
     
     task save_output_image(input string filename, input reg [W-1:0] image_data [0:IMG_WIDTH*IMG_HEIGHT-1]);
         begin
