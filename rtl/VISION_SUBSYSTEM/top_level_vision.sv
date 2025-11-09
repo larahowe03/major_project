@@ -35,7 +35,8 @@ module top_level_vision (
 	assign rst_n = KEY[0];
 
 	// Camera and VGA PLL
-	logic clk_video, send_camera_config;
+	logic clk_video;
+	logic send_camera_config;
 	assign send_camera_config = !KEY[2];
 
 	logic video_pll_locked, config_finished;
@@ -61,8 +62,7 @@ module top_level_vision (
 		.sioc(OV7670_SIOC),
 		.siod(OV7670_SIOD),
 		.reset(OV7670_RESET),
-		.pwdn(OV7670_PWDN),
-		.xclk(OV7670_XCLK)
+		.pwdn(OV7670_PWDN)
 	);
 	
 	ov7670_pixel_capture u_ov7670_pixel_capture (

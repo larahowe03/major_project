@@ -79,7 +79,7 @@ module zebra_crossing_detector #(
 
     // Edge of valid_to_read signal
     logic valid_to_read_d1;
-    wire valid_to_read_edge = valid_to_read && !valid_to_read_d1;;
+    wire valid_to_read_edge = valid_to_read && !valid_to_read_d1;
 
     logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components;
     assign num_connected_components = num_connected_edge_instances;

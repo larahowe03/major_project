@@ -71,10 +71,12 @@ module guide_fsm #(
 
   // Are we inside the maneuver?
   logic in_maneuver;
-  always_comb begin
-    in_maneuver = (s==S_BACK) || (s==S_ARC_R1) || (s==S_ARC_L1) ||
-                  (s==S_COAST) || (s==S_ARC_L2) || (s==S_ARC_R2);
-  end
+	always_comb begin
+		in_maneuver = (current_state==S_BACK) || (current_state==S_ARC_R1) ||
+					 (current_state==S_ARC_L1) || (current_state==S_COAST) ||
+					 (current_state==S_ARC_L2) || (current_state==S_ARC_R2);
+	end
+
 
   // Hard-stop mask: ignore person_far_away_stop while maneuvering
   logic hard_stop_any;
@@ -99,14 +101,14 @@ module guide_fsm #(
       if (!hard_stop_any) begin
         current_state <= next_state;
         if (tick_20hz) begin
-          // Reset on state exit, increment while in state and not done
-          back_ctr  <= (s==S_BACK)   ? ((back_ctr  < BACK_T) ? back_ctr+1  : back_ctr)  : 0;
-          r1_ctr    <= (s==S_ARC_R1) ? ((r1_ctr    < R1_T)   ? r1_ctr+1    : r1_ctr)    : 0;
-          l1_ctr    <= (s==S_ARC_L1) ? ((l1_ctr    < L1_T)   ? l1_ctr+1    : l1_ctr)    : 0;
-          coast_ctr <= (s==S_COAST)  ? ((coast_ctr < C_T)    ? coast_ctr+1 : coast_ctr) : 0;
-          l2_ctr    <= (s==S_ARC_L2) ? ((l2_ctr    < L2_T)   ? l2_ctr+1    : l2_ctr)    : 0;
-          r2_ctr    <= (s==S_ARC_R2) ? ((r2_ctr    < R2_T)   ? r2_ctr+1    : r2_ctr)    : 0;
-          zebra_ctr <= (s==S_ZEBRA)  ? ((zebra_ctr < Z_T)    ? zebra_ctr+1 : zebra_ctr) : 0;
+            // Reset on state exit, increment while in state and not done
+				back_ctr  <= (current_state==S_BACK)   ? ((back_ctr  < BACK_T) ? back_ctr+1  : back_ctr)  : 0;
+				r1_ctr    <= (current_state==S_ARC_R1) ? ((r1_ctr    < R1_T)   ? r1_ctr+1    : r1_ctr)    : 0;
+				l1_ctr    <= (current_state==S_ARC_L1) ? ((l1_ctr    < L1_T)   ? l1_ctr+1    : l1_ctr)    : 0;
+				coast_ctr <= (current_state==S_COAST)  ? ((coast_ctr < C_T)    ? coast_ctr+1 : coast_ctr) : 0;
+				l2_ctr    <= (current_state==S_ARC_L2) ? ((l2_ctr    < L2_T)   ? l2_ctr+1    : l2_ctr)    : 0;
+				r2_ctr    <= (current_state==S_ARC_R2) ? ((r2_ctr    < R2_T)   ? r2_ctr+1    : r2_ctr)    : 0;
+				zebra_ctr <= (current_state==S_ZEBRA)  ? ((zebra_ctr < Z_T)    ? zebra_ctr+1 : zebra_ctr) : 0;
         end
 
       end
@@ -134,6 +136,7 @@ module guide_fsm #(
       S_ARC_R2:  next_state = (r2_ctr    >= R2_T  ) ? S_FWD    : S_ARC_R2;
       S_ZEBRA:   next_state = (zebra_ctr >= Z_T   ) ? S_CROSS_ZEBRA    : S_ZEBRA;
       S_CROSS_ZEBRA:   next_state = (zebra_pattern_stop == '0  ) ? S_FWD    : S_CROSS_ZEBRA;
+
       default:   next_state = S_IDLE;
     endcase
   end
