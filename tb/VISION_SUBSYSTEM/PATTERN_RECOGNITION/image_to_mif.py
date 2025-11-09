@@ -41,7 +41,7 @@ def image_to_grayscale_mif(image_file_name, pixel_bits = 8, channel = 'blue'):
     name, _ = os.path.splitext(image_file_name)
 
     # Write image data file (pixel indices)
-    data_filename = f"verilog_results/test_img.mif"
+    data_filename = f"real_test_images/test_image.mif"
     print(f"\nWriting image data to {data_filename}")
 
     WIDTH = pixel_bits
@@ -70,4 +70,4 @@ def image_to_grayscale_mif(image_file_name, pixel_bits = 8, channel = 'blue'):
 
 if __name__ == "__main__":
     # Use blue channel only
-    image_to_grayscale_mif("verilog_results/test_img.png", channel='blue')
+    image_to_grayscale_mif("real_test_images/test_image.png", channel='blue')

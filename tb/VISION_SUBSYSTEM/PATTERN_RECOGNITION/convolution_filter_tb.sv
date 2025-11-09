@@ -15,8 +15,8 @@ module convolution_filter_tb;
     parameter CLK_PERIOD = 20; // 50 MHz
     
     // Expected output counts (accounting for border)
-    localparam int VALID_CONV_WIDTH = IMG_WIDTH - (KERNEL_W - 1);   // 638
-    localparam int VALID_CONV_HEIGHT = IMG_HEIGHT - (KERNEL_H - 1); // 478
+    localparam int VALID_CONV_WIDTH  = IMG_WIDTH - (KERNEL_W - 1) - 2*MARGIN; // 638-2*margin
+    localparam int VALID_CONV_HEIGHT = IMG_HEIGHT - (KERNEL_H - 1) - 2*MARGIN; // 478-2*margin
     localparam int EXPECTED_EDGE_PIXELS = VALID_CONV_WIDTH * VALID_CONV_HEIGHT; // 305164
     localparam int EXPECTED_BW_PIXELS = IMG_WIDTH * IMG_HEIGHT;      // 307200
     localparam int PIXEL_MARGIN = 2;  // Moved here from procedural block
@@ -114,7 +114,7 @@ module convolution_filter_tb;
         end
         
         // Load input image from MIF file
-        load_mif_file("test_img.mif");
+        load_mif_file("test_image.mif");
         $display("Loaded input image: %0d x %0d = %0d pixels", IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*IMG_HEIGHT);
         
         // Select kernel type

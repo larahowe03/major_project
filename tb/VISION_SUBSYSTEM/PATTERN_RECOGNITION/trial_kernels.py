@@ -9,7 +9,11 @@ def apply_kernel(image, kernel, name):
     img_float = image.astype(float)
     
     # Apply convolution
-    result = convolve(img_float, kernel, mode='constant', cval=0.0)
+    result = convolve(img_float, np.array([[1, 1, 1],
+                              [1, 1, 1],
+                              [1, 1, 1]]) / 15.0, mode='constant', cval=0.0)
+
+    result = convolve(result, kernel, mode='constant', cval=0.0)
 
     # result = convolve(result, np.array([[-1, -2, -1],
     #                                     [ 0,  0,  0],
@@ -159,4 +163,4 @@ def test_single_kernel(image_path, kernel_name):
     plt.show()
 
 if __name__ == "__main__":
-    test_all_kernels("real_test_images/present.jpg")
+    test_all_kernels("real_test_images/test_image.png")
