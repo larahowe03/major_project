@@ -11,34 +11,31 @@ module convolution_filter #(
     input logic clk,
     input logic rst_n,
     
-    // Input stream
+    // Input image data
     input logic x_valid,
     output logic x_ready,
     input logic [W-1:0] x_data,
     
-    // Output stream
+    // Outputs
+    // convolution edge detection output
     output logic y_valid,
-    output logic y_valid_bw,
-    input logic y_ready,
     output logic [W-1:0] y_data,
+
+    // thresholded output
+    output logic y_valid_bw,
     output logic [W-1:0] y_data_bw,
-    
+
+    // always ready
+    input logic y_ready,
+
     // Kernel
     input logic signed [W-1:0] kernel [0:KERNEL_H-1][0:KERNEL_W-1],
 
-    // White pixel count and edge bounding box
+    // White pixel count
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_edge_pixels,
     output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_white_threshold_pixels,
-    output logic [$clog2(IMG_HEIGHT)-1:0] edge_top,     // Minimum Y (top of image)
-    output logic [$clog2(IMG_HEIGHT)-1:0] edge_bottom,  // Maximum Y (bottom of image) - EDGES
-    output logic [$clog2(IMG_WIDTH)-1:0] edge_left,     // Minimum X (left of image)
-    output logic [$clog2(IMG_WIDTH)-1:0] edge_right,    // Maximum X (right of image)
-    output logic [$clog2(IMG_HEIGHT)-1:0] threshold_bottom,  // Maximum Y for THRESHOLDED pixels
-    output logic close_to_crossing_edge,                      // HIGH when edge_bottom > 380
-    output logic close_to_crossing_threshold,                      // HIGH when edge_bottom > 380
     output logic white_count_valid
 );
-
     // Position tracking
     logic [$clog2(IMG_WIDTH)-1:0] x_pos;
     logic [$clog2(IMG_HEIGHT)-1:0] y_pos;
@@ -68,65 +65,56 @@ module convolution_filter #(
         end
     end
     
-    // Add 20-pixel margin - ignore edges near borders
-    localparam MARGIN = 20;
-    wire convolution_valid_now = (x_pos >= KERNEL_W - 1) && (y_pos >= KERNEL_H - 1) &&
-                                  (x_pos >= MARGIN) && (x_pos < IMG_WIDTH - MARGIN) &&
-                                  (y_pos >= MARGIN) && (y_pos < IMG_HEIGHT - MARGIN);
+    // Add 20-pixel margin to ignore edges near borders as tehere are margins in the image seen on vga
+    localparam MARGIN = 20;    
     logic convolution_valid;
     
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             convolution_valid <= 1'b0;
         else if (handshake)
-            convolution_valid <= convolution_valid_now;
+            convolution_valid <= (x_pos >= KERNEL_W - 1) && (y_pos >= KERNEL_H - 1) 
+                              && (x_pos >= MARGIN) && (x_pos < IMG_WIDTH - MARGIN) 
+                              && (y_pos >= MARGIN) && (y_pos < IMG_HEIGHT - MARGIN);
     end
 
-    // Line buffers
-    logic [W-1:0] line_buffer [0:KERNEL_H-1][0:IMG_WIDTH-1];
-    
-    integer init_row, init_col;
-    initial begin
-        for (init_row = 0; init_row < KERNEL_H; init_row = init_row + 1) begin
-            for (init_col = 0; init_col < IMG_WIDTH; init_col = init_col + 1) begin
-                line_buffer[init_row][init_col] = 8'h00;
-            end
-        end
-    end
+    // Line buffers for convolution, must be image width by kernel height    
+    logic [7:0] line_buffer [0:KERNEL_H-1][0:IMG_WIDTH-1];
     
     always_ff @(posedge clk) begin
-        if (handshake) begin
-            for (int row = KERNEL_H - 1; row > 0; row--) begin
-                line_buffer[row][x_pos] <= line_buffer[row-1][x_pos];
-            end
-            line_buffer[0][x_pos] <= x_data;
-        end
-    end
-    
-    // Window register
-    logic [W-1:0] window_reg [0:KERNEL_H-1][0:KERNEL_W-1];
-    
-    integer init_wrow, init_wcol;
-    initial begin
-        for (init_wrow = 0; init_wrow < KERNEL_H; init_wrow = init_wrow + 1) begin
-            for (init_wcol = 0; init_wcol < KERNEL_W; init_wcol = init_wcol + 1) begin
-                window_reg[init_wrow][init_wcol] = 8'h00;
-            end
-        end
-    end
-    
-    always_ff @(posedge clk) begin
-        if (handshake) begin
-            for (int row = 0; row < KERNEL_H; row++) begin
-                for (int col = KERNEL_W - 1; col > 0; col--) begin
-                    window_reg[row][col] <= window_reg[row][col-1];
+        if (!rst_n) begin
+            // technically could do '0, but this is more robust even if it is critical path
+            line_buffer <= '{default:'0};
+        end else begin
+            if (handshake) begin
+                for (int row = KERNEL_H - 1; row > 0; row--) begin
+                    line_buffer[row][x_pos] <= line_buffer[row-1][x_pos];
                 end
-                window_reg[row][0] <= line_buffer[row][x_pos];
+                line_buffer[0][x_pos] <= x_data;
             end
         end
     end
     
-    // Multiplication
+    // Window register for just holding the size of the kernel
+    logic [W-1:0] window_reg [0:KERNEL_H-1][0:KERNEL_W-1];
+        
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            // technically could do '0, but this is more robust even if it is critical path
+            window_reg <= '{default:'0};
+        end else begin
+            if (handshake) begin
+                for (int row = 0; row < KERNEL_H; row++) begin
+                    for (int col = KERNEL_W - 1; col > 0; col--) begin
+                        window_reg[row][col] <= window_reg[row][col-1];
+                    end
+                    window_reg[row][0] <= line_buffer[row][x_pos];
+                end
+            end
+        end
+    end
+    
+    // Convolution on teh windowed region
     logic signed [2*W-1:0] mult_result [0:KERNEL_H-1][0:KERNEL_W-1];
     
     always_comb begin
@@ -150,7 +138,7 @@ module convolution_filter #(
         end
     end
     
-    // Truncation with clamping
+    // Making sure it does not overflow
     logic [W-1:0] truncated_result;
     
     always_comb begin
@@ -163,7 +151,7 @@ module convolution_filter #(
         end
     end
     
-    // Binary thresholding
+    // Binary thresholding so that it is either an edge or no edge
     logic [W-1:0] binary_result;
     
     always_comb begin
@@ -200,7 +188,7 @@ module convolution_filter #(
             last_pixel_d1 <= 1'b0;
         end else begin
             if (handshake) begin
-                // Update delayed signals
+                // Update delayed signals because there is a delay in this pipeline
                 x_valid_d1 <= x_valid;
                 convolution_valid_d1 <= convolution_valid;
                 x_pos_d1 <= x_pos;
@@ -213,7 +201,7 @@ module convolution_filter #(
                 if (convolution_valid_d1) begin
                     y_data <= binary_result_d1;
                 end else begin
-                    y_data <= 8'd0;  // Black border
+                    y_data <= 8'd0;  // Black border where the margin is
                 end
                 
                 // Threshold output
@@ -228,135 +216,40 @@ module convolution_filter #(
                 y_valid_bw <= x_valid_d1;
                 
             end else if (y_ready) begin
-                if (y_valid) y_valid <= 1'b0;
-                if (y_valid_bw) y_valid_bw <= 1'b0;
+                if (y_valid) begin
+                    y_valid <= 1'b0;
+                end
+                if (y_valid_bw) begin
+                    y_valid_bw <= 1'b0;
+                end
             end
         end
     end
 
-    // WHITE PIXEL COUNTER AND EDGE BOUNDING BOX TRACKER
-    logic [$clog2(IMG_HEIGHT)-1:0] min_y, max_y;
-    logic [$clog2(IMG_WIDTH)-1:0] min_x, max_x;
-    logic edge_found;  // Track if we've found at least one edge pixel
-    
-    // Track bounding box for thresholded (white) pixels separately
-    logic [$clog2(IMG_HEIGHT)-1:0] threshold_max_y;
-    logic threshold_found;
-    
-    // Threshold for close to crossing detection (380 out of 480)
-    localparam CLOSE_THRESHOLD = 380;
-    
-    // Debouncing for close_to_crossing_edge signal (must be true for 10 frames)
-    logic [3:0] close_to_crossing_edge_counter;  // Counts up to 10
-    logic [3:0] close_to_crossing_threshold_counter;
-    localparam DEBOUNCE_FRAMES = 10;
-    
+    // Counter for counding how many white thresholded pixels or how many convolution pixels
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             num_white_edge_pixels <= '0;
             num_white_threshold_pixels <= '0;
-            min_y <= '1;  // Initialize to max value
-            max_y <= '0;  // Initialize to min value
-            min_x <= '1;  // Initialize to max value
-            max_x <= '0;  // Initialize to min value
-            threshold_max_y <= '0;
-            edge_found <= 1'b0;
-            threshold_found <= 1'b0;
             white_count_valid <= 1'b0;
-            close_to_crossing_edge <= 1'b0;
-            close_to_crossing_edge_counter <= '0;
-            close_to_crossing_threshold <= 1'b0;
-            close_to_crossing_threshold_counter <= '0;
         end else begin
-            // Signal frame complete and hold for multiple cycles
             if (handshake && last_pixel_d1) begin
-                white_count_valid <= 1'b1;  // Start valid pulse
-                // Latch final bounding box values for edges
-                edge_top <= min_y;
-                edge_bottom <= max_y;
-                edge_left <= min_x;
-                edge_right <= max_x;
-                // Latch threshold bottom
-                threshold_bottom <= threshold_max_y;
-                
-                // Debounce close_to_crossing_edge signal
-                if (max_y > CLOSE_THRESHOLD) begin
-                    // Condition is true - increment counter
-                    if (close_to_crossing_edge_counter < DEBOUNCE_FRAMES) begin
-                        close_to_crossing_edge_counter <= close_to_crossing_edge_counter + 1'b1;
-                    end
-                    // Set signal only after counter reaches threshold
-                    if (close_to_crossing_edge_counter >= DEBOUNCE_FRAMES - 1) begin
-                        close_to_crossing_edge <= 1'b1;
-                    end
-                end else begin
-                    // Condition is false - reset counter and signal
-                    close_to_crossing_edge_counter <= '0;
-                    close_to_crossing_edge <= 1'b0;
-                end
-
-                // Debounce close_to_crossing_edge signal
-                if (threshold_bottom > CLOSE_THRESHOLD) begin
-                    // Condition is true - increment counter
-                    if (close_to_crossing_threshold_counter < DEBOUNCE_FRAMES) begin
-                        close_to_crossing_threshold_counter <= close_to_crossing_threshold_counter + 1'b1;
-                    end
-                    // Set signal only after counter reaches threshold
-                    if (close_to_crossing_threshold_counter >= DEBOUNCE_FRAMES - 1) begin
-                        close_to_crossing_threshold <= 1'b1;
-                    end
-                end else begin
-                    // Condition is false - reset counter and signal
-                    close_to_crossing_threshold_counter <= '0;
-                    close_to_crossing_threshold <= 1'b0;
-                end
+                // valid pulse
+                white_count_valid <= 1'b1;
             end else if (white_count_valid && handshake && x_pos > 10) begin
-                white_count_valid <= 1'b0;  // End valid pulse
-                // Reset counters and bounding boxes
+                // end ov valid pulse and also reset the counters for new frame
+                white_count_valid <= 1'b0;  
                 num_white_edge_pixels <= '0;
                 num_white_threshold_pixels <= '0;
-                min_y <= '1;
-                max_y <= '0;
-                min_x <= '1;
-                max_x <= '0;
-                threshold_max_y <= '0;
-                edge_found <= 1'b0;
-                threshold_found <= 1'b0;
             end else begin
-                // Count white edge pixels and track bounding box
+                // Count white edge pixels
                 if (handshake && convolution_valid_d1 && binary_result_d1 == 8'd255) begin
                     num_white_edge_pixels <= num_white_edge_pixels + 1'b1;
-                    
-                    // Track bounding box
-                    if (!edge_found) begin
-                        // First edge pixel - initialize bounding box
-                        min_y <= y_pos_d1;
-                        max_y <= y_pos_d1;
-                        min_x <= x_pos_d1;
-                        max_x <= x_pos_d1;
-                        edge_found <= 1'b1;
-                    end else begin
-                        // Update bounding box
-                        if (y_pos_d1 < min_y) min_y <= y_pos_d1;
-                        if (y_pos_d1 > max_y) max_y <= y_pos_d1;
-                        if (x_pos_d1 < min_x) min_x <= x_pos_d1;
-                        if (x_pos_d1 > max_x) max_x <= x_pos_d1;
-                    end
                 end
                 
-                // Count white threshold pixels and track max Y
+                // Count white threshold pixels
                 if (handshake && x_valid_d1 && x_data_d1 >= WHITE_THRESHOLD) begin
                     num_white_threshold_pixels <= num_white_threshold_pixels + 1'b1;
-                    
-                    // Track maximum Y for threshold pixels
-                    if (!threshold_found) begin
-                        threshold_max_y <= y_pos_d1;
-                        threshold_found <= 1'b1;
-                    end else begin
-                        if (y_pos_d1 > threshold_max_y) begin
-                            threshold_max_y <= y_pos_d1;
-                        end
-                    end
                 end
             end
         end
