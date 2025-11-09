@@ -1,15 +1,11 @@
-// Level persistence gate:
-// - Input must stay HIGH for ASSERT_TICKS to assert.
-// - Once asserted, it stays HIGH until input stays LOW for CLEAR_TICKS.
-// Drive it with your 20 Hz tick so ASSERT_TICKS=40 ≈ 2 seconds.
 module level_persist #(
-  parameter int ASSERT_TICKS = 40,  // ~2.0s at 20 Hz
-  parameter int CLEAR_TICKS  = 6    // ~0.3s at 20 Hz (tune)
+  parameter int ASSERT_TICKS = 40,  
+  parameter int CLEAR_TICKS  = 6    
 )(
-  input  logic clk,          // same domain as tick
+  input  logic clk,          
   input  logic rst_n,
-  input  logic tick_20hz,    // 20 Hz strobe
-  input  logic in_level,     // raw level (e.g., distance<threshold)
+  input  logic tick_20hz,    
+  input  logic in_level,     // raw signal 
   output logic out_level     // debounced/persisted output
 );
   int unsigned hi_cnt, lo_cnt;
@@ -21,7 +17,6 @@ module level_persist #(
       lo_cnt    <= 0;
     end else if (tick_20hz) begin
       if (!out_level) begin
-        // Try to assert
         if (in_level) begin
           hi_cnt <= hi_cnt + 1;
           if (hi_cnt + 1 >= ASSERT_TICKS) begin
@@ -33,7 +28,6 @@ module level_persist #(
           hi_cnt <= 0;
         end
       end else begin
-        // Currently asserted; try to clear
         if (!in_level) begin
           lo_cnt <= lo_cnt + 1;
           if (lo_cnt + 1 >= CLEAR_TICKS) begin
