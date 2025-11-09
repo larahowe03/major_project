@@ -49,9 +49,9 @@ module zebra_crossing_detector_tb;
         logic [$clog2(IMG_HEIGHT)-1:0] y;
     } coord_t;
     
-    // Image data storage
-    logic [7:0] edge_image [IMG_HEIGHT-1:0][IMG_WIDTH-1:0];
-    logic [7:0] threshold_image [IMG_HEIGHT-1:0][IMG_WIDTH-1:0];
+    // Image data storage - use constants for array dimensions
+    logic [7:0] edge_image [0:IMG_HEIGHT-1][0:IMG_WIDTH-1];
+    logic [7:0] threshold_image [0:IMG_HEIGHT-1][0:IMG_WIDTH-1];
     
     // Edge list storage (simulates sparse edge storage)
     coord_t edge_list [0:MAX_EDGES-1];
