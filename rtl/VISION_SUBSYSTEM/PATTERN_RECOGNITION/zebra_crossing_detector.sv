@@ -32,11 +32,7 @@ module zebra_crossing_detector #(
     output logic num_connected_edge_instances_fulfilled,
     output logic lowest_edge_position_fulfilled,
     
-    output logic capture_trigger,
-
-    // Connected components count
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components,
-    output logic components_done
+    output logic capture_trigger
 );
 
     // Criteria 1: need enough white regions
@@ -120,6 +116,8 @@ module zebra_crossing_detector #(
     logic valid_to_read_d1;
     wire valid_to_read_edge = valid_to_read && !valid_to_read_d1;
 
+    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components;
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE;
@@ -128,7 +126,6 @@ module zebra_crossing_detector #(
             capture_trigger <= '0;
             edge_read_idx <= '0;
             max_y <= '0;
-            components_done <= 1'b0;
             valid_to_read_d1 <= 1'b0;
             
             for (int i = 0; i < MAX_EDGES; i++) begin
@@ -139,7 +136,6 @@ module zebra_crossing_detector #(
             
             case(state)
                 IDLE: begin
-                    components_done <= 1'b0;
                     capture_trigger <= 1'b0;
                     
                     // Wait for positive edge of valid_to_read
@@ -238,7 +234,6 @@ module zebra_crossing_detector #(
                 end
 
                 DONE: begin
-                    components_done <= 1'b1;  // Signal that count is ready
                     state <= WAIT_DONE;
                 end
                 

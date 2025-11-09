@@ -30,15 +30,7 @@ module pattern_recognition #(
     output logic white_count_valid,
 
     output logic zebra_crossing_stop,
-    
-    // Connected components count
-    output logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_connected_components,
-    output logic components_valid
 );
-
-    // Internal signals from detector
-    logic [$clog2(IMG_WIDTH*IMG_HEIGHT)-1:0] num_components_internal;
-    logic components_done;
 
     // ========================================================================
     // Convolution filter
@@ -176,27 +168,8 @@ module pattern_recognition #(
         .num_connected_edge_instances_fulfilled(num_connected_edge_instances_fulfilled),
         .lowest_edge_position_fulfilled(lowest_edge_position_fulfilled),
         
-        .capture_trigger(capture_trigger),
-        
-        .num_connected_components(num_components_internal),
-        .components_done(components_done)
+        .capture_trigger(capture_trigger)
     );
-    
-    // Register outputs for stable display
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            num_connected_components <= '0;
-            components_valid <= 1'b0;
-        end else begin
-            // Update connected components when detector finishes
-            if (components_done) begin
-                num_connected_components <= num_components_internal;
-                components_valid <= 1'b1;
-            end else begin
-                components_valid <= 1'b0;
-            end
-        end
-    end
 
     assign zebra_crossing_stop = num_threshold_pixels_fulfilled & num_edge_pixels_fulfilled & num_connected_edge_instances_fulfilled & lowest_edge_position_fulfilled;
 
