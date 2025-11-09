@@ -175,7 +175,8 @@ module zebra_crossing_detector_tb;
     
     // Task: Load edge image from MIF
     task automatic load_edge_image();
-        integer fd, x, y, addr, data, pixels_loaded;
+        integer fd, addr, data, pixels_loaded;
+        int x, y;
         string line;
         
         $display("--- Loading Edge Image ---");
@@ -221,7 +222,8 @@ module zebra_crossing_detector_tb;
     
     // Task: Load threshold image from MIF
     task automatic load_threshold_image();
-        integer fd, x, y, addr, data, pixels_loaded;
+        integer fd, addr, data, pixels_loaded;
+        int x, y;
         string line;
         
         $display("\n--- Loading Threshold Image ---");
